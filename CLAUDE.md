@@ -130,7 +130,7 @@ selector PCA/UMAP, descargar), `SampleGrid` (rejilla de imágenes generadas/reco
 5. **Indicador "requiere reentrenar".** Los hiperparámetros que cambian el modelo (p. ej. `latent_dim`)
    marcan el modelo como *desactualizado* (pill ámbar) hasta reentrenar. Los parámetros de exploración
    (ruido, k, clusters, pasos) son **interactivos** y no requieren reentrenar (pill verde).
-6. **Dataset:** `huggan/anime-faces` (21.551 imágenes 64×64 RGB, CC0). **No** usar streaming del
+6. **Dataset:** `huggan/anime-faces` (43.102 imágenes 64×64 RGB, CC0 — la ficha del dataset menciona 21.551, pero el `data.zip` publicado trae 43.102). **No** usar streaming del
    dataset viewer de HuggingFace (es inestable). Descargar el zip / usar `snapshot_download` una vez
    y cachear en local; si falla la red, *fallback* a una carpeta local de imágenes. La primera vez se
    descarga; después, todo local.
