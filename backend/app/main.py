@@ -7,13 +7,19 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .device import device_label, get_device
-from .routers import health
+from .routers import autoencoder, dataset, health, upload
+from .services.ae_service import ae_service
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     device = get_device()
     print(f"[GMVL] Device: {device.type} ({device_label(device)}) · PyTorch {torch.__version__}")
+    # Modo demo: cargar el checkpoint preentrenado si existe (CLAUDE.md §3.2).
+    if ae_service.load_checkpoint():
+        print(f"[GMVL] Autoencoder: checkpoint demo cargado (latent_dim={ae_service.hp.latent_dim})")
+    else:
+        print("[GMVL] Autoencoder: sin checkpoint demo (entrena para generarlo)")
     yield
 
 
@@ -36,3 +42,6 @@ app.add_middleware(
 )
 
 app.include_router(health.router, prefix="/api")
+app.include_router(dataset.router, prefix="/api")
+app.include_router(autoencoder.router, prefix="/api")
+app.include_router(upload.router, prefix="/api")
