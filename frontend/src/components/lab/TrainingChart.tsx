@@ -34,17 +34,20 @@ export function TrainingChart({ points, className, color = 'var(--blue)' }: Prop
   const line = points.map((p, i) => `${X(i).toFixed(1)},${Y(p.loss).toFixed(1)}`).join(' ')
   const area = `${pad},${H - pad} ${line} ${(W - pad).toFixed(1)},${H - pad}`
   const last = points[points.length - 1]
+  // id único por color: si hay varias curvas en la misma página (p. ej. G y D en el GAN),
+  // cada degradado debe tener su propio id o el segundo reutilizaría el del primero.
+  const fillId = `lossfill-${color.replace(/[^a-zA-Z0-9]/g, '')}`
 
   return (
     <div className={cn('relative', className)}>
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="block h-[150px] w-full">
         <defs>
-          <linearGradient id="lossfill" x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stopColor={color} stopOpacity="0.18" />
             <stop offset="1" stopColor={color} stopOpacity="0" />
           </linearGradient>
         </defs>
-        <polygon points={area} fill="url(#lossfill)" />
+        <polygon points={area} fill={`url(#${fillId})`} />
         <polyline
           points={line}
           fill="none"

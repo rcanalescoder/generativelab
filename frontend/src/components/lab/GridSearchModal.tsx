@@ -2,7 +2,14 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Button, SegmentedControl, Slider } from '../ui'
 import { CloseIcon, GridIcon, PlayIcon } from '../../lib/icons'
 import { cn } from '../../lib/cn'
-import { cancelGridSearch, gridSearch, type GridConfig, type GridResult } from '../../lib/api'
+import {
+  cancelGridSearch,
+  gridSearch,
+  type GridConfig,
+  type GridEvent,
+  type GridRequest,
+  type GridResult,
+} from '../../lib/api'
 
 const LD_OPTS = [32, 64, 128, 192]
 const LR_OPTS = [0.0003, 0.001, 0.003]
@@ -12,6 +19,10 @@ interface Props {
   seed: number
   onClose: () => void
   onApply: (cfg: GridConfig) => void
+  /** Función de búsqueda (por defecto la del Autoencoder). Permite reutilizar el modal en VAE. */
+  runSearch?: (body: GridRequest, onEvent: (ev: GridEvent) => void, signal?: AbortSignal) => Promise<void>
+  cancelSearch?: () => Promise<unknown>
+  title?: string
 }
 
 function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
@@ -22,7 +33,14 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
   )
 }
 
-export function GridSearchModal({ seed, onClose, onApply }: Props) {
+export function GridSearchModal({
+  seed,
+  onClose,
+  onApply,
+  runSearch = gridSearch,
+  cancelSearch = cancelGridSearch,
+  title,
+}: Props) {
   const [scope, setScope] = useState<'quick' | 'full'>('quick')
   const [epochs, setEpochs] = useState(3)
   const [lds, setLds] = useState<number[]>([32, 64, 128])
@@ -66,7 +84,7 @@ export function GridSearchModal({ seed, onClose, onApply }: Props) {
     setProgress(null)
     const ctrl = new AbortController()
     abortRef.current = ctrl
-    gridSearch(
+    runSearch(
       { scope, epochs, seed, grid: { latent_dim: lds, learning_rate: lrs, loss: losses } },
       (ev) => {
         if (ev.type === 'start') setTotal(ev.total)
@@ -92,7 +110,7 @@ export function GridSearchModal({ seed, onClose, onApply }: Props) {
   }
 
   const cancel = () => {
-    cancelGridSearch().catch(() => undefined)
+    cancelSearch().catch(() => undefined)
     abortRef.current?.abort()
   }
 
@@ -104,7 +122,7 @@ export function GridSearchModal({ seed, onClose, onApply }: Props) {
         <div className="gm-ip-banner">
           <div className="gm-ip-banner-text">
             <span className="gm-ip-badge">Búsqueda de hiperparámetros</span>
-            <h2>Buscar mejores parámetros</h2>
+            <h2>{title ?? 'Buscar mejores parámetros'}</h2>
             <p>Prueba varias combinaciones y mide la calidad de reconstrucción (MSE) sobre un conjunto de prueba fijo. Gana la de menor error.</p>
           </div>
           <div className="gm-ip-banner-actions">

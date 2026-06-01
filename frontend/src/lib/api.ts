@@ -135,7 +135,7 @@ export type GridEvent =
   | { type: 'cancelled' }
   | { type: 'error'; message: string }
 
-async function getJSON<T>(path: string, init?: RequestInit): Promise<T> {
+export async function getJSON<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, init)
   if (!res.ok) {
     let detail = `${res.status} ${res.statusText}`
@@ -150,7 +150,7 @@ async function getJSON<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>
 }
 
-function postJSON<T>(path: string, body: unknown): Promise<T> {
+export function postJSON<T>(path: string, body: unknown): Promise<T> {
   return getJSON<T>(path, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -198,7 +198,7 @@ export interface TrainRequest {
 }
 
 /** Lee un stream SSE de un POST con body y llama onEvent por cada evento `data:`. */
-async function streamSSE<E>(
+export async function streamSSE<E>(
   path: string,
   body: unknown,
   onEvent: (ev: E) => void,

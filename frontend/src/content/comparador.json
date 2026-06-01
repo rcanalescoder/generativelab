@@ -1,0 +1,83 @@
+{
+  "general": {
+    "title": "Comparador de modelos generativos",
+    "subtitle": "Cuatro formas distintas de aprender a crear caras, una al lado de otra",
+    "badge": "Guía de la página",
+    "accent": "violet",
+    "sections": [
+      {
+        "heading": "¿Qué compara esta página?",
+        "accent": "violet",
+        "icon": "info",
+        "blocks": [
+          { "type": "p", "text": "Has visto cuatro modelos por separado. Aquí los pones lado a lado para entender en qué se parecen y en qué se diferencian: cómo aprenden, si pueden inventar caras nuevas y qué pinta tienen sus resultados." },
+          { "type": "note", "tone": "info", "text": "El Autoencoder no inventa caras: solo reconstruye las que le das. Los otros tres sí generan caras nuevas, cada uno a su manera." }
+        ]
+      },
+      {
+        "heading": "Las cuatro ideas en una frase",
+        "accent": "blue",
+        "icon": "read",
+        "blocks": [
+          { "type": "defs", "items": [
+            { "term": "Autoencoder", "desc": "Comprime y reconstruye. Aprende un resumen (z) de cada cara, pero su espacio latente no está pensado para muestrear." },
+            { "term": "VAE", "desc": "Como el AE, pero su latente es una distribución ordenada (N(0,I)); por eso puede generar caras nuevas muestreando del prior." },
+            { "term": "GAN", "desc": "Dos redes compiten: una genera, otra distingue real de falso. Suele dar las caras más nítidas, pero entrena de forma inestable." },
+            { "term": "Diffusion", "desc": "Aprende a quitar ruido paso a paso. Parte de ruido puro y lo va limpiando hasta una cara. Calidad alta, muestreo lento." }
+          ] }
+        ]
+      },
+      {
+        "heading": "Cómo elegir",
+        "accent": "green",
+        "icon": "sliders",
+        "blocks": [
+          { "type": "list", "items": [
+            "¿Necesitas comprimir o detectar anomalías? Autoencoder.",
+            "¿Quieres generar y además un latente manejable? VAE.",
+            "¿Buscas máxima nitidez y no te importa pelearte con el entrenamiento? GAN.",
+            "¿Quieres la mejor calidad/diversidad y aceptas muestreo lento? Diffusion."
+          ] }
+        ]
+      }
+    ]
+  },
+  "topics": {
+    "tabla": {
+      "title": "Tabla comparativa",
+      "badge": "Capacidades",
+      "accent": "cyan",
+      "sections": [
+        {
+          "heading": "Cómo leerla",
+          "accent": "cyan",
+          "icon": "read",
+          "blocks": [
+            { "type": "p", "text": "Cada fila es una propiedad; cada columna, un modelo. Resume las diferencias prácticas que has visto en cada pestaña." },
+            { "type": "defs", "items": [
+              { "term": "Encoder", "desc": "Si el modelo sabe convertir una imagen dada en un código (reconstruir/buscar similares)." },
+              { "term": "Genera", "desc": "Si puede inventar caras nuevas que no estaban en el dataset." },
+              { "term": "Muestreo", "desc": "Cuántos pasos necesita para producir una imagen (1 = rápido; iterativo = lento)." }
+            ] }
+          ]
+        }
+      ]
+    },
+    "galeria": {
+      "title": "Galería comparada",
+      "badge": "Resultados",
+      "accent": "pink",
+      "sections": [
+        {
+          "heading": "Qué estás viendo",
+          "accent": "pink",
+          "icon": "sparkles",
+          "blocks": [
+            { "type": "p", "text": "Con la misma semilla, cada modelo produce su salida: el Autoencoder reconstruye caras del dataset; el VAE, el GAN y el Diffusion generan caras nuevas. Compara nitidez, diversidad y artefactos." },
+            { "type": "note", "tone": "warn", "text": "Si un modelo aparece vacío es que aún no tiene checkpoint entrenado. Entrénalo en su pestaña (o genera el demo) y vuelve aquí." }
+          ]
+        }
+      ]
+    }
+  }
+}

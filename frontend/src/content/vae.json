@@ -1,0 +1,293 @@
+{
+  "general": {
+    "title": "VAE, explicado",
+    "subtitle": "Qué es esta página, cómo funciona un autoencoder variacional y cómo leer lo que ves",
+    "badge": "Guía de la página",
+    "accent": "violet",
+    "sections": [
+      {
+        "heading": "¿Qué es esta página?",
+        "accent": "violet",
+        "icon": "info",
+        "blocks": [
+          { "type": "p", "text": "Es un laboratorio visual para entender un VAE (autoencoder variacional): una red que, como el autoencoder, comprime y reconstruye imágenes, pero que además aprende un espacio latente «ordenado» del que se pueden muestrear caras nuevas. Aquí lo entrenas, reconstruyes, exploras su latente y, sobre todo, GENERAS caras que no existen en el dataset." },
+          { "type": "note", "tone": "info", "text": "No necesitas saber matemáticas para usarla. Cada tarjeta tiene su propio botón «i» que explica qué estás viendo." }
+        ]
+      },
+      {
+        "heading": "Del autoencoder al VAE",
+        "accent": "blue",
+        "icon": "flow",
+        "blocks": [
+          { "type": "p", "text": "Un autoencoder normal codifica cada imagen en un único punto z. Un VAE, en cambio, codifica cada imagen en una pequeña «nube» gaussiana: en vez de un punto, aprende una media μ y una dispersión σ. Para decodificar, muestrea un z dentro de esa nube. Esto obliga al modelo a rellenar el espacio latente de forma continua, y por eso se puede generar a partir de él." },
+          { "type": "defs", "items": [
+            { "term": "μ (media)", "desc": "El centro de la nube latente de una imagen. Es el «z determinista» que usamos para reconstruir, mapear y buscar vecinos." },
+            { "term": "σ (dispersión)", "desc": "Cuánta incertidumbre tiene el modelo sobre el código de esa imagen." },
+            { "term": "z muestreado", "desc": "Un punto tomado al azar dentro de la nube: z = μ + σ·ε." }
+          ] }
+        ]
+      },
+      {
+        "heading": "Las dos ideas clave",
+        "accent": "pink",
+        "icon": "sparkles",
+        "blocks": [
+          { "type": "defs", "items": [
+            { "term": "Reparametrización", "desc": "z = μ + σ·ε con ε~N(0,I). Separa el azar (ε) de los parámetros (μ, σ) para poder entrenar con descenso de gradiente a pesar del muestreo." },
+            { "term": "Término KL", "desc": "Empuja todas las nubes latentes hacia un prior común N(0,I), evitando que el modelo «memorice» y dejando el espacio continuo y muestreable." }
+          ] },
+          { "type": "formula", "text": "pérdida = reconstrucción + β · KL( q(z|x) ‖ N(0,I) )" }
+        ]
+      },
+      {
+        "heading": "Qué puedes hacer aquí",
+        "accent": "green",
+        "icon": "read",
+        "blocks": [
+          { "type": "list", "items": [
+            "Entrenar el VAE y ver bajar la pérdida, separando reconstrucción y KL.",
+            "Generar caras nuevas muestreando del prior N(0,I).",
+            "Reconstruir una cara concreta (vía μ) y compararla con el original.",
+            "Explorar el mapa latente y buscar vecinos según el código μ.",
+            "Interpolar entre dos caras: en un VAE la transición suele ser más suave.",
+            "Subir μ de ruido (ruido en z) para ver cómo de robusto es el código.",
+            "Ajustar β para ver el trade-off entre fidelidad y regularidad del latente."
+          ] }
+        ]
+      },
+      {
+        "heading": "Cómo está construido",
+        "accent": "cyan",
+        "icon": "build",
+        "blocks": [
+          { "type": "p", "text": "Todo corre en tu máquina. El frontend es React + TypeScript; el backend es FastAPI con PyTorch, que ejecuta el modelo en la GPU de Apple Silicon (MPS) con respaldo a CPU." },
+          { "type": "defs", "items": [
+            { "term": "Modelo", "desc": "VAE convolucional: el mismo stack del autoencoder, pero el encoder produce (μ, logσ²) y el latente se muestrea." },
+            { "term": "Generación", "desc": "z~N(0,I) → decoder → cara nueva. No hay imagen de entrada." },
+            { "term": "Mapa latente", "desc": "Se construye con la media μ de cada imagen; se proyecta a 2D con PCA y se agrupa con k-means." },
+            { "term": "Dataset", "desc": "huggan/anime-faces, cacheado en local (no se descarga en cada uso)." }
+          ] },
+          { "type": "note", "tone": "success", "text": "Al abrir la app ya hay un modelo entrenado (checkpoint demo), así que puedes generar y explorar desde el primer segundo." }
+        ]
+      }
+    ]
+  },
+
+  "topics": {
+    "dataset": {
+      "title": "Dataset visual",
+      "badge": "Dataset",
+      "accent": "violet",
+      "sections": [
+        {
+          "heading": "Qué estás viendo",
+          "accent": "violet",
+          "icon": "dataset",
+          "blocks": [
+            { "type": "p", "text": "Una muestra del conjunto con el que aprende el modelo: 43.102 caras de anime de 64×64 píxeles en color (RGB), sin etiquetas. El VAE solo ve píxeles; aprende a representarlos y a generar nuevas variaciones plausibles." },
+            { "type": "defs", "items": [
+              { "term": "64×64×3", "desc": "Alto × ancho × 3 canales de color. Son 12.288 números por imagen." },
+              { "term": "Sin etiquetas", "desc": "Aprendizaje no supervisado: el objetivo es reconstruir y modelar la distribución, no clasificar." }
+            ] }
+          ]
+        },
+        {
+          "heading": "Cómo se usa",
+          "accent": "blue",
+          "icon": "read",
+          "blocks": [
+            { "type": "list", "items": [
+              "Haz clic en cualquier miniatura para llevarla al «Flujo del modelo» y reconstruirla.",
+              "«Ver muestras» baraja y trae otras imágenes del dataset.",
+              "«Subir imagen» reconstruye una imagen tuya (se redimensiona a 64×64)."
+            ] },
+            { "type": "note", "tone": "info", "text": "Recuerda: para GENERAR caras nuevas no hace falta elegir ninguna imagen; eso se hace en la tarjeta de generación muestreando del prior." }
+          ]
+        }
+      ]
+    },
+
+    "flujo": {
+      "title": "Flujo del modelo",
+      "badge": "Pipeline",
+      "accent": "blue",
+      "sections": [
+        {
+          "heading": "El recorrido de una imagen",
+          "accent": "blue",
+          "icon": "flow",
+          "blocks": [
+            { "type": "p", "text": "De izquierda a derecha ves el viaje de una cara por el VAE. La diferencia con un autoencoder normal está en el cuello de botella: aquí el encoder no produce un punto, sino una distribución (μ, σ) de la que se muestrea z." },
+            { "type": "steps", "items": [
+              "Original: la imagen de entrada (64×64×3).",
+              "Encoder: la comprime hasta 4×4×256 y produce μ y logσ².",
+              "z: se muestrea con z = μ + σ·ε (para reconstruir aquí usamos μ, el centro).",
+              "Decoder: expande z de vuelta a una imagen de 64×64×3.",
+              "Reconstruida: la salida del modelo, x̂.",
+              "Diferencia: |x − x̂|, el mapa de error."
+            ] },
+            { "type": "note", "tone": "info", "text": "En esta vista la reconstrucción es determinista: usamos μ (sin ruido) para que el resultado sea estable y comparable." }
+          ]
+        },
+        {
+          "heading": "El mapa de diferencia",
+          "accent": "pink",
+          "icon": "read",
+          "blocks": [
+            { "type": "p", "text": "Resalta en rosa dónde la reconstrucción se aleja del original. Las zonas oscuras son aciertos; las brillantes, errores." },
+            { "type": "formula", "text": "diferencia = |x − x̂|  (por píxel)" },
+            { "type": "note", "tone": "info", "text": "Un VAE suele reconstruir algo más borroso que un autoencoder a igualdad de tamaño: parte de su «esfuerzo» se va en mantener el latente ordenado (el término KL)." }
+          ]
+        }
+      ]
+    },
+
+    "mapa-latente": {
+      "title": "Mapa latente",
+      "badge": "Espacio latente",
+      "accent": "cyan",
+      "sections": [
+        {
+          "heading": "Qué es el espacio latente de un VAE",
+          "accent": "cyan",
+          "icon": "latent",
+          "blocks": [
+            { "type": "p", "text": "Cada imagen se representa por la media μ de su nube latente: un punto en un espacio de muchas dimensiones (tantas como latent_dim). Lo proyectamos a 2D para poder mirarlo." },
+            { "type": "defs", "items": [
+              { "term": "Cada punto", "desc": "La media μ de una imagen del dataset." },
+              { "term": "Cercanía", "desc": "Puntos próximos = caras que el modelo considera parecidas." },
+              { "term": "Colores", "desc": "Grupos (clusters) calculados con k-means sobre μ." }
+            ] }
+          ]
+        },
+        {
+          "heading": "Por qué se ve «más gaussiano»",
+          "accent": "violet",
+          "icon": "read",
+          "blocks": [
+            { "type": "p", "text": "El término KL empuja todas las nubes hacia el prior N(0,I). El resultado es una mancha de puntos más compacta y centrada en el origen que la de un autoencoder normal: el espacio queda «relleno», sin grandes huecos. Eso es justo lo que permite muestrear del prior y generar." },
+            { "type": "note", "tone": "warn", "text": "Ojo: la cercanía real se mide sobre μ (todas las dimensiones), no sobre la proyección 2D. Dos puntos pueden verse cerca en el mapa y no serlo tanto en realidad." }
+          ]
+        }
+      ]
+    },
+
+    "resultados": {
+      "title": "Resultados del espacio latente",
+      "badge": "Vecinos e interpolación",
+      "accent": "pink",
+      "sections": [
+        {
+          "heading": "Vecinos similares",
+          "accent": "pink",
+          "icon": "search",
+          "blocks": [
+            { "type": "p", "text": "Tomamos la imagen de consulta (recuadro rosa), miramos su código μ y buscamos las imágenes con μ más cercano. El número bajo cada cara es la distancia: cuanto menor, más parecida según el modelo." },
+            { "type": "note", "tone": "info", "text": "«Parecido» aquí lo decide el modelo a partir de lo que aprendió, no un humano. A veces agrupa por color de pelo, pose o fondo." }
+          ]
+        },
+        {
+          "heading": "Interpolación A → B",
+          "accent": "violet",
+          "icon": "interpolate",
+          "blocks": [
+            { "type": "p", "text": "Cogemos los códigos μ de dos caras (μ_A y μ_B) y generamos pasos intermedios mezclándolos. Cada fotograma es una imagen decodificada desde un punto intermedio." },
+            { "type": "formula", "text": "z_α = (1 − α)·μ_A + α·μ_B,   con α de 0 a 1" },
+            { "type": "p", "text": "Como el espacio latente del VAE es continuo y está regularizado, la transición suele ser más suave que en un autoencoder: las caras intermedias parecen plausibles en todo el recorrido." }
+          ]
+        }
+      ]
+    },
+
+    "generacion": {
+      "title": "Generación (muestrear del prior)",
+      "badge": "Lo que hace especial al VAE",
+      "accent": "pink",
+      "sections": [
+        {
+          "heading": "Caras de la nada",
+          "accent": "pink",
+          "icon": "sparkles",
+          "blocks": [
+            { "type": "p", "text": "Aquí no hay imagen de entrada. Tomamos vectores z al azar del prior N(0,I) y los pasamos por el decoder. Como el entrenamiento (con el término KL) dejó el espacio latente ordenado y «relleno» en torno al origen, casi cualquier z razonable produce una cara plausible que no existe en el dataset." },
+            { "type": "formula", "text": "z ~ N(0, I)   →   x_gen = decoder(z)" }
+          ]
+        },
+        {
+          "heading": "Los controles",
+          "accent": "violet",
+          "icon": "sliders",
+          "blocks": [
+            { "type": "defs", "items": [
+              { "term": "nº de muestras", "desc": "Cuántas caras generar de golpe para llenar la rejilla." },
+              { "term": "semilla", "desc": "Fija el azar: con la misma semilla obtienes exactamente las mismas caras (reproducibilidad)." },
+              { "term": "Generar nuevas", "desc": "Vuelve a muestrear z del prior y decodifica una nueva tanda." }
+            ] },
+            { "type": "note", "tone": "info", "text": "¿Caras borrosas o «promediadas»? Es típico del VAE: al regularizar el latente, sacrifica algo de nitidez. Bajar β suele dar muestras más nítidas pero un latente menos ordenado." }
+          ]
+        },
+        {
+          "heading": "Por qué el autoencoder no puede hacer esto",
+          "accent": "blue",
+          "icon": "info",
+          "blocks": [
+            { "type": "p", "text": "Un autoencoder normal no impone ninguna forma al espacio latente: sus códigos pueden quedar dispersos y con huecos. Si muestreas un z al azar, lo más probable es caer en un «vacío» y obtener basura. El VAE evita eso precisamente con el término KL, y por eso es un modelo generativo de pleno derecho." }
+          ]
+        }
+      ]
+    },
+
+    "parametros-modelo": {
+      "title": "Parámetros del modelo",
+      "badge": "Requiere reentrenar",
+      "accent": "amber",
+      "sections": [
+        {
+          "heading": "Qué hace cada uno",
+          "accent": "amber",
+          "icon": "sliders",
+          "blocks": [
+            { "type": "defs", "items": [
+              { "term": "latent_dim", "desc": "Tamaño del código (μ y σ). Pequeño = más compresión y muestras más «promediadas»; grande = más capacidad, pero más difícil de regularizar." },
+              { "term": "learning_rate", "desc": "Cuánto ajusta el modelo en cada paso. Muy alto: inestable; muy bajo: aprende lento." },
+              { "term": "epochs", "desc": "Cuántas veces ve el conjunto de entrenamiento. Más épocas suelen mejorar, hasta saturar." },
+              { "term": "loss (reconstrucción)", "desc": "Cómo se mide el error de reconstrucción. MSE penaliza más los fallos grandes (suaviza); L1 trata todos los errores por igual (bordes algo más definidos)." },
+              { "term": "β (beta)", "desc": "Peso del término KL. β alto = latente muy ordenado y muestreable pero reconstrucción más pobre; β bajo = reconstrucción nítida pero latente menos regular. Es el trade-off central del VAE." }
+            ] }
+          ]
+        },
+        {
+          "heading": "El papel especial de β",
+          "accent": "pink",
+          "icon": "info",
+          "blocks": [
+            { "type": "p", "text": "β controla cuánto se prioriza tener un latente parecido a N(0,I) frente a reconstruir fielmente. Con β=0 el VAE se parece a un autoencoder (buena reconstrucción, mala generación). Subiéndolo (β-VAE) el espacio se vuelve más regular y, a veces, más interpretable, a costa de nitidez." },
+            { "type": "note", "tone": "warn", "text": "Como define cómo aprende el modelo, cambiar β —igual que el resto— requiere reentrenar para que tenga efecto." }
+          ]
+        }
+      ]
+    },
+
+    "parametros-exploracion": {
+      "title": "Parámetros de exploración",
+      "badge": "Interactivo",
+      "accent": "green",
+      "sections": [
+        {
+          "heading": "Qué hace cada uno",
+          "accent": "green",
+          "icon": "sliders",
+          "blocks": [
+            { "type": "defs", "items": [
+              { "term": "ruido en z", "desc": "Suma azar a μ antes de decodificar (similar a aumentar σ a mano). Subiéndolo ves cómo de robusto es el código: la cara se deforma poco a poco." },
+              { "term": "k vecinos", "desc": "Cuántas caras similares mostrar al buscar vecinos." },
+              { "term": "n clusters", "desc": "En cuántos grupos divide k-means el mapa latente." },
+              { "term": "pasos interpolación", "desc": "Cuántos fotogramas intermedios genera entre A y B." }
+            ] },
+            { "type": "note", "tone": "success", "text": "Son interactivos: cambian el resultado en cuanto pulsas la acción correspondiente, sin reentrenar nada." }
+          ]
+        }
+      ]
+    }
+  }
+}
