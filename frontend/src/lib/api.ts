@@ -107,6 +107,34 @@ export type TrainEvent =
   | { type: 'cancelled'; epoch: number; step: number }
   | { type: 'error'; message: string }
 
+export interface GridConfig {
+  latent_dim: number
+  learning_rate: number
+  loss: 'mse' | 'l1'
+  epochs: number
+}
+export interface GridResult extends GridConfig {
+  eval_mse: number
+}
+export interface GridSpec {
+  latent_dim: number[]
+  learning_rate: number[]
+  loss: ('mse' | 'l1')[]
+}
+export interface GridRequest {
+  scope: 'quick' | 'full'
+  epochs: number
+  seed: number
+  grid: GridSpec
+}
+export type GridEvent =
+  | { type: 'start'; total: number; scope: string; epochs: number; eval_n: number; train_n: number }
+  | { type: 'progress'; index: number; total: number; epoch: number; epochs: number }
+  | { type: 'trial'; index: number; total: number; result: GridResult; best: GridResult }
+  | { type: 'done'; results: GridResult[]; best: GridResult | null }
+  | { type: 'cancelled' }
+  | { type: 'error'; message: string }
+
 async function getJSON<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, init)
   if (!res.ok) {
@@ -169,13 +197,14 @@ export interface TrainRequest {
   hyperparams: Partial<AEHyperParams>
 }
 
-/** Entrena por SSE sobre fetch (POST con body). Llama onEvent por cada evento. */
-export async function trainAE(
-  body: TrainRequest,
-  onEvent: (ev: TrainEvent) => void,
+/** Lee un stream SSE de un POST con body y llama onEvent por cada evento `data:`. */
+async function streamSSE<E>(
+  path: string,
+  body: unknown,
+  onEvent: (ev: E) => void,
   signal?: AbortSignal,
 ): Promise<void> {
-  const res = await fetch(`${API_BASE}/autoencoder/train`, {
+  const res = await fetch(`${API_BASE}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -194,7 +223,17 @@ export async function trainAE(
       const block = buffer.slice(0, sep)
       buffer = buffer.slice(sep + 2)
       const line = block.split('\n').find((l) => l.startsWith('data:'))
-      if (line) onEvent(JSON.parse(line.slice(5).trim()) as TrainEvent)
+      if (line) onEvent(JSON.parse(line.slice(5).trim()) as E)
     }
   }
 }
+
+/** Entrena por SSE. Llama onEvent por cada evento. */
+export const trainAE = (body: TrainRequest, onEvent: (ev: TrainEvent) => void, signal?: AbortSignal) =>
+  streamSSE<TrainEvent>('/autoencoder/train', body, onEvent, signal)
+
+/** Búsqueda en rejilla por SSE: prueba combinaciones y evalúa la mejor reconstrucción. */
+export const gridSearch = (body: GridRequest, onEvent: (ev: GridEvent) => void, signal?: AbortSignal) =>
+  streamSSE<GridEvent>('/autoencoder/gridsearch', body, onEvent, signal)
+
+export const cancelGridSearch = () => fetch(`${API_BASE}/autoencoder/train/cancel`, { method: 'POST' })

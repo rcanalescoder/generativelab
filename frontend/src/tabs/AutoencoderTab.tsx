@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Button, Card, CardHeader, InfoButton, SegmentedControl, Slider, StatusLine, Tag } from '../components/ui'
+import { Button, Card, CardHeader, SegmentedControl, Slider, StatusLine, Tag } from '../components/ui'
 import { DatasetCard } from '../components/lab/DatasetCard'
 import { ModelFlowCard } from '../components/lab/ModelFlowCard'
 import { LatentMap } from '../components/lab/LatentMap'
 import { ResultsCard } from '../components/lab/ResultsCard'
 import { TrainingChart } from '../components/lab/TrainingChart'
-import { ClustersIcon, InterpolateIcon, PlayIcon, RefreshIcon, SearchIcon } from '../lib/icons'
+import { ClustersIcon, GridIcon, InterpolateIcon, PlayIcon, RefreshIcon, SearchIcon } from '../lib/icons'
 import {
   cancelTraining,
   computeClusters,
@@ -20,6 +20,7 @@ import {
   uploadImage,
   type AEStatus,
   type DatasetInfo,
+  type GridConfig,
   type InterpResult,
   type LossPoint,
   type NeighborsResult,
@@ -29,6 +30,7 @@ import {
 } from '../lib/api'
 import { useInfo } from '../components/info/InfoProvider'
 import { autoencoderContent } from '../content'
+import { GridSearchModal } from '../components/lab/GridSearchModal'
 
 const LR_VALUES = [0.0001, 0.0003, 0.001, 0.003, 0.01]
 const nearestLrIdx = (lr: number) => {
@@ -67,6 +69,7 @@ export function AutoencoderTab() {
   const [method, setMethod] = useState<'pca' | 'umap'>('pca')
   const [neighbors, setNeighbors] = useState<NeighborsResult | null>(null)
   const [interp, setInterp] = useState<InterpResult | null>(null)
+  const [interpB, setInterpB] = useState<Sample | null>(null)
   const [alpha, setAlpha] = useState(0.5)
 
   // hiperparámetros del modelo (requieren reentrenar)
@@ -87,6 +90,7 @@ export function AutoencoderTab() {
   const [trainInfo, setTrainInfo] = useState<{ epoch: number; epochs: number; loss: number } | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [gridOpen, setGridOpen] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
 
   const lr = LR_VALUES[lrIdx]
@@ -132,8 +136,9 @@ export function AutoencoderTab() {
           setPipelineItem(items[0] ?? null)
           setProjection(await computeClusters(5))
           setNeighbors(await getNeighbors(pid, 8))
-          const bid = sm[Math.min(1, sm.length - 1)].id
-          setInterp(await interpolate(pid, bid, 6))
+          const bSample = sm[Math.min(1, sm.length - 1)]
+          setInterpB(bSample ?? null)
+          setInterp(await interpolate(pid, bSample.id, 6))
         }
       } catch (e) {
         setError(errMsg(e))
@@ -182,8 +187,18 @@ export function AutoencoderTab() {
   const doInterpolate = () =>
     run(async () => {
       const a = pipelineId ?? samples[0]?.id ?? 0
-      const b = samples[Math.min(1, samples.length - 1)]?.id ?? a
+      const b = interpB?.id ?? samples[Math.min(1, samples.length - 1)]?.id ?? a
       setInterp(await interpolate(a, b, steps))
+    })
+
+  const changeB = () =>
+    run(async () => {
+      if (!samples.length) return
+      const cands = samples.filter((s) => s.id !== pipelineId)
+      const pick = cands.length ? cands[Math.floor(Math.random() * cands.length)] : samples[0]
+      setInterpB(pick)
+      const a = pipelineId ?? samples[0].id
+      setInterp(await interpolate(a, pick.id, steps))
     })
 
   const changeMethod = (m: 'pca' | 'umap') =>
@@ -251,6 +266,13 @@ export function AutoencoderTab() {
     setMode(DEFAULTS.mode)
   }
 
+  const applyGrid = (cfg: GridConfig) => {
+    setLatentDim(cfg.latent_dim)
+    setLrIdx(nearestLrIdx(cfg.learning_rate))
+    setLoss(cfg.loss)
+    setEpochs(cfg.epochs)
+  }
+
   const statusLine = training ? (
     trainInfo ? (
       <>
@@ -286,16 +308,65 @@ export function AutoencoderTab() {
       )}
 
       <div className="mb-[22px] grid items-stretch gap-[22px] grid-cols-1 xl:grid-cols-[minmax(316px,358px)_minmax(0,1fr)_minmax(336px,374px)]">
-        <DatasetCard
-          info={info}
-          samples={samples}
-          onShuffle={shuffle}
-          onUpload={onUpload}
-          onSelect={selectSample}
-          onInfo={() => open(C.topics.dataset)}
-          busy={busy}
-        />
+        {/* IZQUIERDA: dataset + exploración */}
+        <div className="flex flex-col gap-[22px]">
+          <DatasetCard
+            info={info}
+            samples={samples}
+            onShuffle={shuffle}
+            onUpload={onUpload}
+            onSelect={selectSample}
+            onInfo={() => open(C.topics.dataset)}
+            busy={busy}
+          />
 
+          <Card rise={2}>
+            <CardHeader
+              title="Exploración"
+              actions={<Tag variant="live">interactivo</Tag>}
+              onInfo={() => open(C.topics['parametros-exploracion'])}
+              infoLabel="Parámetros de exploración"
+            />
+            <Slider
+              label="ruido en z"
+              value={Math.round(noise * 100)}
+              min={0}
+              max={100}
+              onChange={(v) => setNoise(v / 100)}
+              format={(v) => (v / 100).toFixed(2)}
+            />
+            <Slider label="k vecinos" value={k} min={1} max={24} onChange={setK} />
+            <Slider label="n clusters" value={nClusters} min={2} max={12} onChange={setNClusters} />
+            <Slider label="pasos interpolación" value={steps} min={2} max={12} onChange={setSteps} />
+
+            <div className="mt-[8px] grid grid-cols-2 gap-[11px]">
+              <Button icon={<RefreshIcon />} onClick={doReconstruct} disabled={!trained || busy || training}>
+                Reconstruir
+              </Button>
+              <Button icon={<SearchIcon />} onClick={doNeighbors} disabled={!trained || busy || training}>
+                Buscar similares
+              </Button>
+              <Button
+                className="col-span-2"
+                icon={<InterpolateIcon />}
+                onClick={doInterpolate}
+                disabled={!trained || busy || training}
+              >
+                Interpolar
+              </Button>
+              <Button
+                className="col-span-2"
+                icon={<ClustersIcon />}
+                onClick={doClusters}
+                disabled={!trained || busy || training}
+              >
+                Calcular clusters
+              </Button>
+            </div>
+          </Card>
+        </div>
+
+        {/* CENTRO: flujo + mapa */}
         <div className="flex min-w-0 flex-col gap-[22px]">
           <ModelFlowCard item={pipelineItem} latentDim={latentDim} onInfo={() => open(C.topics.flujo)} />
           <LatentMap
@@ -307,17 +378,14 @@ export function AutoencoderTab() {
           />
         </div>
 
-        {/* Controles */}
+        {/* DERECHA: entrenamiento */}
         <Card rise={3}>
-          <CardHeader title="Controles" onInfo={() => open(C.topics.controles)} infoLabel="Cómo funcionan los controles" />
-
-          <div className="gm-group-head">
-            <span className="gm-group-title">
-              <span className="t">Parámetros del modelo</span>
-              <InfoButton onClick={() => open(C.topics['parametros-modelo'])} label="Sobre los parámetros del modelo" />
-            </span>
-            <Tag variant="warn">requiere reentrenar</Tag>
-          </div>
+          <CardHeader
+            title="Entrenamiento"
+            actions={<Tag variant="warn">requiere reentrenar</Tag>}
+            onInfo={() => open(C.topics['parametros-modelo'])}
+            infoLabel="Parámetros del modelo"
+          />
           <Slider label="latent_dim" value={latentDim} min={16} max={256} step={8} onChange={setLatentDim} />
           <Slider label="learning_rate" value={lrIdx} min={0} max={LR_VALUES.length - 1} onChange={setLrIdx} format={() => lr} />
           <Slider label="epochs" value={epochs} min={1} max={100} onChange={setEpochs} />
@@ -334,20 +402,6 @@ export function AutoencoderTab() {
               />
             </div>
           </div>
-
-          <div className="gm-divider" />
-
-          <div className="gm-group-head">
-            <span className="gm-group-title">
-              <span className="t">Parámetros de exploración</span>
-              <InfoButton onClick={() => open(C.topics['parametros-exploracion'])} label="Sobre los parámetros de exploración" />
-            </span>
-            <Tag variant="live">interactivo</Tag>
-          </div>
-          <Slider label="ruido en z" value={Math.round(noise * 100)} min={0} max={100} onChange={(v) => setNoise(v / 100)} format={(v) => (v / 100).toFixed(2)} />
-          <Slider label="k vecinos" value={k} min={1} max={24} onChange={setK} />
-          <Slider label="n clusters" value={nClusters} min={2} max={12} onChange={setNClusters} />
-          <Slider label="pasos interpolación" value={steps} min={2} max={12} onChange={setSteps} />
 
           <div className="gm-ctrl">
             <div className="row">
@@ -388,29 +442,25 @@ export function AutoencoderTab() {
             />
           </div>
 
-          <div className="actions grid grid-cols-2 gap-[11px]">
-            {training ? (
-              <Button variant="primary" full className="col-span-2" onClick={onCancel}>
-                Cancelar entrenamiento
-              </Button>
-            ) : (
-              <Button variant="primary" full className="col-span-2" icon={<PlayIcon />} onClick={onTrain} disabled={busy}>
-                Entrenar
-              </Button>
-            )}
-            <Button icon={<RefreshIcon />} onClick={doReconstruct} disabled={!trained || busy || training}>
-              Reconstruir
+          {training ? (
+            <Button variant="primary" full onClick={onCancel}>
+              Cancelar entrenamiento
             </Button>
-            <Button icon={<SearchIcon />} onClick={doNeighbors} disabled={!trained || busy || training}>
-              Buscar similares
+          ) : (
+            <Button variant="primary" full icon={<PlayIcon />} onClick={onTrain} disabled={busy}>
+              Entrenar
             </Button>
-            <Button className="col-span-2" icon={<InterpolateIcon />} onClick={doInterpolate} disabled={!trained || busy || training}>
-              Interpolar
-            </Button>
-            <Button className="col-span-2" icon={<ClustersIcon />} onClick={doClusters} disabled={!trained || busy || training}>
-              Calcular clusters
-            </Button>
-          </div>
+          )}
+
+          <Button
+            full
+            icon={<GridIcon />}
+            onClick={() => setGridOpen(true)}
+            disabled={busy || training}
+            className="mt-[11px]"
+          >
+            Buscar mejores parámetros
+          </Button>
         </Card>
       </div>
 
@@ -419,8 +469,20 @@ export function AutoencoderTab() {
         interp={interp}
         alpha={alpha}
         onAlpha={setAlpha}
+        aImage={pipelineItem?.original}
+        bImage={interpB?.image}
+        onChangeB={changeB}
+        busy={busy}
         onInfo={() => open(C.topics.resultados)}
       />
+
+      {gridOpen && (
+        <GridSearchModal
+          seed={seed}
+          onClose={() => setGridOpen(false)}
+          onApply={applyGrid}
+        />
+      )}
     </>
   )
 }

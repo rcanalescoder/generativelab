@@ -50,6 +50,19 @@ class InterpolateRequest(BaseModel):
     steps: int = 6
 
 
+class GridSpec(BaseModel):
+    latent_dim: list[int] = [64, 128]
+    learning_rate: list[float] = [1e-3]
+    loss: list[str] = ["mse"]
+
+
+class GridSearchRequest(BaseModel):
+    scope: str = "quick"  # "quick" | "full"
+    epochs: int = 3
+    seed: int = 42
+    grid: GridSpec = Field(default_factory=GridSpec)
+
+
 def _require_model() -> None:
     if ae_service.model is None:
         raise HTTPException(status_code=409, detail="modelo no entrenado: entrena o carga el checkpoint demo")
@@ -97,6 +110,30 @@ async def train(req: TrainRequest, request: Request) -> StreamingResponse:
 def cancel() -> dict:
     ae_service.cancel()
     return {"cancelled": True}
+
+
+@router.post("/gridsearch")
+async def gridsearch(req: GridSearchRequest, request: Request) -> StreamingResponse:
+    events = ae_service.start_gridsearch(req.scope, req.epochs, req.grid.model_dump(), req.seed)
+
+    async def gen():
+        while True:
+            try:
+                ev = await run_in_threadpool(events.get, True, 1.0)
+            except Empty:
+                if await request.is_disconnected():
+                    ae_service.cancel()
+                    break
+                continue
+            if ev is None:
+                break
+            yield f"data: {json.dumps(ev)}\n\n"
+
+    return StreamingResponse(
+        gen(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @router.post("/reconstruct")

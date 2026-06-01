@@ -212,6 +212,101 @@ class AEService:
         threading.Thread(target=worker, name="ae-train", daemon=True).start()
         return q
 
+    # ---------- búsqueda en rejilla (grid search) ----------
+    def _eval_mse(self, model: ConvAutoencoder, ids: np.ndarray) -> float:
+        """MSE de reconstrucción por píxel sobre un conjunto de evaluación."""
+        model.eval()
+        tot = 0.0
+        cnt = 0
+        with torch.no_grad():
+            for batch in self._iter_batches(ids, 256):
+                recon, _ = model(batch)
+                tot += torch.mean((recon - batch) ** 2, dim=[1, 2, 3]).sum().item()
+                cnt += int(batch.shape[0])
+        return tot / max(cnt, 1)
+
+    def iter_gridsearch(self, scope: str, epochs: int, grid: dict, seed: int) -> Iterator[dict]:
+        """Entrena cada combinación de la rejilla y la evalúa por MSE en un held-out fijo.
+        NO adopta ningún modelo ni toca el checkpoint: solo busca la mejor configuración."""
+        if self.training:
+            yield {"type": "error", "message": "Ya hay una operación en curso"}
+            return
+        self.training = True
+        self._cancel = False
+        try:
+            epochs = int(max(1, min(15, epochs)))
+            lds = sorted({int(max(8, min(512, x))) for x in grid.get("latent_dim", [128])})
+            lrs = sorted({float(max(1e-5, min(1e-1, x))) for x in grid.get("learning_rate", [1e-3])})
+            losses = [x for x in ["mse", "l1"] if x in set(grid.get("loss", ["mse"]))] or ["mse"]
+            combos = [(ld, lr, ls) for ld in lds for lr in lrs for ls in losses][:16]
+            total = len(combos)
+
+            n = dataset.count()
+            rng = np.random.default_rng(seed)
+            perm = rng.permutation(n)
+            eval_ids = perm[:1000]
+            pool = perm[1000:]
+            train_ids = pool if scope == "full" else pool[: min(QUICK_N, len(pool))]
+
+            yield {"type": "start", "total": total, "scope": scope, "epochs": epochs,
+                   "eval_n": int(len(eval_ids)), "train_n": int(len(train_ids))}
+
+            results: list[dict] = []
+            best: dict | None = None
+            for idx, (ld, lr, ls) in enumerate(combos):
+                if self._cancel:
+                    yield {"type": "cancelled"}
+                    return
+                set_seed(seed)
+                model = ConvAutoencoder(ld).to(self.device)
+                model.train()
+                opt = torch.optim.Adam(model.parameters(), lr=lr)
+                crit: nn.Module = nn.L1Loss() if ls == "l1" else nn.MSELoss()
+                ids = train_ids.copy()
+                for ep in range(epochs):
+                    np.random.default_rng(seed + ep + 1).shuffle(ids)
+                    for batch in self._iter_batches(ids, 256):
+                        opt.zero_grad(set_to_none=True)
+                        recon, _ = model(batch)
+                        loss = crit(recon, batch)
+                        loss.backward()
+                        opt.step()
+                        if self._cancel:
+                            yield {"type": "cancelled"}
+                            return
+                    yield {"type": "progress", "index": idx, "total": total,
+                           "epoch": ep + 1, "epochs": epochs}
+                cfg = {"latent_dim": ld, "learning_rate": lr, "loss": ls, "epochs": epochs}
+                res = {**cfg, "eval_mse": self._eval_mse(model, eval_ids)}
+                results.append(res)
+                if best is None or res["eval_mse"] < best["eval_mse"]:
+                    best = res
+                yield {"type": "trial", "index": idx, "total": total, "result": res, "best": best}
+
+            results.sort(key=lambda r: r["eval_mse"])
+            yield {"type": "done", "results": results, "best": results[0] if results else None}
+        finally:
+            self.training = False
+
+    def start_gridsearch(self, scope: str, epochs: int, grid: dict, seed: int) -> "queue.Queue":
+        q: "queue.Queue" = queue.Queue(maxsize=256)
+        if self.training:
+            q.put({"type": "error", "message": "Ya hay una operación en curso"})
+            q.put(None)
+            return q
+
+        def worker() -> None:
+            try:
+                for ev in self.iter_gridsearch(scope, epochs, grid, seed):
+                    q.put(ev)
+            except Exception as exc:  # pragma: no cover - defensivo
+                q.put({"type": "error", "message": str(exc)})
+            finally:
+                q.put(None)
+
+        threading.Thread(target=worker, name="ae-gridsearch", daemon=True).start()
+        return q
+
     # ---------- checkpoint ----------
     def save_checkpoint(self, path: Path = DEMO_PATH) -> None:
         """Guarda el modelo. Solo lo usa el script generador del demo (`__main__`)."""
