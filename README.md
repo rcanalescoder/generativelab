@@ -12,7 +12,7 @@ con acabado premium, pensada para tocar parámetros, ver qué ocurre y hacer cap
 | Fase | Contenido | Estado |
 |---|---|---|
 | **0** | Andamiaje + sistema de diseño + `/api/health` | ✅ hecho |
-| 1 | Autoencoder (vertical slice) | ⏳ |
+| **1** | Autoencoder (dataset, entrenamiento SSE, mapa latente, vecinos, interpolación) | ✅ hecho |
 | 2 | Pantallas "i" + modo captura | ⏳ |
 | 3 | VAE · 4 GAN · 5 Diffusion · 6 Comparador | ⏳ |
 
@@ -52,6 +52,24 @@ Comprobación rápida:
 curl http://localhost:8000/api/health
 # {"status":"ok","device":"mps","device_name":"Apple Silicon GPU (MPS)", ...}
 ```
+
+### Dataset y checkpoint demo (Fase 1)
+
+La primera vez hay que preparar los datos (descarga el `data.zip` de `huggan/anime-faces`,
+~462 MB, y construye un cache local `backend/data/anime-faces/faces_64.npy`):
+
+```bash
+# desde backend/ con el venv activado
+python -m app.data.dataset            # descarga + cachea el dataset (solo la 1ª vez)
+python -m app.services.ae_service     # entrena el checkpoint demo del AE (~3 min en MPS)
+```
+
+Hecho esto, al arrancar el backend carga el checkpoint y el tab Autoencoder es usable al
+instante. Si no quieres esperar, también puedes pulsar **Entrenar** (modo *Rápido*) en la UI:
+genera un modelo utilizable en unos segundos.
+
+> Nota: el `data.zip` publicado contiene **43.102** imágenes (la ficha del dataset menciona
+> 21.551). La app usa y muestra el recuento real.
 
 ## Frontend (Vite + React + TS + Tailwind)
 
