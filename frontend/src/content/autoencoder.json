@@ -1,0 +1,290 @@
+{
+  "general": {
+    "title": "Autoencoder, explicado",
+    "subtitle": "Qué es esta página, cómo funciona el modelo y cómo leer lo que ves",
+    "badge": "Guía de la página",
+    "accent": "blue",
+    "sections": [
+      {
+        "heading": "¿Qué es esta página?",
+        "accent": "blue",
+        "icon": "info",
+        "blocks": [
+          { "type": "p", "text": "Es un laboratorio visual para entender un autoencoder: una red neuronal que aprende a comprimir una imagen en unos pocos números y luego a reconstruirla a partir de ellos. Aquí lo entrenas, ves qué reconstruye y exploras qué ha aprendido, todo sobre un dataset de caras de anime de 64×64 píxeles." },
+          { "type": "note", "tone": "info", "text": "No necesitas saber matemáticas para usarla. Cada tarjeta tiene su propio botón «i» que explica qué estás viendo." }
+        ]
+      },
+      {
+        "heading": "Cómo funciona un autoencoder",
+        "accent": "violet",
+        "icon": "flow",
+        "blocks": [
+          { "type": "p", "text": "El modelo tiene dos mitades unidas por un «cuello de botella». El encoder reduce la imagen a un vector pequeño llamado z (el código latente); el decoder intenta reconstruir la imagen original solo a partir de z. Como z es mucho más pequeño que la imagen, el modelo se ve obligado a quedarse con lo esencial." },
+          { "type": "defs", "items": [
+            { "term": "Encoder", "desc": "Comprime la imagen (64×64×3 = 12.288 números) hasta z." },
+            { "term": "z (latente)", "desc": "El vector comprimido. Su tamaño lo eliges con latent_dim." },
+            { "term": "Decoder", "desc": "Reconstruye la imagen a partir de z." },
+            { "term": "Reconstrucción", "desc": "La salida del decoder, x̂. Cuanto más se parezca a x, mejor ha aprendido." }
+          ] },
+          { "type": "formula", "text": "x  →  z = encoder(x)  →  x̂ = decoder(z)" },
+          { "type": "p", "text": "Entrenar consiste en ajustar el modelo para que x̂ se parezca lo más posible a x, en miles de imágenes." }
+        ]
+      },
+      {
+        "heading": "Qué puedes hacer aquí",
+        "accent": "pink",
+        "icon": "sparkles",
+        "blocks": [
+          { "type": "list", "items": [
+            "Entrenar el modelo y ver la curva de pérdida bajar en vivo.",
+            "Reconstruir una cara y comparar original vs. reconstrucción.",
+            "Explorar el mapa latente: cada punto es una imagen vista por el modelo.",
+            "Buscar vecinos: las caras más parecidas según el modelo.",
+            "Interpolar entre dos caras y ver cómo una se transforma en la otra.",
+            "Subir tu propia imagen y ver cómo la reconstruye.",
+            "Añadir ruido a z para comprobar cómo de robusto es el código."
+          ] }
+        ]
+      },
+      {
+        "heading": "Cómo leer lo que ves",
+        "accent": "green",
+        "icon": "read",
+        "blocks": [
+          { "type": "defs", "items": [
+            { "term": "Mapa de diferencia", "desc": "|x − x̂|: en rosa, dónde se equivoca la reconstrucción. Suele fallar en bordes y detalles finos." },
+            { "term": "Mapa latente", "desc": "Una «foto 2D» del espacio de z. Puntos cercanos = caras que el modelo considera parecidas." },
+            { "term": "Vecinos", "desc": "Las imágenes con z más cercano a la consulta." },
+            { "term": "Interpolación", "desc": "Un paseo en línea recta dentro del espacio latente: si es suave, el modelo ha aprendido un espacio con sentido." }
+          ] }
+        ]
+      },
+      {
+        "heading": "Cómo está construido",
+        "accent": "cyan",
+        "icon": "build",
+        "blocks": [
+          { "type": "p", "text": "Todo corre en tu máquina. El frontend es React + TypeScript; el backend es FastAPI con PyTorch, que ejecuta el modelo en la GPU de Apple Silicon (MPS) con respaldo a CPU." },
+          { "type": "defs", "items": [
+            { "term": "Modelo", "desc": "Autoencoder convolucional (~2,4 M de parámetros)." },
+            { "term": "Entrenamiento", "desc": "Se transmite en vivo por SSE; puedes cancelarlo cuando quieras." },
+            { "term": "Mapa latente", "desc": "Se proyecta de muchas dimensiones a 2D con PCA; los grupos se calculan con k-means." },
+            { "term": "Dataset", "desc": "huggan/anime-faces, cacheado en local (no se descarga en cada uso)." }
+          ] },
+          { "type": "note", "tone": "success", "text": "Al abrir la app ya hay un modelo entrenado (checkpoint demo), así que todo funciona desde el primer segundo." }
+        ]
+      }
+    ]
+  },
+
+  "topics": {
+    "dataset": {
+      "title": "Dataset visual",
+      "badge": "Dataset",
+      "accent": "violet",
+      "sections": [
+        {
+          "heading": "Qué estás viendo",
+          "accent": "violet",
+          "icon": "dataset",
+          "blocks": [
+            { "type": "p", "text": "Una muestra del conjunto de datos con el que aprende el modelo: 43.102 caras de anime de 64×64 píxeles en color (RGB), sin etiquetas. El modelo solo ve píxeles; nadie le dice «esto es pelo» o «esto es un ojo»." },
+            { "type": "defs", "items": [
+              { "term": "64×64×3", "desc": "Alto × ancho × 3 canales de color. Son 12.288 números por imagen." },
+              { "term": "Sin etiquetas", "desc": "Aprendizaje no supervisado: el objetivo es reconstruir, no clasificar." }
+            ] }
+          ]
+        },
+        {
+          "heading": "Cómo se usa",
+          "accent": "blue",
+          "icon": "read",
+          "blocks": [
+            { "type": "list", "items": [
+              "Haz clic en cualquier miniatura para llevarla al «Flujo del modelo» y reconstruirla.",
+              "«Ver muestras» baraja y trae otras imágenes del dataset.",
+              "«Subir imagen» reconstruye una imagen tuya (se redimensiona a 64×64)."
+            ] },
+            { "type": "note", "tone": "info", "text": "Si subes una foto real, verás que el modelo la «dibuja» como una cara de anime: solo sabe lo que ha visto en el dataset." }
+          ]
+        }
+      ]
+    },
+
+    "flujo": {
+      "title": "Flujo del modelo",
+      "badge": "Pipeline",
+      "accent": "blue",
+      "sections": [
+        {
+          "heading": "El recorrido de una imagen",
+          "accent": "blue",
+          "icon": "flow",
+          "blocks": [
+            { "type": "p", "text": "De izquierda a derecha ves el viaje completo de una cara a través del autoencoder." },
+            { "type": "steps", "items": [
+              "Original: la imagen de entrada (64×64×3).",
+              "Encoder: la comprime, reduciendo tamaño y aumentando «profundidad» hasta 4×4×256.",
+              "z: el cuello de botella, el código latente (su tamaño es latent_dim).",
+              "Decoder: expande z de vuelta a una imagen de 64×64×3.",
+              "Reconstruida: la salida del modelo, x̂.",
+              "Diferencia: |x − x̂|, el mapa de error."
+            ] }
+          ]
+        },
+        {
+          "heading": "El mapa de diferencia",
+          "accent": "pink",
+          "icon": "read",
+          "blocks": [
+            { "type": "p", "text": "Resalta en rosa dónde la reconstrucción se aleja del original. Las zonas oscuras son aciertos; las brillantes, errores." },
+            { "type": "formula", "text": "diferencia = |x − x̂|  (por píxel)" },
+            { "type": "note", "tone": "info", "text": "Es normal que falle en bordes, pelo y detalles pequeños: son los más difíciles de comprimir en pocos números." }
+          ]
+        }
+      ]
+    },
+
+    "mapa-latente": {
+      "title": "Mapa latente",
+      "badge": "Espacio latente",
+      "accent": "cyan",
+      "sections": [
+        {
+          "heading": "Qué es el espacio latente",
+          "accent": "cyan",
+          "icon": "latent",
+          "blocks": [
+            { "type": "p", "text": "Cada imagen, una vez codificada, es un punto z en un espacio de muchas dimensiones (tantas como latent_dim). No podemos ver tantas dimensiones, así que las proyectamos a 2D para poder mirarlas." },
+            { "type": "defs", "items": [
+              { "term": "Cada punto", "desc": "Una imagen del dataset vista por el encoder." },
+              { "term": "Cercanía", "desc": "Puntos próximos = caras que el modelo considera parecidas." },
+              { "term": "Colores", "desc": "Grupos (clusters) calculados con k-means sobre z." }
+            ] }
+          ]
+        },
+        {
+          "heading": "PCA / UMAP y cómo leerlo",
+          "accent": "violet",
+          "icon": "read",
+          "blocks": [
+            { "type": "p", "text": "PCA y UMAP son dos formas de aplanar el espacio a 2D. PCA conserva las direcciones de mayor variación; UMAP intenta preservar la vecindad local." },
+            { "type": "note", "tone": "warn", "text": "Ojo: la cercanía real se mide sobre z (todas las dimensiones), no sobre la proyección 2D. Dos puntos pueden verse cerca en el mapa y no serlo tanto en realidad." },
+            { "type": "p", "text": "Pasa el ratón por encima de un punto para ver su miniatura, su ID, su grupo y la magnitud de su z (‖z‖)." }
+          ]
+        }
+      ]
+    },
+
+    "resultados": {
+      "title": "Resultados del espacio latente",
+      "badge": "Vecinos e interpolación",
+      "accent": "pink",
+      "sections": [
+        {
+          "heading": "Vecinos similares",
+          "accent": "pink",
+          "icon": "search",
+          "blocks": [
+            { "type": "p", "text": "Tomamos la imagen de consulta (recuadro rosa), miramos su z y buscamos las imágenes con z más cercano. El número bajo cada cara es la distancia: cuanto menor, más parecida según el modelo." },
+            { "type": "note", "tone": "info", "text": "«Parecido» aquí lo decide el modelo a partir de lo que aprendió, no un humano. A veces agrupa por color de pelo, pose o fondo." }
+          ]
+        },
+        {
+          "heading": "Interpolación A → B",
+          "accent": "violet",
+          "icon": "interpolate",
+          "blocks": [
+            { "type": "p", "text": "Cogemos los códigos de dos caras (z_A y z_B) y generamos pasos intermedios mezclándolos. Cada fotograma es una imagen decodificada desde un punto intermedio." },
+            { "type": "formula", "text": "z_α = (1 − α)·z_A + α·z_B,   con α de 0 a 1" },
+            { "type": "p", "text": "Si la transición es suave y las imágenes intermedias parecen caras plausibles, el modelo ha aprendido un espacio latente «con sentido», no un simple diccionario." }
+          ]
+        }
+      ]
+    },
+
+    "controles": {
+      "title": "Controles",
+      "badge": "Panel de control",
+      "accent": "blue",
+      "sections": [
+        {
+          "heading": "Dos tipos de parámetros",
+          "accent": "blue",
+          "icon": "sliders",
+          "blocks": [
+            { "type": "defs", "items": [
+              { "term": "Del modelo (ámbar)", "desc": "Cambian la red o su entrenamiento. Necesitan reentrenar para tener efecto." },
+              { "term": "De exploración (verde)", "desc": "Son interactivos: se aplican al instante, sin reentrenar." }
+            ] },
+            { "type": "note", "tone": "info", "text": "¿Te has perdido tocando sliders? Usa «Volver a parámetros por defecto» para dejarlo todo como al abrir la app." }
+          ]
+        },
+        {
+          "heading": "Acciones",
+          "accent": "green",
+          "icon": "sparkles",
+          "blocks": [
+            { "type": "defs", "items": [
+              { "term": "Entrenar", "desc": "Rápido: unas pocas épocas sobre una muestra (segundos). Completo: el dataset entero (minutos)." },
+              { "term": "Reconstruir", "desc": "Vuelve a pasar la imagen actual por el modelo (con el ruido en z elegido)." },
+              { "term": "Buscar similares", "desc": "Calcula los k vecinos de la imagen actual." },
+              { "term": "Interpolar / Calcular clusters", "desc": "Rehacen la interpolación o reagrupan el mapa latente." }
+            ] }
+          ]
+        }
+      ]
+    },
+
+    "parametros-modelo": {
+      "title": "Parámetros del modelo",
+      "badge": "Requiere reentrenar",
+      "accent": "amber",
+      "sections": [
+        {
+          "heading": "Qué hace cada uno",
+          "accent": "amber",
+          "icon": "sliders",
+          "blocks": [
+            { "type": "defs", "items": [
+              { "term": "latent_dim", "desc": "Tamaño de z. Pequeño = más compresión, reconstrucción más borrosa pero más «abstracta». Grande = más nítido, pero comprime menos." },
+              { "term": "learning_rate", "desc": "Cuánto ajusta el modelo en cada paso. Muy alto: inestable; muy bajo: aprende lento." },
+              { "term": "epochs", "desc": "Cuántas veces ve el conjunto de entrenamiento. Más épocas suelen mejorar, hasta saturar." },
+              { "term": "loss", "desc": "Cómo se mide el error. MSE penaliza más los fallos grandes (tiende a suavizar); L1 trata todos los errores por igual (bordes algo más definidos)." }
+            ] }
+          ]
+        },
+        {
+          "heading": "¿Por qué «requiere reentrenar»?",
+          "accent": "pink",
+          "icon": "info",
+          "blocks": [
+            { "type": "p", "text": "Estos valores definen la red o cómo aprende. Cambiarlos no afecta al modelo ya entrenado: hasta que no pulses «Entrenar», sigues viendo los resultados del modelo anterior. Por eso aparece el aviso «cambios sin aplicar»." }
+          ]
+        }
+      ]
+    },
+
+    "parametros-exploracion": {
+      "title": "Parámetros de exploración",
+      "badge": "Interactivo",
+      "accent": "green",
+      "sections": [
+        {
+          "heading": "Qué hace cada uno",
+          "accent": "green",
+          "icon": "sliders",
+          "blocks": [
+            { "type": "defs", "items": [
+              { "term": "ruido en z", "desc": "Suma azar al código antes de decodificar. Subiéndolo ves cómo de robusto (o frágil) es z: la cara se deforma poco a poco." },
+              { "term": "k vecinos", "desc": "Cuántas caras similares mostrar al buscar vecinos." },
+              { "term": "n clusters", "desc": "En cuántos grupos divide k-means el mapa latente." },
+              { "term": "pasos interpolación", "desc": "Cuántos fotogramas intermedios genera entre A y B." }
+            ] },
+            { "type": "note", "tone": "success", "text": "Son interactivos: cambian el resultado en cuanto pulsas la acción correspondiente, sin reentrenar nada." }
+          ]
+        }
+      ]
+    }
+  }
+}

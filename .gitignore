@@ -12,3 +12,6 @@ backend/data/
 *.npy
 *.egg-info/
 .pytest_cache/
+# Logs y PIDs de arrancar.sh
+.logs/
+*.pid

@@ -9,7 +9,14 @@ interface InfoButtonProps {
 /** Botón redondo "i" que vive en la cabecera de cada tarjeta. */
 export function InfoButton({ onClick, label = 'Más información' }: InfoButtonProps) {
   return (
-    <button type="button" className="gm-info" onClick={onClick} aria-label={label} title={label}>
+    <button
+      type="button"
+      className="gm-info"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      data-chrome="true"
+    >
       <InfoIcon />
     </button>
   )

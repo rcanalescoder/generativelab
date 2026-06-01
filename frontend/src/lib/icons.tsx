@@ -177,3 +177,69 @@ export function SparklesIcon(props: IconProps) {
     </svg>
   )
 }
+
+export function CloseIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+export function SlidersIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h8M16 18h4" strokeLinecap="round" />
+      <circle cx="16" cy="6" r="2" />
+      <circle cx="8" cy="12" r="2" />
+      <circle cx="14" cy="18" r="2" />
+    </svg>
+  )
+}
+
+export function LayersIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M12 3l9 5-9 5-9-5 9-5z" strokeLinejoin="round" />
+      <path d="M3 13l9 5 9-5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+export function EyeIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z" strokeLinejoin="round" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  )
+}
+
+export function WrenchIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path
+        d="M14.7 6.3a4 4 0 00-5.2 5.2l-6 6a1.5 1.5 0 002.1 2.1l6-6a4 4 0 005.2-5.2l-2.5 2.5-2.1-2.1 2.5-2.5z"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+export function MapIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2z" strokeLinejoin="round" />
+      <path d="M9 4v14M15 6v14" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+export function BookIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M4 5a2 2 0 012-2h13v15H6a2 2 0 00-2 2V5z" strokeLinejoin="round" />
+      <path d="M19 18H6a2 2 0 00-2 2" strokeLinecap="round" />
+    </svg>
+  )
+}

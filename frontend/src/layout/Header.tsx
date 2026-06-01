@@ -1,8 +1,10 @@
 import { Button, Tabs } from '../components/ui'
-import { CameraIcon, DownloadIcon, LogoMark } from '../lib/icons'
+import { BookIcon, CameraIcon, DownloadIcon, LogoMark } from '../lib/icons'
 import { cn } from '../lib/cn'
 import { useHealth } from '../lib/useHealth'
+import { useInfo } from '../components/info/InfoProvider'
 import { TABS, type TabId } from '../tabs/types'
+import type { Topic } from '../content/types'
 
 /** Pill de estado del backend: MPS (verde, pulsa), CPU (ámbar) o sin conexión. */
 function MpsPill() {
@@ -10,7 +12,7 @@ function MpsPill() {
 
   if (loading) {
     return (
-      <span className="gm-pill-mps is-off">
+      <span className="gm-pill-mps is-off" data-chrome="true">
         <span className="gm-dot" />
         Conectando…
       </span>
@@ -18,7 +20,7 @@ function MpsPill() {
   }
   if (error || !health) {
     return (
-      <span className="gm-pill-mps is-off" title={error ?? 'Sin respuesta del backend'}>
+      <span className="gm-pill-mps is-off" data-chrome="true" title={error ?? 'Sin respuesta del backend'}>
         <span className="gm-dot" />
         Backend sin conexión
       </span>
@@ -28,6 +30,7 @@ function MpsPill() {
   return (
     <span
       className={cn('gm-pill-mps', !isMps && 'is-cpu')}
+      data-chrome="true"
       title={`${health.device_name} · PyTorch ${health.torch_version}`}
     >
       <span className="gm-dot" />
@@ -39,11 +42,15 @@ function MpsPill() {
 interface HeaderProps {
   active: TabId
   onChange: (id: TabId) => void
+  /** Guía general de la lengüeta activa (botón "i" del header). */
+  general: Topic | null
+  capture: boolean
+  onToggleCapture: () => void
+  onExport: () => void
 }
 
-export function Header({ active, onChange }: HeaderProps) {
-  // Los botones de captura llegan en la Fase 2; de momento sin función (GUIA Fase 0).
-  const captureSoon = 'Se activa en la Fase 2'
+export function Header({ active, onChange, general, capture, onToggleCapture, onExport }: HeaderProps) {
+  const { open } = useInfo()
 
   return (
     <header className="mb-[26px] flex items-center justify-between gap-4">
@@ -52,19 +59,30 @@ export function Header({ active, onChange }: HeaderProps) {
           <div className="gm-brand-logo">
             <LogoMark className="h-[21px] w-[21px]" />
           </div>
-          <h1 className="text-[19px] font-semibold tracking-[-0.3px]">
-            Generative Models Visual Lab
-          </h1>
+          <h1 className="text-[19px] font-semibold tracking-[-0.3px]">Generative Models Visual Lab</h1>
         </div>
         <Tabs items={TABS} active={active} onChange={onChange} className="ml-[30px]" />
       </div>
 
       <div className="flex items-center gap-[11px]">
         <MpsPill />
-        <Button icon={<CameraIcon />} title={captureSoon}>
-          Modo captura
-        </Button>
-        <Button icon={<DownloadIcon />} title={captureSoon}>
+        {general && (
+          <span data-chrome="true">
+            <Button icon={<BookIcon />} onClick={() => open(general)} title="Guía completa de esta página">
+              Guía
+            </Button>
+          </span>
+        )}
+        <span data-chrome="true">
+          <Button
+            icon={<CameraIcon />}
+            onClick={onToggleCapture}
+            title="Oculta el cromo para hacer capturas limpias"
+          >
+            Modo captura
+          </Button>
+        </span>
+        <Button icon={<DownloadIcon />} onClick={onExport} title={capture ? 'Exportar PNG' : 'Exporta la vista actual a PNG'}>
           Exportar PNG
         </Button>
       </div>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Button, Card, CardHeader, SegmentedControl, Slider, StatusLine, Tag } from '../components/ui'
+import { Button, Card, CardHeader, InfoButton, SegmentedControl, Slider, StatusLine, Tag } from '../components/ui'
 import { DatasetCard } from '../components/lab/DatasetCard'
 import { ModelFlowCard } from '../components/lab/ModelFlowCard'
 import { LatentMap } from '../components/lab/LatentMap'
@@ -27,6 +27,8 @@ import {
   type ReconItem,
   type Sample,
 } from '../lib/api'
+import { useInfo } from '../components/info/InfoProvider'
+import { autoencoderContent } from '../content'
 
 const LR_VALUES = [0.0001, 0.0003, 0.001, 0.003, 0.01]
 const nearestLrIdx = (lr: number) => {
@@ -38,7 +40,23 @@ const nearestLrIdx = (lr: number) => {
 }
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
+/** Valores por defecto (los que ves al abrir la app, = checkpoint demo). */
+const DEFAULTS = {
+  latentDim: 128,
+  lrIdx: 2,
+  epochs: 10,
+  loss: 'mse' as const,
+  noise: 0,
+  k: 8,
+  nClusters: 5,
+  steps: 6,
+  seed: 42,
+  mode: 'quick' as const,
+}
+
 export function AutoencoderTab() {
+  const { open } = useInfo()
+  const C = autoencoderContent
   const [status, setStatus] = useState<AEStatus | null>(null)
   const [info, setInfo] = useState<DatasetInfo | null>(null)
   const [samples, setSamples] = useState<Sample[]>([])
@@ -220,6 +238,19 @@ export function AutoencoderTab() {
     abortRef.current?.abort()
   }
 
+  const resetDefaults = () => {
+    setLatentDim(DEFAULTS.latentDim)
+    setLrIdx(DEFAULTS.lrIdx)
+    setEpochs(DEFAULTS.epochs)
+    setLoss(DEFAULTS.loss)
+    setNoise(DEFAULTS.noise)
+    setK(DEFAULTS.k)
+    setNClusters(DEFAULTS.nClusters)
+    setSteps(DEFAULTS.steps)
+    setSeed(DEFAULTS.seed)
+    setMode(DEFAULTS.mode)
+  }
+
   const statusLine = training ? (
     trainInfo ? (
       <>
@@ -261,20 +292,30 @@ export function AutoencoderTab() {
           onShuffle={shuffle}
           onUpload={onUpload}
           onSelect={selectSample}
+          onInfo={() => open(C.topics.dataset)}
           busy={busy}
         />
 
         <div className="flex min-w-0 flex-col gap-[22px]">
-          <ModelFlowCard item={pipelineItem} latentDim={latentDim} />
-          <LatentMap projection={projection} method={method} onMethodChange={changeMethod} loading={busy && !projection} />
+          <ModelFlowCard item={pipelineItem} latentDim={latentDim} onInfo={() => open(C.topics.flujo)} />
+          <LatentMap
+            projection={projection}
+            method={method}
+            onMethodChange={changeMethod}
+            loading={busy && !projection}
+            onInfo={() => open(C.topics['mapa-latente'])}
+          />
         </div>
 
         {/* Controles */}
         <Card rise={3}>
-          <CardHeader title="Controles" />
+          <CardHeader title="Controles" onInfo={() => open(C.topics.controles)} infoLabel="Cómo funcionan los controles" />
 
           <div className="gm-group-head">
-            <span className="t">Parámetros del modelo</span>
+            <span className="gm-group-title">
+              <span className="t">Parámetros del modelo</span>
+              <InfoButton onClick={() => open(C.topics['parametros-modelo'])} label="Sobre los parámetros del modelo" />
+            </span>
             <Tag variant="warn">requiere reentrenar</Tag>
           </div>
           <Slider label="latent_dim" value={latentDim} min={16} max={256} step={8} onChange={setLatentDim} />
@@ -297,7 +338,10 @@ export function AutoencoderTab() {
           <div className="gm-divider" />
 
           <div className="gm-group-head">
-            <span className="t">Parámetros de exploración</span>
+            <span className="gm-group-title">
+              <span className="t">Parámetros de exploración</span>
+              <InfoButton onClick={() => open(C.topics['parametros-exploracion'])} label="Sobre los parámetros de exploración" />
+            </span>
             <Tag variant="live">interactivo</Tag>
           </div>
           <Slider label="ruido en z" value={Math.round(noise * 100)} min={0} max={100} onChange={(v) => setNoise(v / 100)} format={(v) => (v / 100).toFixed(2)} />
@@ -317,6 +361,17 @@ export function AutoencoderTab() {
               />
             </div>
           </div>
+
+          <Button
+            variant="ghost"
+            full
+            icon={<RefreshIcon />}
+            onClick={resetDefaults}
+            disabled={training}
+            className="mb-[11px]"
+          >
+            Volver a parámetros por defecto
+          </Button>
 
           <StatusLine>{statusLine}</StatusLine>
 
@@ -359,7 +414,13 @@ export function AutoencoderTab() {
         </Card>
       </div>
 
-      <ResultsCard neighbors={neighbors} interp={interp} alpha={alpha} onAlpha={setAlpha} />
+      <ResultsCard
+        neighbors={neighbors}
+        interp={interp}
+        alpha={alpha}
+        onAlpha={setAlpha}
+        onInfo={() => open(C.topics.resultados)}
+      />
     </>
   )
 }

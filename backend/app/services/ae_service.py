@@ -20,7 +20,7 @@ from ..device import get_device
 from ..models.ae import ConvAutoencoder, count_params
 from ..seeding import set_seed
 
-CKPT_PATH = Path(__file__).resolve().parents[1] / "checkpoints" / "ae_demo.pt"
+DEMO_PATH = Path(__file__).resolve().parents[1] / "checkpoints" / "ae_demo.pt"
 
 QUICK_N = 6000          # subconjunto para el modo "quick"
 QUICK_MAX_EPOCHS = 6
@@ -179,7 +179,9 @@ class AEService:
             self.outdated = False
             self.loss_history = history
             self._invalidate_embedding()
-            self.save_checkpoint()
+            # IMPORTANTE: el entrenamiento en la app NO toca el checkpoint demo. El modelo
+            # entrenado vive en memoria durante esta sesión del servidor; al reiniciar se
+            # vuelve al demo pristino. Así, experimentar nunca degrada el estado base.
             yield {"type": "done", "epochs": epochs, "loss": history[-1]["loss"] if history else None,
                    "loss_history": history}
         finally:
@@ -211,10 +213,11 @@ class AEService:
         return q
 
     # ---------- checkpoint ----------
-    def save_checkpoint(self) -> None:
+    def save_checkpoint(self, path: Path = DEMO_PATH) -> None:
+        """Guarda el modelo. Solo lo usa el script generador del demo (`__main__`)."""
         if self.model is None:
             return
-        CKPT_PATH.parent.mkdir(parents=True, exist_ok=True)
+        path.parent.mkdir(parents=True, exist_ok=True)
         torch.save(
             {
                 "state_dict": self.model.state_dict(),
@@ -223,13 +226,13 @@ class AEService:
                 "loss_history": self.loss_history,
                 "version": 1,
             },
-            CKPT_PATH,
+            path,
         )
 
     def load_checkpoint(self) -> bool:
-        if not CKPT_PATH.exists():
+        if not DEMO_PATH.exists():
             return False
-        ckpt = torch.load(CKPT_PATH, map_location=self.device)
+        ckpt = torch.load(DEMO_PATH, map_location=self.device)
         self.hp = AEHyperParams(**ckpt["hyperparams"]).sanitized()
         model = ConvAutoencoder(self.hp.latent_dim).to(self.device)
         model.load_state_dict(ckpt["state_dict"])
@@ -405,4 +408,6 @@ if __name__ == "__main__":
         if ev["type"] == "epoch":
             print(f"[ae]   epoch {ev['epoch']}/{ev['epochs']} · loss {ev['loss']:.5f}", flush=True)
         elif ev["type"] == "done":
-            print(f"[ae] listo · loss final {ev['loss']:.5f} · guardado en {CKPT_PATH}", flush=True)
+            print(f"[ae] listo · loss final {ev['loss']:.5f}", flush=True)
+    svc.save_checkpoint(DEMO_PATH)
+    print(f"[ae] checkpoint demo guardado en {DEMO_PATH}", flush=True)
