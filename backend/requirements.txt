@@ -1,0 +1,6 @@
+# Backend del Generative Models Visual Lab — Mac Apple Silicon (MPS) / CPU. Nunca CUDA.
+# Fase 0: solo lo necesario para FastAPI + detección de device.
+# Las dependencias de ML pesadas (datasets, scikit-learn, pillow…) se añaden por fase.
+fastapi>=0.115
+uvicorn[standard]>=0.30
+torch>=2.5

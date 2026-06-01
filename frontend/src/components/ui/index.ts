@@ -1,0 +1,13 @@
+// Sistema de componentes propio (CLAUDE.md §2). Barrel de re-exportación.
+export { Card, CardHeader } from './Card'
+export { InfoButton } from './InfoButton'
+export { Button } from './Button'
+export { Slider } from './Slider'
+export { SegmentedControl } from './SegmentedControl'
+export { Tag } from './Tag'
+export { Tabs } from './Tabs'
+export { StatusLine } from './StatusLine'
+export { Sparkline } from './Sparkline'
+export { Thumb } from './Thumb'
+export { Skeleton } from './Skeleton'
+export { Spinner } from './Spinner'

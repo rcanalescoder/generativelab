@@ -1,0 +1,43 @@
+/*
+ * Design tokens — fuente de verdad de la paleta, formas y tipografía.
+ * Extraídos literalmente de /design/mockup.html (tab Autoencoder, ya aprobado).
+ * El resto de la app referencia estas variables; no hay colores "sueltos".
+ */
+:root {
+  /* --- Acentos --- */
+  --blue: #2563eb;
+  --blue-soft: #eaf1fe;
+  --blue-line: #c9ddfb;
+  --cyan: #06b6d4;
+  --violet: #8b5cf6;
+  --violet-soft: #f1ecfc;
+  --violet-line: #ddd0f6;
+  --pink: #ec4899;
+  --pink-soft: #fce9f2;
+  --green: #10b981;
+  --green-soft: #e5f6f0;
+  --amber: #f59e0b;
+  --amber-soft: #fcefd7;
+
+  /* --- Neutros --- */
+  --bg: #f5f6f9;
+  --card: #ffffff;
+  --ink: #111827;
+  --slate: #5b6472;
+  --muted: #8a93a2;
+  --hair: #e7eaf0;
+  --line: #edeff4;
+  --track: #e7eaf1;
+
+  /* --- Sombras --- */
+  --shadow-sm: 0 1px 2px rgba(17, 24, 39, 0.04);
+  --shadow: 0 1px 3px rgba(17, 24, 39, 0.05), 0 10px 30px -12px rgba(17, 24, 39, 0.1);
+
+  /* --- Forma --- */
+  --radius: 18px;
+  --radius-sm: 11px;
+
+  /* --- Tipografía --- */
+  --ff-sans: 'Geist', 'Helvetica Neue', Arial, sans-serif;
+  --ff-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}

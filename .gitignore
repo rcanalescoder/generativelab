@@ -1,0 +1,14 @@
+node_modules/
+dist/
+__pycache__/
+*.pyc
+.venv/
+venv/
+.DS_Store
+backend/app/checkpoints/*.pt
+backend/app/checkpoints/*.pth
+# Dataset descargado/cacheado y derivados (no el paquete de código backend/app/data/)
+backend/data/
+*.npy
+*.egg-info/
+.pytest_cache/
