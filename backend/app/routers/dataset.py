@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import numpy as np
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
 from .. import imaging
@@ -36,3 +36,11 @@ def samples(n: int = Query(12, ge=1, le=64), seed: int = 0) -> dict:
     rng = np.random.default_rng(seed)
     ids = sorted(int(i) for i in rng.choice(total, size=min(n, total), replace=False))
     return {"samples": [{"id": i, "image": imaging.encode_png_b64(np.asarray(arr[i]))} for i in ids]}
+
+
+@router.get("/image/{idx}")
+def image(idx: int) -> dict:
+    total = dataset.count()
+    if idx < 0 or idx >= total:
+        raise HTTPException(status_code=404, detail="id fuera de rango")
+    return {"id": idx, "image": imaging.encode_png_b64(np.asarray(dataset.load_array()[idx]))}

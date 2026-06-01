@@ -1,11 +1,365 @@
-import { ComingSoon } from '../components/lab/ComingSoon'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Button, Card, CardHeader, SegmentedControl, Slider, StatusLine, Tag } from '../components/ui'
+import { DatasetCard } from '../components/lab/DatasetCard'
+import { ModelFlowCard } from '../components/lab/ModelFlowCard'
+import { LatentMap } from '../components/lab/LatentMap'
+import { ResultsCard } from '../components/lab/ResultsCard'
+import { TrainingChart } from '../components/lab/TrainingChart'
+import { ClustersIcon, InterpolateIcon, PlayIcon, RefreshIcon, SearchIcon } from '../lib/icons'
+import {
+  cancelTraining,
+  computeClusters,
+  getAEStatus,
+  getDatasetInfo,
+  getNeighbors,
+  getProjection,
+  getSamples,
+  interpolate,
+  reconstruct,
+  trainAE,
+  uploadImage,
+  type AEStatus,
+  type DatasetInfo,
+  type InterpResult,
+  type LossPoint,
+  type NeighborsResult,
+  type Projection,
+  type ReconItem,
+  type Sample,
+} from '../lib/api'
+
+const LR_VALUES = [0.0001, 0.0003, 0.001, 0.003, 0.01]
+const nearestLrIdx = (lr: number) => {
+  let best = 0
+  for (let i = 1; i < LR_VALUES.length; i++) {
+    if (Math.abs(LR_VALUES[i] - lr) < Math.abs(LR_VALUES[best] - lr)) best = i
+  }
+  return best
+}
+const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
 export function AutoencoderTab() {
+  const [status, setStatus] = useState<AEStatus | null>(null)
+  const [info, setInfo] = useState<DatasetInfo | null>(null)
+  const [samples, setSamples] = useState<Sample[]>([])
+  const [gallerySeed, setGallerySeed] = useState(0)
+  const [pipelineId, setPipelineId] = useState<number | null>(null)
+  const [pipelineItem, setPipelineItem] = useState<ReconItem | null>(null)
+  const [projection, setProjection] = useState<Projection | null>(null)
+  const [method, setMethod] = useState<'pca' | 'umap'>('pca')
+  const [neighbors, setNeighbors] = useState<NeighborsResult | null>(null)
+  const [interp, setInterp] = useState<InterpResult | null>(null)
+  const [alpha, setAlpha] = useState(0.5)
+
+  // hiperparámetros del modelo (requieren reentrenar)
+  const [latentDim, setLatentDim] = useState(128)
+  const [lrIdx, setLrIdx] = useState(2)
+  const [epochs, setEpochs] = useState(10)
+  const [loss, setLoss] = useState<'mse' | 'l1'>('mse')
+  // exploración (interactivo)
+  const [noise, setNoise] = useState(0)
+  const [k, setK] = useState(8)
+  const [nClusters, setNClusters] = useState(5)
+  const [steps, setSteps] = useState(6)
+  const [seed, setSeed] = useState(42)
+  const [mode, setMode] = useState<'quick' | 'full'>('quick')
+
+  const [training, setTraining] = useState(false)
+  const [liveLoss, setLiveLoss] = useState<LossPoint[]>([])
+  const [trainInfo, setTrainInfo] = useState<{ epoch: number; epochs: number; loss: number } | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
+
+  const lr = LR_VALUES[lrIdx]
+  const trained = !!status?.trained
+  const outdated =
+    trained &&
+    !!status &&
+    (latentDim !== status.hyperparams.latent_dim ||
+      lr !== status.hyperparams.learning_rate ||
+      epochs !== status.hyperparams.epochs ||
+      loss !== status.hyperparams.loss)
+
+  const run = useCallback(async (fn: () => Promise<void>) => {
+    setBusy(true)
+    setError(null)
+    try {
+      await fn()
+    } catch (e) {
+      setError(errMsg(e))
+    } finally {
+      setBusy(false)
+    }
+  }, [])
+
+  // carga inicial
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const st = await getAEStatus()
+        setStatus(st)
+        setLatentDim(st.hyperparams.latent_dim)
+        setEpochs(st.hyperparams.epochs)
+        setLoss(st.hyperparams.loss)
+        setLrIdx(nearestLrIdx(st.hyperparams.learning_rate))
+        setSeed(st.seed)
+        setInfo(await getDatasetInfo())
+        const sm = await getSamples(8, 0)
+        setSamples(sm)
+        if (st.trained && sm.length) {
+          const pid = sm[0].id
+          setPipelineId(pid)
+          const items = await reconstruct([pid], 0)
+          setPipelineItem(items[0] ?? null)
+          setProjection(await computeClusters(5))
+          setNeighbors(await getNeighbors(pid, 8))
+          const bid = sm[Math.min(1, sm.length - 1)].id
+          setInterp(await interpolate(pid, bid, 6))
+        }
+      } catch (e) {
+        setError(errMsg(e))
+      }
+    })()
+  }, [])
+
+  const selectSample = (id: number) =>
+    run(async () => {
+      setPipelineId(id)
+      const items = await reconstruct([id], noise)
+      setPipelineItem(items[0] ?? null)
+    })
+
+  const shuffle = () =>
+    run(async () => {
+      const s = gallerySeed + 1
+      setGallerySeed(s)
+      setSamples(await getSamples(8, s))
+    })
+
+  const onUpload = (file: File) =>
+    run(async () => {
+      setPipelineItem(await uploadImage(file))
+      setPipelineId(null)
+    })
+
+  const doReconstruct = () =>
+    run(async () => {
+      if (pipelineId == null) return
+      const items = await reconstruct([pipelineId], noise)
+      setPipelineItem(items[0] ?? null)
+    })
+
+  const doNeighbors = () =>
+    run(async () => {
+      if (pipelineId == null) return
+      setNeighbors(await getNeighbors(pipelineId, k))
+    })
+
+  const doClusters = () =>
+    run(async () => {
+      setProjection(await computeClusters(nClusters))
+    })
+
+  const doInterpolate = () =>
+    run(async () => {
+      const a = pipelineId ?? samples[0]?.id ?? 0
+      const b = samples[Math.min(1, samples.length - 1)]?.id ?? a
+      setInterp(await interpolate(a, b, steps))
+    })
+
+  const changeMethod = (m: 'pca' | 'umap') =>
+    run(async () => {
+      setMethod(m)
+      setProjection(await getProjection(m))
+    })
+
+  const onTrain = () => {
+    setError(null)
+    setTraining(true)
+    setLiveLoss([])
+    setTrainInfo(null)
+    const ctrl = new AbortController()
+    abortRef.current = ctrl
+    trainAE(
+      { mode, seed, hyperparams: { latent_dim: latentDim, learning_rate: lr, epochs, loss } },
+      (ev) => {
+        if (ev.type === 'epoch') {
+          setLiveLoss((prev) => [...prev, { epoch: ev.epoch, loss: ev.loss }])
+          setTrainInfo({ epoch: ev.epoch, epochs: ev.epochs, loss: ev.loss })
+        } else if (ev.type === 'done') {
+          setLiveLoss(ev.loss_history)
+        } else if (ev.type === 'error') {
+          setError(ev.message)
+        }
+      },
+      ctrl.signal,
+    )
+      .catch((e) => {
+        if (!ctrl.signal.aborted) setError(errMsg(e))
+      })
+      .finally(() => {
+        setTraining(false)
+        abortRef.current = null
+        // refrescar el estado y los paneles con el modelo recién entrenado
+        run(async () => {
+          const st = await getAEStatus()
+          setStatus(st)
+          if (st.trained && pipelineId != null) {
+            const items = await reconstruct([pipelineId], noise)
+            setPipelineItem(items[0] ?? null)
+            setProjection(await computeClusters(nClusters))
+            setNeighbors(await getNeighbors(pipelineId, k))
+          }
+        })
+      })
+  }
+
+  const onCancel = () => {
+    cancelTraining().catch(() => undefined)
+    abortRef.current?.abort()
+  }
+
+  const statusLine = training ? (
+    trainInfo ? (
+      <>
+        epoch <b>{trainInfo.epoch}/{trainInfo.epochs}</b> · loss{' '}
+        <span className="mono">{trainInfo.loss.toFixed(4)}</span>
+      </>
+    ) : (
+      <>iniciando entrenamiento…</>
+    )
+  ) : outdated ? (
+    <span style={{ color: '#B5740B' }}>cambios sin aplicar — reentrena para verlos</span>
+  ) : trained && status?.loss_history.length ? (
+    <>
+      modelo entrenado · loss final{' '}
+      <span className="mono">{status.loss_history[status.loss_history.length - 1].loss.toFixed(4)}</span>
+    </>
+  ) : (
+    <>sin entrenar — entrena o carga el checkpoint demo</>
+  )
+
   return (
-    <ComingSoon
-      phase="Fase 1"
-      title="Autoencoder"
-      description="Compresión, cuello de botella y estructura del espacio latente. Es el módulo de referencia: aquí vivirán el flujo del modelo, el mapa latente, los vecinos y la interpolación."
-    />
+    <>
+      {error && (
+        <div
+          className="mb-[18px] flex items-center justify-between rounded-[12px] border px-4 py-3 text-[13.5px]"
+          style={{ background: 'var(--pink-soft)', borderColor: '#F6C9DD', color: '#9D2A5E' }}
+        >
+          <span>{error}</span>
+          <button className="gm-btn is-ghost" onClick={() => setError(null)}>
+            cerrar
+          </button>
+        </div>
+      )}
+
+      <div className="mb-[22px] grid items-stretch gap-[22px] grid-cols-1 xl:grid-cols-[minmax(316px,358px)_minmax(0,1fr)_minmax(336px,374px)]">
+        <DatasetCard
+          info={info}
+          samples={samples}
+          onShuffle={shuffle}
+          onUpload={onUpload}
+          onSelect={selectSample}
+          busy={busy}
+        />
+
+        <div className="flex min-w-0 flex-col gap-[22px]">
+          <ModelFlowCard item={pipelineItem} latentDim={latentDim} />
+          <LatentMap projection={projection} method={method} onMethodChange={changeMethod} loading={busy && !projection} />
+        </div>
+
+        {/* Controles */}
+        <Card rise={3}>
+          <CardHeader title="Controles" />
+
+          <div className="gm-group-head">
+            <span className="t">Parámetros del modelo</span>
+            <Tag variant="warn">requiere reentrenar</Tag>
+          </div>
+          <Slider label="latent_dim" value={latentDim} min={16} max={256} step={8} onChange={setLatentDim} />
+          <Slider label="learning_rate" value={lrIdx} min={0} max={LR_VALUES.length - 1} onChange={setLrIdx} format={() => lr} />
+          <Slider label="epochs" value={epochs} min={1} max={100} onChange={setEpochs} />
+          <div className="gm-ctrl">
+            <div className="row" style={{ marginBottom: 0 }}>
+              <span className="name">loss</span>
+              <SegmentedControl
+                value={loss}
+                onChange={setLoss}
+                options={[
+                  { label: 'MSE', value: 'mse' },
+                  { label: 'L1', value: 'l1' },
+                ]}
+              />
+            </div>
+          </div>
+
+          <div className="gm-divider" />
+
+          <div className="gm-group-head">
+            <span className="t">Parámetros de exploración</span>
+            <Tag variant="live">interactivo</Tag>
+          </div>
+          <Slider label="ruido en z" value={Math.round(noise * 100)} min={0} max={100} onChange={(v) => setNoise(v / 100)} format={(v) => (v / 100).toFixed(2)} />
+          <Slider label="k vecinos" value={k} min={1} max={24} onChange={setK} />
+          <Slider label="n clusters" value={nClusters} min={2} max={12} onChange={setNClusters} />
+          <Slider label="pasos interpolación" value={steps} min={2} max={12} onChange={setSteps} />
+
+          <div className="gm-ctrl">
+            <div className="row">
+              <span className="name">seed</span>
+              <input
+                type="number"
+                className="gm-val"
+                style={{ width: 72 }}
+                value={seed}
+                onChange={(e) => setSeed(Number(e.target.value))}
+              />
+            </div>
+          </div>
+
+          <StatusLine>{statusLine}</StatusLine>
+
+          {liveLoss.length > 0 && <TrainingChart points={liveLoss} className="mb-3" />}
+
+          <div className="mb-[11px]">
+            <SegmentedControl
+              value={mode}
+              onChange={setMode}
+              options={[
+                { label: 'Rápido', value: 'quick' },
+                { label: 'Completo', value: 'full' },
+              ]}
+            />
+          </div>
+
+          <div className="actions grid grid-cols-2 gap-[11px]">
+            {training ? (
+              <Button variant="primary" full className="col-span-2" onClick={onCancel}>
+                Cancelar entrenamiento
+              </Button>
+            ) : (
+              <Button variant="primary" full className="col-span-2" icon={<PlayIcon />} onClick={onTrain} disabled={busy}>
+                Entrenar
+              </Button>
+            )}
+            <Button icon={<RefreshIcon />} onClick={doReconstruct} disabled={!trained || busy || training}>
+              Reconstruir
+            </Button>
+            <Button icon={<SearchIcon />} onClick={doNeighbors} disabled={!trained || busy || training}>
+              Buscar similares
+            </Button>
+            <Button className="col-span-2" icon={<InterpolateIcon />} onClick={doInterpolate} disabled={!trained || busy || training}>
+              Interpolar
+            </Button>
+            <Button className="col-span-2" icon={<ClustersIcon />} onClick={doClusters} disabled={!trained || busy || training}>
+              Calcular clusters
+            </Button>
+          </div>
+        </Card>
+      </div>
+
+      <ResultsCard neighbors={neighbors} interp={interp} alpha={alpha} onAlpha={setAlpha} />
+    </>
   )
 }

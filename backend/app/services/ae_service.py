@@ -243,7 +243,7 @@ class AEService:
         return True
 
     # ---------- reconstrucción ----------
-    def reconstruct(self, ids: list[int]) -> list[dict]:
+    def reconstruct(self, ids: list[int], noise: float = 0.0) -> list[dict]:
         if self.model is None:
             raise RuntimeError("modelo no entrenado")
         arr = dataset.load_array()
@@ -255,8 +255,10 @@ class AEService:
                 if i < 0 or i >= n:
                     continue
                 x = imaging.uint8_to_tensor(np.asarray(arr[i])).to(self.device)
-                recon, _ = self.model(x.unsqueeze(0))
-                recon = recon[0]
+                z = self.model.encode(x.unsqueeze(0))
+                if noise > 0:
+                    z = z + noise * torch.randn_like(z)
+                recon = self.model.decode(z)[0]
                 out.append(
                     {
                         "id": int(i),

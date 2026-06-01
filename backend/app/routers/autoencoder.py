@@ -32,6 +32,7 @@ class TrainRequest(BaseModel):
 
 class ReconstructRequest(BaseModel):
     ids: list[int]
+    noise: float = 0.0
 
 
 class NeighborsRequest(BaseModel):
@@ -101,7 +102,7 @@ def cancel() -> dict:
 @router.post("/reconstruct")
 def reconstruct(req: ReconstructRequest) -> dict:
     _require_model()
-    return {"items": ae_service.reconstruct(req.ids)}
+    return {"items": ae_service.reconstruct(req.ids, req.noise)}
 
 
 @router.get("/projection")
