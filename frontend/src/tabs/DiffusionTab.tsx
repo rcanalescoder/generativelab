@@ -34,6 +34,7 @@ const DEFAULTS = {
   epochs: 18,
   seed: 42,
   mode: 'quick' as const,
+  earlyStop: true,
   genN: 6,
   genSeed: 42,
   genSteps: 50,
@@ -65,10 +66,12 @@ export function DiffusionTab() {
   const [epochs, setEpochs] = useState(DEFAULTS.epochs)
   const [seed, setSeed] = useState(DEFAULTS.seed)
   const [mode, setMode] = useState<'quick' | 'full'>(DEFAULTS.mode)
+  const [earlyStop, setEarlyStop] = useState(DEFAULTS.earlyStop)
 
   const [training, setTraining] = useState(false)
   const [liveLoss, setLiveLoss] = useState<LossPoint[]>([])
   const [trainInfo, setTrainInfo] = useState<{ epoch: number; epochs: number; loss: number } | null>(null)
+  const [stoppedEarly, setStoppedEarly] = useState<number | null>(null)
   const [preview, setPreview] = useState<string[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
@@ -150,11 +153,12 @@ export function DiffusionTab() {
     setTraining(true)
     setLiveLoss([])
     setTrainInfo(null)
+    setStoppedEarly(null)
     setPreview(null)
     const ctrl = new AbortController()
     abortRef.current = ctrl
     trainDiffusion(
-      { mode, seed, hyperparams: { learning_rate: lr, epochs } },
+      { mode, seed, early_stop: earlyStop, hyperparams: { learning_rate: lr, epochs } },
       (ev) => {
         if (ev.type === 'epoch') {
           setLiveLoss((prev) => [...prev, { epoch: ev.epoch, loss: ev.loss }])
@@ -166,6 +170,7 @@ export function DiffusionTab() {
           )
         } else if (ev.type === 'done') {
           setLiveLoss(ev.loss_history)
+          if (ev.stopped_early) setStoppedEarly(ev.epochs_run ?? ev.loss_history.length)
         } else if (ev.type === 'error') {
           setError(ev.message)
         }
@@ -204,6 +209,7 @@ export function DiffusionTab() {
     setEpochs(DEFAULTS.epochs)
     setSeed(DEFAULTS.seed)
     setMode(DEFAULTS.mode)
+    setEarlyStop(DEFAULTS.earlyStop)
   }
 
   const statusLine = training ? (
@@ -221,6 +227,9 @@ export function DiffusionTab() {
     <>
       modelo entrenado · loss final{' '}
       <span className="mono">{status.loss_history[status.loss_history.length - 1].loss.toFixed(4)}</span>
+      {stoppedEarly != null && (
+        <span style={{ color: '#0a6b4e' }}> · parado temprano (epoch {stoppedEarly}, sin mejora)</span>
+      )}
     </>
   ) : (
     <>sin entrenar — entrena o genera el checkpoint demo</>
@@ -509,6 +518,20 @@ export function DiffusionTab() {
               </div>
             </div>
           )}
+
+          <div className="gm-ctrl">
+            <div className="row" style={{ marginBottom: 0 }}>
+              <span className="name">early stop</span>
+              <SegmentedControl
+                value={earlyStop ? 'on' : 'off'}
+                onChange={(v) => setEarlyStop(v === 'on')}
+                options={[
+                  { label: 'Sí', value: 'on' },
+                  { label: 'No', value: 'off' },
+                ]}
+              />
+            </div>
+          </div>
 
           <div className="mb-[11px]">
             <SegmentedControl

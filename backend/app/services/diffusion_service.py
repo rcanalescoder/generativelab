@@ -39,10 +39,10 @@ from ..seeding import set_seed
 
 DEMO_PATH = Path(__file__).resolve().parents[1] / "checkpoints" / "diffusion_demo.pt"
 
-QUICK_N = 4000          # subconjunto para el modo "quick"
-QUICK_MAX_EPOCHS = 8
+QUICK_N = 4000          # subconjunto para el modo "quick" (solo cambia el tamaño de datos)
 DEMO_EPOCHS = 18        # checkpoint demo (modo full, acotado)
 LOG_EVERY = 20          # steps entre eventos de progreso
+EARLY_STOP_MIN_DELTA = 1e-4  # mejora mínima de pérdida por epoch para resetear la paciencia
 PREVIEW_N = 6           # nº de caras del grid de vista previa por epoch
 PREVIEW_STEPS = 40      # pasos de muestreo de la vista previa (rápida)
 DISPLAY_SIZE = 64       # resolución a la que reescalamos para mostrar
@@ -124,11 +124,16 @@ class DiffusionService:
         return imaging.tensor_to_b64(up)
 
     # ---------- entrenamiento ----------
-    def iter_train(self, mode: str, hp: DiffusionHyperParams, seed: int) -> Iterator[dict]:
+    def iter_train(
+        self, mode: str, hp: DiffusionHyperParams, seed: int, early_stop: bool = True, patience: int = 5
+    ) -> Iterator[dict]:
         """Entrena el denoising emitiendo eventos {type, epoch, step, loss, preview?}.
 
         Adopta el modelo en memoria al terminar; NO guarda checkpoint (igual que el AE: la
         app no toca el demo; el modelo entrenado vive durante esta sesión del servidor).
+
+        El número de epochs del slider se respeta siempre; "quick" solo reduce el tamaño del
+        subconjunto. Con early_stop, para antes si la pérdida no mejora durante `patience` epochs.
         """
         if self.training:
             yield {"type": "error", "message": "Ya hay un entrenamiento en curso"}
@@ -142,7 +147,7 @@ class DiffusionService:
             n_total = dataset.count()
             quick = mode == "quick"
             n_use = min(QUICK_N, n_total) if quick else n_total
-            epochs = min(hp.epochs, QUICK_MAX_EPOCHS) if quick else hp.epochs
+            epochs = hp.epochs
 
             model = TimeUNet().to(self.device)
             model.train()
@@ -157,6 +162,9 @@ class DiffusionService:
 
             history: list[dict] = []
             global_step = 0
+            best = float("inf")
+            no_improve = 0
+            stopped_early = False
             yield {"type": "start", "epochs": epochs, "n": int(n_use), "mode": mode,
                    "hyperparams": asdict(hp), "seed": seed}
 
@@ -187,6 +195,15 @@ class DiffusionService:
                 history.append({"epoch": epoch, "loss": epoch_loss})
                 yield {"type": "epoch", "epoch": epoch, "epochs": epochs, "step": global_step,
                        "loss": epoch_loss, "preview": self._preview_grid(model)}
+                if early_stop:
+                    if epoch_loss < best - EARLY_STOP_MIN_DELTA:
+                        best = epoch_loss
+                        no_improve = 0
+                    else:
+                        no_improve += 1
+                        if no_improve >= patience:
+                            stopped_early = True
+                            break
 
             # finalizar: adoptar el modelo entrenado (sin tocar el checkpoint demo)
             model.eval()
@@ -195,12 +212,15 @@ class DiffusionService:
             self.seed = seed
             self.trained = True
             self.loss_history = history
-            yield {"type": "done", "epochs": epochs,
+            yield {"type": "done", "epochs": epochs, "epochs_run": len(history),
+                   "stopped_early": stopped_early,
                    "loss": history[-1]["loss"] if history else None, "loss_history": history}
         finally:
             self.training = False
 
-    def start_training(self, mode: str, hp: DiffusionHyperParams, seed: int) -> "queue.Queue":
+    def start_training(
+        self, mode: str, hp: DiffusionHyperParams, seed: int, early_stop: bool = True
+    ) -> "queue.Queue":
         """Arranca el entrenamiento en un hilo propio y devuelve una cola de eventos.
 
         Desacopla el entrenamiento de la conexión del cliente: aunque el navegador se vaya,
@@ -214,7 +234,7 @@ class DiffusionService:
 
         def worker() -> None:
             try:
-                for ev in self.iter_train(mode, hp, seed):
+                for ev in self.iter_train(mode, hp, seed, early_stop=early_stop):
                     q.put(ev)
             except Exception as exc:  # pragma: no cover - defensivo
                 q.put({"type": "error", "message": str(exc)})
@@ -316,13 +336,18 @@ diffusion_service = DiffusionService()
 
 if __name__ == "__main__":
     # Genera el checkpoint demo:  python -m app.services.diffusion_service
+    # Demo acotado a un subconjunto para que termine en tiempo razonable. El checkpoint no se
+    # versiona (cada usuario lo regenera con este comando). Esto NO afecta al botón "Rápido"
+    # interactivo de la app: aquí se reescriben las constantes solo en este proceso.
+    QUICK_N = 8000
+    DEMO_EPOCHS = 10
     svc = DiffusionService()
     print(
-        f"[diffusion] entrenando checkpoint demo (full, {DEMO_EPOCHS} epochs, "
+        f"[diffusion] entrenando checkpoint demo (subconjunto {QUICK_N}, {DEMO_EPOCHS} epochs, "
         f"T={TIMESTEPS}) en {svc.device.type}…",
         flush=True,
     )
-    for ev in svc.iter_train("full", DiffusionHyperParams(epochs=DEMO_EPOCHS), seed=42):
+    for ev in svc.iter_train("quick", DiffusionHyperParams(epochs=DEMO_EPOCHS), seed=42):
         if ev["type"] == "step":
             print(f"[diffusion]   step {ev['step']} · loss {ev['loss']:.5f}", flush=True)
         elif ev["type"] == "epoch":

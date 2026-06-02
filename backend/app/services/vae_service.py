@@ -23,10 +23,10 @@ from ..seeding import set_seed
 
 DEMO_PATH = Path(__file__).resolve().parents[1] / "checkpoints" / "vae_demo.pt"
 
-QUICK_N = 6000          # subconjunto para el modo "quick"
-QUICK_MAX_EPOCHS = 6
+QUICK_N = 6000          # subconjunto para el modo "quick" (solo cambia el tamaño de datos)
 DEMO_EPOCHS = 12        # checkpoint demo (modo full)
 LOG_EVERY = 25          # steps entre eventos de progreso
+EARLY_STOP_MIN_DELTA = 1e-4  # mejora mínima de pérdida por epoch para resetear la paciencia
 PREVIEW_IDS = [12, 800, 4096, 20000]  # caras fijas para la vista previa
 EMBED_SAMPLE = 1200     # nº de z muestreados para el mapa latente / vecinos / clusters
 
@@ -127,11 +127,17 @@ class VAEService:
         return [imaging.tensor_to_b64(xh[k]) for k in range(len(ids))]
 
     # ---------- entrenamiento ----------
-    def iter_train(self, mode: str, hp: VAEHyperParams, seed: int) -> Iterator[dict]:
+    def iter_train(
+        self, mode: str, hp: VAEHyperParams, seed: int, early_stop: bool = True, patience: int = 5
+    ) -> Iterator[dict]:
         """Entrena emitiendo eventos {type, epoch, step, loss, recon_loss, kl_loss, preview?}.
 
         La pérdida es `recon + β·KL`. En cada epoch se emiten también `recon_loss` y `kl_loss`
         por separado para poder graficar el trade-off reconstrucción ↔ regularidad.
+
+        El número de epochs del slider se respeta siempre; "quick" solo reduce el tamaño del
+        subconjunto. Con early_stop, para antes si la pérdida TOTAL no mejora durante `patience`
+        epochs.
         """
         if self.training:
             yield {"type": "error", "message": "Ya hay un entrenamiento en curso"}
@@ -144,7 +150,7 @@ class VAEService:
             n_total = dataset.count()
             quick = mode == "quick"
             n_use = min(QUICK_N, n_total) if quick else n_total
-            epochs = min(hp.epochs, QUICK_MAX_EPOCHS) if quick else hp.epochs
+            epochs = hp.epochs
 
             model = ConvVAE(hp.latent_dim).to(self.device)
             model.train()
@@ -160,6 +166,9 @@ class VAEService:
 
             history: list[dict] = []
             global_step = 0
+            best = float("inf")
+            no_improve = 0
+            stopped_early = False
             yield {"type": "start", "epochs": epochs, "n": int(n_use), "mode": mode,
                    "hyperparams": asdict(hp), "seed": seed}
 
@@ -199,6 +208,15 @@ class VAEService:
                 yield {"type": "epoch", "epoch": epoch, "epochs": epochs, "step": global_step,
                        "loss": epoch_loss, "recon_loss": epoch_recon, "kl_loss": epoch_kl,
                        "preview": self._preview(model)}
+                if early_stop:
+                    if epoch_loss < best - EARLY_STOP_MIN_DELTA:
+                        best = epoch_loss
+                        no_improve = 0
+                    else:
+                        no_improve += 1
+                        if no_improve >= patience:
+                            stopped_early = True
+                            break
 
             # finalizar: adoptar el modelo entrenado (en memoria) — NO se escribe el checkpoint
             model.eval()
@@ -212,13 +230,16 @@ class VAEService:
             # IMPORTANTE: como en el AE, el entrenamiento en la app NO toca el checkpoint demo. El
             # modelo entrenado vive en memoria durante esta sesión del servidor; al reiniciar se
             # vuelve al demo pristino. Así, experimentar nunca degrada el estado base.
-            yield {"type": "done", "epochs": epochs,
+            yield {"type": "done", "epochs": epochs, "epochs_run": len(history),
+                   "stopped_early": stopped_early,
                    "loss": history[-1]["loss"] if history else None,
                    "loss_history": history}
         finally:
             self.training = False
 
-    def start_training(self, mode: str, hp: VAEHyperParams, seed: int) -> "queue.Queue":
+    def start_training(
+        self, mode: str, hp: VAEHyperParams, seed: int, early_stop: bool = True
+    ) -> "queue.Queue":
         """Arranca el entrenamiento en un hilo propio y devuelve una cola de eventos.
 
         Desacopla el ciclo de vida del entrenamiento de la conexión del cliente: aunque el
@@ -233,7 +254,7 @@ class VAEService:
 
         def worker() -> None:
             try:
-                for ev in self.iter_train(mode, hp, seed):
+                for ev in self.iter_train(mode, hp, seed, early_stop=early_stop):
                     q.put(ev)
             except Exception as exc:  # pragma: no cover - defensivo
                 q.put({"type": "error", "message": str(exc)})

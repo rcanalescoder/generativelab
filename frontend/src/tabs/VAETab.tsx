@@ -65,6 +65,7 @@ const DEFAULTS = {
   steps: 6,
   seed: 42,
   mode: 'quick' as const,
+  earlyStop: true,
   genN: 8,
   genSeed: 42,
 }
@@ -108,10 +109,12 @@ export function VAETab() {
   const [steps, setSteps] = useState(DEFAULTS.steps)
   const [seed, setSeed] = useState(DEFAULTS.seed)
   const [mode, setMode] = useState<'quick' | 'full'>(DEFAULTS.mode)
+  const [earlyStop, setEarlyStop] = useState(DEFAULTS.earlyStop)
 
   const [training, setTraining] = useState(false)
   const [liveLoss, setLiveLoss] = useState<VAELossPoint[]>([])
   const [trainInfo, setTrainInfo] = useState<{ epoch: number; epochs: number; loss: number; recon: number; kl: number } | null>(null)
+  const [stoppedEarly, setStoppedEarly] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
   const [genBusy, setGenBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -254,16 +257,18 @@ export function VAETab() {
     setTraining(true)
     setLiveLoss([])
     setTrainInfo(null)
+    setStoppedEarly(null)
     const ctrl = new AbortController()
     abortRef.current = ctrl
     trainVAE(
-      { mode, seed, hyperparams: { latent_dim: latentDim, learning_rate: lr, epochs, loss, beta } },
+      { mode, seed, early_stop: earlyStop, hyperparams: { latent_dim: latentDim, learning_rate: lr, epochs, loss, beta } },
       (ev) => {
         if (ev.type === 'epoch') {
           setLiveLoss((prev) => [...prev, { epoch: ev.epoch, loss: ev.loss, recon: ev.recon_loss, kl: ev.kl_loss }])
           setTrainInfo({ epoch: ev.epoch, epochs: ev.epochs, loss: ev.loss, recon: ev.recon_loss, kl: ev.kl_loss })
         } else if (ev.type === 'done') {
           setLiveLoss(ev.loss_history)
+          if (ev.stopped_early) setStoppedEarly(ev.epochs_run ?? ev.loss_history.length)
         } else if (ev.type === 'error') {
           setError(ev.message)
         }
@@ -310,6 +315,7 @@ export function VAETab() {
     setSteps(DEFAULTS.steps)
     setSeed(DEFAULTS.seed)
     setMode(DEFAULTS.mode)
+    setEarlyStop(DEFAULTS.earlyStop)
   }
 
   const applyGrid = (cfg: GridConfig) => {
@@ -336,6 +342,9 @@ export function VAETab() {
     <>
       modelo entrenado · loss final{' '}
       <span className="mono">{status.loss_history[status.loss_history.length - 1].loss.toFixed(4)}</span>
+      {stoppedEarly != null && (
+        <span style={{ color: '#0a6b4e' }}> · parado temprano (epoch {stoppedEarly}, sin mejora)</span>
+      )}
     </>
   ) : (
     <>sin entrenar — entrena o carga el checkpoint demo</>
@@ -578,6 +587,20 @@ export function VAETab() {
               </div>
             </div>
           )}
+
+          <div className="gm-ctrl">
+            <div className="row" style={{ marginBottom: 0 }}>
+              <span className="name">early stop</span>
+              <SegmentedControl
+                value={earlyStop ? 'on' : 'off'}
+                onChange={(v) => setEarlyStop(v === 'on')}
+                options={[
+                  { label: 'Sí', value: 'on' },
+                  { label: 'No', value: 'off' },
+                ]}
+              />
+            </div>
+          </div>
 
           <div className="mb-[11px]">
             <SegmentedControl

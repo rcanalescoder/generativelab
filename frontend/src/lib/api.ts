@@ -103,7 +103,14 @@ export type TrainEvent =
   | { type: 'start'; epochs: number; n: number; mode: string; seed: number; hyperparams: AEHyperParams }
   | { type: 'step'; epoch: number; step: number; loss: number }
   | { type: 'epoch'; epoch: number; epochs: number; step: number; loss: number; preview: string[] }
-  | { type: 'done'; epochs: number; loss: number | null; loss_history: LossPoint[] }
+  | {
+      type: 'done'
+      epochs: number
+      epochs_run?: number
+      stopped_early?: boolean
+      loss: number | null
+      loss_history: LossPoint[]
+    }
   | { type: 'cancelled'; epoch: number; step: number }
   | { type: 'error'; message: string }
 
@@ -195,6 +202,7 @@ export interface TrainRequest {
   mode: 'full' | 'quick'
   seed: number
   hyperparams: Partial<AEHyperParams>
+  early_stop?: boolean
 }
 
 /** Lee un stream SSE de un POST con body y llama onEvent por cada evento `data:`. */

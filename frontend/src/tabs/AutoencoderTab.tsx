@@ -54,6 +54,7 @@ const DEFAULTS = {
   steps: 6,
   seed: 42,
   mode: 'quick' as const,
+  earlyStop: true,
 }
 
 export function AutoencoderTab() {
@@ -84,10 +85,12 @@ export function AutoencoderTab() {
   const [steps, setSteps] = useState(6)
   const [seed, setSeed] = useState(42)
   const [mode, setMode] = useState<'quick' | 'full'>('quick')
+  const [earlyStop, setEarlyStop] = useState(true)
 
   const [training, setTraining] = useState(false)
   const [liveLoss, setLiveLoss] = useState<LossPoint[]>([])
   const [trainInfo, setTrainInfo] = useState<{ epoch: number; epochs: number; loss: number } | null>(null)
+  const [stoppedEarly, setStoppedEarly] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [gridOpen, setGridOpen] = useState(false)
@@ -212,16 +215,18 @@ export function AutoencoderTab() {
     setTraining(true)
     setLiveLoss([])
     setTrainInfo(null)
+    setStoppedEarly(null)
     const ctrl = new AbortController()
     abortRef.current = ctrl
     trainAE(
-      { mode, seed, hyperparams: { latent_dim: latentDim, learning_rate: lr, epochs, loss } },
+      { mode, seed, early_stop: earlyStop, hyperparams: { latent_dim: latentDim, learning_rate: lr, epochs, loss } },
       (ev) => {
         if (ev.type === 'epoch') {
           setLiveLoss((prev) => [...prev, { epoch: ev.epoch, loss: ev.loss }])
           setTrainInfo({ epoch: ev.epoch, epochs: ev.epochs, loss: ev.loss })
         } else if (ev.type === 'done') {
           setLiveLoss(ev.loss_history)
+          if (ev.stopped_early) setStoppedEarly(ev.epochs_run ?? ev.loss_history.length)
         } else if (ev.type === 'error') {
           setError(ev.message)
         }
@@ -264,6 +269,7 @@ export function AutoencoderTab() {
     setSteps(DEFAULTS.steps)
     setSeed(DEFAULTS.seed)
     setMode(DEFAULTS.mode)
+    setEarlyStop(DEFAULTS.earlyStop)
   }
 
   const applyGrid = (cfg: GridConfig) => {
@@ -288,6 +294,9 @@ export function AutoencoderTab() {
     <>
       modelo entrenado · loss final{' '}
       <span className="mono">{status.loss_history[status.loss_history.length - 1].loss.toFixed(4)}</span>
+      {stoppedEarly != null && (
+        <span style={{ color: '#0a6b4e' }}> · parado temprano (epoch {stoppedEarly}, sin mejora)</span>
+      )}
     </>
   ) : (
     <>sin entrenar — entrena o carga el checkpoint demo</>
@@ -430,6 +439,20 @@ export function AutoencoderTab() {
           <StatusLine>{statusLine}</StatusLine>
 
           {liveLoss.length > 0 && <TrainingChart points={liveLoss} className="mb-3" />}
+
+          <div className="gm-ctrl">
+            <div className="row" style={{ marginBottom: 0 }}>
+              <span className="name">early stop</span>
+              <SegmentedControl
+                value={earlyStop ? 'on' : 'off'}
+                onChange={(v) => setEarlyStop(v === 'on')}
+                options={[
+                  { label: 'Sí', value: 'on' },
+                  { label: 'No', value: 'off' },
+                ]}
+              />
+            </div>
+          </div>
 
           <div className="mb-[11px]">
             <SegmentedControl

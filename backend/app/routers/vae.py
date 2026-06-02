@@ -30,6 +30,7 @@ class TrainRequest(BaseModel):
     mode: str = "quick"  # "full" | "quick"
     seed: int = 42
     hyperparams: HyperParamsIn = Field(default_factory=HyperParamsIn)
+    early_stop: bool = True
 
 
 class ReconstructRequest(BaseModel):
@@ -90,7 +91,7 @@ def set_hyperparams(req: HyperParamsIn) -> dict:
 async def train(req: TrainRequest, request: Request) -> StreamingResponse:
     merged = {**asdict(vae_service.hp), **{k: v for k, v in req.hyperparams.model_dump().items() if v is not None}}
     hp = VAEHyperParams(**merged)
-    events = vae_service.start_training(req.mode, hp, req.seed)
+    events = vae_service.start_training(req.mode, hp, req.seed, req.early_stop)
 
     async def gen():
         while True:

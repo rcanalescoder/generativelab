@@ -76,7 +76,14 @@ export type VAETrainEvent =
       kl_loss: number
       preview: string[]
     }
-  | { type: 'done'; epochs: number; loss: number | null; loss_history: VAELossPoint[] }
+  | {
+      type: 'done'
+      epochs: number
+      epochs_run?: number
+      stopped_early?: boolean
+      loss: number | null
+      loss_history: VAELossPoint[]
+    }
   | { type: 'cancelled'; epoch: number; step: number }
   | { type: 'error'; message: string }
 
@@ -84,6 +91,7 @@ export interface VAETrainRequest {
   mode: 'full' | 'quick'
   seed: number
   hyperparams: Partial<VAEHyperParams>
+  early_stop?: boolean
 }
 
 // ---------- estado / hiperparámetros ----------

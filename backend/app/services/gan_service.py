@@ -32,8 +32,7 @@ from ..seeding import set_seed
 
 DEMO_PATH = Path(__file__).resolve().parents[1] / "checkpoints" / "gan_demo.pt"
 
-QUICK_N = 6000           # subconjunto para el modo "quick"
-QUICK_MAX_EPOCHS = 6
+QUICK_N = 6000           # subconjunto para el modo "quick" (solo cambia el tamaño de datos)
 DEMO_N = 15000           # subconjunto para el checkpoint demo (acota el tiempo)
 DEMO_EPOCHS = 25
 LOG_EVERY = 25           # steps entre eventos de progreso
@@ -151,7 +150,8 @@ class GANService:
             n_use = min(QUICK_N, n_total) if quick else n_total
             if n_override is not None:
                 n_use = min(n_override, n_total)
-            epochs = min(hp.epochs, QUICK_MAX_EPOCHS) if quick else hp.epochs
+            # El nº de epochs del slider se respeta siempre; "quick" solo reduce el subconjunto.
+            epochs = hp.epochs
 
             generator = Generator(hp.z_dim).to(self.device)
             discriminator = Discriminator().to(self.device)

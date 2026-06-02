@@ -35,6 +35,7 @@ class TrainRequest(BaseModel):
     mode: str = "quick"  # "full" | "quick"
     seed: int = 42
     hyperparams: HyperParamsIn = Field(default_factory=HyperParamsIn)
+    early_stop: bool = True
 
 
 class GenerateRequest(BaseModel):
@@ -71,7 +72,7 @@ async def train(req: TrainRequest, request: Request) -> StreamingResponse:
         **{k: v for k, v in req.hyperparams.model_dump().items() if v is not None},
     }
     hp = DiffusionHyperParams(**merged)
-    events = diffusion_service.start_training(req.mode, hp, req.seed)
+    events = diffusion_service.start_training(req.mode, hp, req.seed, req.early_stop)
 
     async def gen():
         while True:
