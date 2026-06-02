@@ -97,220 +97,411 @@
   table.compare th{ background:#f6f7f9; padding:7px 8px; text-align:left; border-bottom:2px solid var(--line); font-size:8.5pt; }
   table.compare td{ padding:7px 8px; border-bottom:1px solid #f1f2f5; color:var(--slate); }
   table.compare td:first-child{ font-weight:600; color:var(--ink); }
+
+  /* ---------- añadidos pedagógicos (no rompen lo anterior) ---------- */
+  /* caja de analogía: amable, para el público general */
+  .analogy{ display:flex; gap:12px; align-items:flex-start; background:var(--accent-soft,#eff4fe);
+    border:1px solid var(--line); border-radius:12px; padding:13px 16px; margin:10px 0; }
+  .analogy .ic{ font-size:20pt; line-height:1; flex:none; }
+  .analogy .t{ font-weight:700; color:var(--accent,#2563eb); font-size:10.5pt; margin-bottom:2px; }
+  .analogy .bd{ color:var(--slate); }
+
+  /* tarjetas "¿para qué sirve?" */
+  .uses{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:10px 0; }
+  .use{ border:1px solid var(--line); border-radius:11px; padding:11px 13px; background:#fff; }
+  .use .h{ font-weight:700; font-size:10pt; color:var(--ink); margin-bottom:2px; display:flex; gap:7px; align-items:center; }
+  .use .h .e{ font-size:13pt; }
+  .use p{ margin:0; color:var(--slate); font-size:9.6pt; }
+
+  /* mini-pipeline de capas (estructura de la red) */
+  .pipe{ display:flex; align-items:stretch; gap:0; flex-wrap:wrap; margin:10px 0; }
+  .pipe .stage{ flex:1 1 0; min-width:24mm; border:1px solid var(--line); border-radius:10px;
+    padding:9px 10px; background:#fff; text-align:center; }
+  .pipe .stage .nm{ font-weight:700; font-size:9.3pt; color:var(--accent,#2563eb); }
+  .pipe .stage .dim{ font-family:"SFMono-Regular",Menlo,monospace; font-size:8.4pt; color:var(--slate); margin-top:3px; }
+  .pipe .arrow{ align-self:center; color:var(--muted); font-size:12pt; padding:0 5px; flex:none; }
+
+  /* término del glosario inline */
+  .term{ font-weight:700; color:var(--accent,#2563eb); }
+  /* subtítulo pequeño bajo un h3.sub */
+  .lead{ color:var(--slate); font-size:10.2pt; margin:-2px 0 8px; }
+  /* recuadro "en una frase" para conclusiones */
+  .takeaway{ background:#f0fdf9; border:1px solid #c7eede; border-left:4px solid #0c9f6e; border-radius:10px;
+    padding:11px 15px; margin:10px 0; }
+  .takeaway .t{ font-weight:700; color:#0a6b4e; font-size:10.5pt; margin-bottom:3px; }
+  .takeaway .bd{ color:#155e4a; }
+  /* impresión: evitar encabezados huérfanos y partir figuras/bloques entre páginas */
+  h3.sub{ break-after:avoid; page-break-after:avoid; }
+  figure,.pm,.bars,.uses,.analogy,.takeaway,.pipe,table.compare,table.params,.defs{
+    break-inside:avoid; page-break-inside:avoid; }
 </style>
 </head>
 <body>
 
 <!-- ============ PORTADA ============ -->
 <section class="cover">
-  <div class="kicker">Cuaderno de laboratorio</div>
-  <h1>Laboratorio de<br/>Modelos Generativos</h1>
-  <div class="sub">Aprender, de lo más básico a lo más avanzado, cómo una red neuronal aprende a crear imágenes — y cómo un bucle de mejora agéntica nos lleva de "funciona regular" a "funciona bien".</div>
+  <div class="kicker">Recorrido didáctico</div>
+  <h1>Cómo aprende<br/>una IA a crear<br/>imágenes</h1>
+  <div class="sub">Un viaje visual por los cuatro grandes modelos generativos —de lo más sencillo a lo más avanzado— explicado para que se entienda sin necesidad de saber de inteligencia artificial. Cada tecnicismo, aclarado al momento.</div>
   <div class="chips">
     <span class="chip">Autoencoder</span>
     <span class="chip">VAE</span>
     <span class="chip">GAN</span>
     <span class="chip">Diffusion</span>
   </div>
-  <div class="foot"><span>Herramienta local · React + FastAPI + PyTorch (Apple Silicon / MPS)</span><span>Dataset: 43.102 caras de anime · 64×64</span></div>
+  <div class="foot"><span>Laboratorio interactivo · se ejecuta en un portátil normal</span><span>Aprende con 43.102 caras de dibujo (anime) de 64×64 píxeles</span></div>
 </section>
 
 <!-- ============ INTRODUCCIÓN ============ -->
 <section class="section">
-  <div class="band b-ink"><div class="n">INTRODUCCIÓN</div><h2>¿Qué queremos aprender?</h2>
+  <div class="band b-ink"><div class="n">PARA EMPEZAR</div><h2>¿De qué va todo esto?</h2>
     <div class="tag">Una escalera de cuatro modelos, del más simple al más capaz</div></div>
   <div class="pad">
-    <p>Este cuaderno acompaña a un <b>laboratorio visual interactivo</b> creado para <i>entender</i> los modelos generativos de imágenes. En lugar de leer fórmulas, se tocan los parámetros, se entrena en vivo y se ve —literalmente— qué aprende cada red. Todo corre en local sobre un conjunto de <b>43.102 caras de anime de 64×64</b>, sin etiquetas.</p>
-    <p>Recorremos cuatro modelos en orden creciente de sofisticación. Cada uno resuelve una limitación del anterior:</p>
+    <p>Seguro que has oído hablar de la <b>inteligencia artificial que crea imágenes</b>: herramientas que dibujan un retrato, rejuvenecen una foto o inventan un paisaje que no existe. Detrás de casi todas hay un puñado de ideas que se pueden entender sin matemáticas. Este documento las recorre una a una, de la más sencilla a la más potente.</p>
+    <p>Para hacerlo, construimos un <b>laboratorio visual</b>: un pequeño programa donde se entrena cada modelo en directo y se ve —literalmente, con imágenes— qué está aprendiendo. Todo funciona en un portátil corriente, sin servidores ni nube, usando una colección de <b>43.102 caras de dibujo estilo anime</b>, cada una de 64×64 píxeles (una imagen diminuta, del tamaño de un icono). El modelo nunca recibe pistas del tipo «esto es pelo» o «esto es un ojo»: solo ve los píxeles y tiene que apañárselas solo.</p>
+
+    <h3 class="sub">Los cuatro protagonistas</h3>
+    <p class="lead">Cada modelo arregla una carencia del anterior. Esta es la idea de cada uno en una frase; el resto del documento los desarrolla.</p>
     <div class="defs" style="--accent:#2563eb">
-      <dt>Autoencoder</dt><dd>Comprime una imagen a un código pequeño <span class="mono">z</span> y la reconstruye. Es la base: encoder, decoder y espacio latente.</dd>
-      <dt>VAE</dt><dd>Convierte ese latente en una <i>distribución</i> ordenada; por eso ya puede <b>generar</b> caras nuevas, no solo reconstruir.</dd>
-      <dt>GAN</dt><dd>Enfrenta dos redes (generador y juez). Gana nitidez a cambio de un entrenamiento inestable.</dd>
-      <dt>Diffusion</dt><dd>Aprende a quitar ruido paso a paso. Máxima calidad y diversidad, a cambio de un muestreo lento.</dd>
+      <dt>Autoencoder</dt><dd>Aprende a <b>resumir</b> una imagen en muy pocos números y luego a <b>reconstruirla</b> a partir de ese resumen. Es la base de todo lo demás.</dd>
+      <dt>VAE</dt><dd>El mismo esqueleto, pero ordena su «memoria» de tal forma que ya puede <b>inventar caras nuevas</b>, no solo copiar las que ha visto.</dd>
+      <dt>GAN</dt><dd>Pone a <b>competir dos redes</b> —una que falsifica y otra que detecta falsificaciones—. Consigue caras más nítidas, pero entrenarla es delicado.</dd>
+      <dt>Diffusion</dt><dd>Aprende a <b>quitar ruido poco a poco</b>, partiendo de una pantalla de «nieve» de tele hasta que aparece una cara. Es la familia detrás de herramientas como DALL·E o Stable Diffusion.</dd>
     </div>
-    <h3 class="sub" style="--accent:#0c9f6e">El método: realimentación agéntica</h3>
-    <p>Construir el modelo es solo la mitad. La otra mitad es <b>mejorarlo con un bucle de realimentación</b>: agentes auxiliares proponen variantes (arquitecturas, hiperparámetros, técnicas), las <b>entrenan y miden</b> con métricas objetivas (PSNR, SSIM) sobre un conjunto de prueba, y nos quedamos con lo que de verdad mejora. En cada modelo verás el "antes" (la versión básica y sus problemas) y el "después" (la mejora encontrada y verificada).</p>
-    <div class="note">A lo largo del cuaderno, las cifras (PSNR, SSIM, MSE, nº de parámetros) son <b>reales</b>, medidas sobre un conjunto de prueba que el modelo no usa para entrenar, y las capturas provienen directamente de la herramienta.</div>
+
+    <h3 class="sub" style="--accent:#0c9f6e">El hilo conductor: mejorar con ayuda de agentes de IA</h3>
+    <p>Hacer que un modelo funcione la primera vez es solo la mitad del trabajo. La otra mitad es <b>mejorarlo</b>. Y aquí hicimos algo curioso: en lugar de afinarlo todo a mano, montamos un <b>bucle de realimentación con agentes de IA</b> (programas asistentes que proponen cambios, los prueban y comparan resultados). El ciclo es simple: <i>proponer</i> una variante → <i>entrenarla</i> → <i>medirla</i> con cifras objetivas → <i>quedarse</i> con la que de verdad mejora. En cada modelo verás el «antes» (la primera versión, con sus defectos) y el «después» (la mejora que el bucle encontró y verificó).</p>
+    <div class="note">Importante para leer con confianza: <b>todas las cifras de este documento son reales</b>, medidas por el propio laboratorio sobre imágenes que el modelo no usó para aprender (su «examen»). Las capturas de pantalla salen directamente de la herramienta. No hay nada inventado ni maquillado.</div>
   </div>
 </section>
 
 <!-- ============ AUTOENCODER ============ -->
 <section class="section">
-  <div class="band b-blue"><div class="n">MODELO 01</div><h2>Autoencoder</h2>
-    <div class="tag">Comprimir y reconstruir: el cuello de botella y el espacio latente</div></div>
+  <div class="band b-blue"><div class="n">MODELO 01 · EL CIMIENTO</div><h2>Autoencoder</h2>
+    <div class="tag">Aprender a resumir una imagen en muy pocos números — y reconstruirla</div></div>
   <div class="pad" style="--accent:#2563eb;--accent-soft:#eff4fe">
-    <h3 class="sub">Teoría</h3>
-    <p>Un autoencoder tiene forma de reloj de arena. El <b>encoder</b> reduce la imagen (64×64×3 = 12.288 números) a un vector pequeño <span class="mono">z</span> (el <i>código latente</i>); el <b>decoder</b> intenta reconstruir la imagen original solo a partir de <span class="mono">z</span>. Como <span class="mono">z</span> es mucho menor que la imagen, el modelo se ve obligado a quedarse con lo esencial.</p>
-    <div class="formula">x &nbsp;→&nbsp; z = encoder(x) &nbsp;→&nbsp; x̂ = decoder(z) &nbsp;&nbsp;&nbsp; pérdida = ‖x − x̂‖² (MSE)</div>
-    <div class="tint"><div class="t">La clave pedagógica</div>Si <span class="mono">z</span> fuera tan grande como la imagen, el modelo podría limitarse a copiarla. El cuello de botella es lo que lo fuerza a <i>descubrir estructura</i>: que las caras tienen ojos, pelo, una pose… y a resumir todo eso en pocos números.</div>
 
-    <h3 class="sub">Parámetros importantes</h3>
+    <h3 class="sub">¿Qué es un autoencoder?</h3>
+    <p>Un autoencoder es una red neuronal que aprende a hacer dos cosas seguidas: primero <b>resumir</b> una imagen en un puñado de números, y luego <b>volver a dibujarla</b> a partir de ese resumen. La parte que resume se llama <span class="term">encoder</span> (codificador) y la que vuelve a dibujar, <span class="term">decoder</span> (decodificador). Entre las dos hay un «estrechamiento» a propósito: el resumen tiene que caber en muy poco espacio. A ese resumen comprimido se le llama <span class="term">código latente</span>, que abreviamos como <span class="mono">z</span> (es, simplemente, una lista de números que captura «la esencia» de la imagen).</p>
+    <div class="analogy">
+      <div class="ic">✍️</div>
+      <div class="bd"><div class="t">Una analogía</div>Imagina a un dibujante que mira un retrato durante diez segundos, se va a otra habitación y lo redibuja de memoria. No puede recordar cada píxel, así que se queda con lo importante: «pelo azul largo, ojos grandes, sonríe, fondo claro». Ese puñado de rasgos que apunta mentalmente es el <b>código latente</b>; el ejercicio de mirar-y-redibujar de memoria es, exactamente, lo que hace un autoencoder. Y como solo puede recordar unos pocos rasgos, se ve obligado a aprender qué es lo que de verdad importa de una cara.</div>
+    </div>
+
+    <h3 class="sub">¿Para qué sirve? (en el mundo real)</h3>
+    <div class="uses">
+      <div class="use"><div class="h"><span class="e">🗜️</span>Comprimir datos</div><p>Guardar imágenes, audio o sensores ocupando mucho menos espacio, quedándose solo con lo esencial.</p></div>
+      <div class="use"><div class="h"><span class="e">🧽</span>Quitar ruido</div><p>Limpiar fotos granuladas o señales con interferencias: el modelo aprende a reconstruir la versión «limpia».</p></div>
+      <div class="use"><div class="h"><span class="e">🚨</span>Detectar anomalías</div><p>Si algo es muy raro (un fallo en una máquina, un fraude), el modelo lo reconstruye mal: ese «error grande» es la alarma.</p></div>
+      <div class="use"><div class="h"><span class="e">🔎</span>Buscar por parecido</div><p>Comparar los resúmenes <span class="mono">z</span> en vez de los píxeles permite encontrar imágenes parecidas «de fondo», aunque no sean idénticas.</p></div>
+    </div>
+
+    <h3 class="sub">Cómo es la red (su estructura)</h3>
+    <p>La imagen de entrada son 64×64 píxeles en color, y cada píxel tiene 3 valores (rojo, verde, azul): en total <b>12.288 números</b>. El encoder los va comprimiendo en cuatro pasos, reduciendo el tamaño a la mitad cada vez (64→32→16→8→4 píxeles de lado) hasta dejar el resumen <span class="mono">z</span>, que por defecto son solo <b>128 números</b>. Es decir, comprime unas <b>96 veces</b>. El decoder es el espejo del encoder: parte de esos 128 números y los va ampliando paso a paso (4→8→16→32→64) hasta reconstruir la imagen completa.</p>
+    <div class="pipe">
+      <div class="stage"><div class="nm">Imagen</div><div class="dim">64×64×3<br/>12.288 nº</div></div>
+      <div class="arrow">→</div>
+      <div class="stage"><div class="nm">Encoder</div><div class="dim">4 pasos<br/>64→32→16→8→4</div></div>
+      <div class="arrow">→</div>
+      <div class="stage" style="border-color:#d97706;background:#fef3e6"><div class="nm" style="color:#d97706">z (resumen)</div><div class="dim">128 nº</div></div>
+      <div class="arrow">→</div>
+      <div class="stage"><div class="nm">Decoder</div><div class="dim">4 pasos<br/>4→8→16→32→64</div></div>
+      <div class="arrow">→</div>
+      <div class="stage"><div class="nm">Reconstruida</div><div class="dim">64×64×3</div></div>
+    </div>
+    <div class="formula">imagen &nbsp;→&nbsp; z = encoder(imagen) &nbsp;→&nbsp; reconstrucción = decoder(z)</div>
+    <div class="tint"><div class="t">El truco que lo hace aprender: el «cuello de botella»</div>Si el resumen <span class="mono">z</span> fuera tan grande como la imagen, el modelo haría trampa: copiaría la imagen tal cual sin aprender nada. Al obligarlo a que todo quepa en 128 números, lo forzamos a <b>descubrir la estructura</b> de una cara —que tiene ojos, pelo, una pose— y a quedarse solo con eso. Ese estrechamiento se llama <i>cuello de botella</i>, y es la idea central de todo el documento.</div>
+    <div class="note">En la app hay un botón <b>«Ver la estructura»</b> que abre el esquema interactivo capa por capa (encoder a la izquierda, decoder a la derecha y el cuello en medio), como el de la página siguiente.</div>
+
+    <figure><img src="assets/ae_arch.jpg" /><figcaption>El esquema «Ver la estructura» de la app (variante U-Net): a la izquierda el encoder comprime la imagen capa a capa; a la derecha el decoder la reconstruye; en el centro, el cuello de botella <span class="mono">z</span>. Las flechas que cruzan por arriba son las «conexiones de atajo» que explicamos en los resultados.</figcaption></figure>
+
+    <h3 class="sub">El experimento: objetivo, datos y parámetros</h3>
+    <p><b>Los datos.</b> Entrenamos con el conjunto <span class="mono">huggan/anime-faces</span>: <b>43.102 caras de dibujo (anime) de 64×64 píxeles</b>, en color y <i>sin etiquetas</i> (nadie le dice al modelo qué es cada cosa). <b>El objetivo:</b> que la reconstrucción se parezca lo máximo posible al original. El «profesor» es la propia imagen de entrada: el modelo se corrige solo comparando lo que dibuja con lo que vio.</p>
+    <p>Estos son los ajustes que más influyen en el resultado, explicados sin jerga:</p>
     <table class="params">
-      <tr><th>Parámetro</th><th>Qué controla</th></tr>
-      <tr><td class="k">latent_dim</td><td>Tamaño de <span class="mono">z</span>. Por defecto 128 (compresión ~96×). Pequeño → más abstracto y borroso; grande → más fiel, menos compresión.</td></tr>
-      <tr><td class="k">arquitectura</td><td>Básico / Grande / U-Net. Define la capacidad y si hay <i>skip connections</i> (ver mejora).</td></tr>
-      <tr><td class="k">loss</td><td>MSE (suaviza) o L1 (bordes algo más definidos).</td></tr>
-      <tr><td class="k">learning_rate · epochs</td><td>Velocidad y duración del entrenamiento (con parada temprana).</td></tr>
+      <tr><th>Ajuste</th><th>Qué es y qué efecto tiene</th></tr>
+      <tr><td class="k">latent_dim</td><td><b>Cuántos números resumen cada cara</b> (por defecto 128). Pocos números → resumen más abstracto y reconstrucción más borrosa, pero más compresión. Muchos números → más detalle y fidelidad, pero comprime menos.</td></tr>
+      <tr><td class="k">arquitectura</td><td><b>El «plano» de la red</b>: Básica, Grande o U-Net. Cambia cuánta capacidad tiene y, sobre todo, si usa «conexiones de atajo» (clave en la mejora de más abajo).</td></tr>
+      <tr><td class="k">loss</td><td><b>Cómo se mide el error</b> entre original y reconstrucción. La opción por defecto (MSE) tiende a suavizar; la alternativa (L1) deja los bordes algo más marcados.</td></tr>
+      <tr><td class="k">learning_rate</td><td><b>El tamaño de cada paso de aprendizaje.</b> Muy grande: aprende a trompicones y se desestabiliza; muy pequeño: aprende lentísimo.</td></tr>
+      <tr><td class="k">epochs</td><td><b>Cuántas veces repasa todas las imágenes.</b> Más repasos suelen mejorar, hasta que deja de notarse. Se detiene solo si ya no progresa («parada temprana»).</td></tr>
     </table>
 
     <h3 class="sub">La interfaz</h3>
-    <figure><img src="assets/tab_autoencoder.jpg" /><figcaption>Pestaña Autoencoder: dataset, flujo del modelo (original → encoder → z → decoder → reconstruida → diferencia), mapa latente, y controles de entrenamiento y exploración.</figcaption></figure>
+    <figure><img src="assets/tab_autoencoder.jpg" /><figcaption>La pestaña del Autoencoder en la app. De izquierda a derecha se ve el viaje de una cara: <b>original → encoder → z → decoder → reconstruida → mapa de diferencias</b> (en rosa, dónde se equivoca). Abajo, el «mapa latente» coloca cada cara como un punto según lo que el modelo considera parecido, y a la derecha están los controles para entrenar y experimentar.</figcaption></figure>
 
-    <h3 class="sub">Resultados del modelo básico</h3>
-    <p>El autoencoder básico (2,43 M de parámetros, <span class="mono">latent_dim</span>=128) reconstruye caras reconocibles pero <b>borrosas</b>:</p>
-    <figure><img src="assets/ae_metrics_basico.jpg" /><figcaption>Métricas de reconstrucción del modelo básico, medidas sobre 256 imágenes de prueba.</figcaption></figure>
+    <h3 class="sub">Resultados y la mejora con agentes</h3>
+    <p>La primera versión (la <b>Básica</b>, con 2,43 millones de parámetros) reconstruye caras perfectamente reconocibles, pero <b>borrosas</b>, como una foto desenfocada. No es un fallo de programación: es una consecuencia de cómo mide el error. Cuando el modelo duda entre dos detalles igual de probables (¿el mechón cae a la izquierda o a la derecha?), la opción más «segura» para minimizar el error promedio es dibujar el punto medio difuso de ambas. A esto lo llamamos cariñosamente la <b>«maldición del promedio»</b>, y es la razón de que los bordes y las texturas finas salgan suavizados.</p>
+    <figure><img src="assets/ae_metrics_basico.jpg" /><figcaption>Métricas reales de la versión Básica, medidas sobre 256 caras de prueba (su «examen»).</figcaption></figure>
 
-    <h3 class="sub">Problema → mejora agéntica</h3>
     <div class="pm">
-      <div class="box prob"><div class="h">⚠ El problema</div>Con un cuello pequeño y pérdida MSE, la reconstrucción se difumina (la "maldición del promedio": ante la duda, el MSE elige el punto medio borroso). Además la red era pequeña. Resultado: <b>PSNR ~18 dB</b>, una imagen claramente suave.</div>
-      <div class="box mejo"><div class="h">✔ La mejora</div>Agentes auxiliares implementaron y <b>midieron</b> dos variantes: <b>Grande</b> (base 64 + bloques residuales, 10,7 M) y <b>U-Net</b> (skip connections, 5,0 M). Las skips dejan pasar el detalle fino que el cuello tiraba → salto grande en nitidez.</div>
+      <div class="box prob"><div class="h">⚠ El problema</div>Caras reconocibles pero claramente <b>borrosas</b>. La intuición fácil sería «la red es pequeña, hagámosla más grande». Spoiler: no funcionó.</div>
+      <div class="box mejo"><div class="h">✔ Cómo se buscó la mejora</div>Los agentes de IA propusieron, programaron y <b>midieron</b> dos variantes: una <b>Grande</b> (con más capas y más capacidad) y una <b>U-Net</b>, que añade «conexiones de atajo» (en inglés <i>skip connections</i>): cables directos que llevan el detalle fino del encoder al decoder, saltándose el cuello de botella.</div>
     </div>
 
-    <h3 class="sub">Comparación de variantes (medida real)</h3>
+    <p>Comparemos las tres con dos medidas objetivas (las explicamos en las conclusiones; por ahora basta saber que <b>más alto = más se parece al original</b>):</p>
     <div class="bars">
-      <div class="legend" style="font-weight:700;color:var(--ink);font-size:10pt;margin-bottom:4px;">PSNR — relación señal/ruido (dB, más alto mejor)</div>
+      <div class="legend" style="font-weight:700;color:var(--ink);font-size:10pt;margin-bottom:4px;">PSNR — cuánto se parece al original, en decibelios (más alto, mejor)</div>
       <div class="row"><span class="name">Básico</span><div class="track"><div class="fill" style="width:60.9%;background:#2563eb"></div></div><span class="val">18.28</span></div>
       <div class="row"><span class="name">Grande</span><div class="track"><div class="fill" style="width:61.8%;background:#7c3aed"></div></div><span class="val">18.54</span></div>
       <div class="row"><span class="name">U-Net ★</span><div class="track"><div class="fill" style="width:95.1%;background:#0c9f6e"></div></div><span class="val">28.54</span></div>
-      <div class="legend">Escala 0–30 dB. Por encima de 30 dB es excelente; ~18 dB es claramente borroso.</div>
+      <div class="legend">Escala 0–30 dB. Por encima de 30 dB es excelente; unos 18 dB se ve claramente borroso.</div>
     </div>
     <div class="bars" style="margin-top:14px">
-      <div class="legend" style="font-weight:700;color:var(--ink);font-size:10pt;margin-bottom:4px;">SSIM — similitud estructural (0–1, más alto mejor)</div>
+      <div class="legend" style="font-weight:700;color:var(--ink);font-size:10pt;margin-bottom:4px;">SSIM — parecido «estructural», de 0 a 1 (más alto, mejor)</div>
       <div class="row"><span class="name">Básico</span><div class="track"><div class="fill" style="width:58.5%;background:#2563eb"></div></div><span class="val">0.585</span></div>
       <div class="row"><span class="name">Grande</span><div class="track"><div class="fill" style="width:60.7%;background:#7c3aed"></div></div><span class="val">0.607</span></div>
       <div class="row"><span class="name">U-Net ★</span><div class="track"><div class="fill" style="width:96.3%;background:#0c9f6e"></div></div><span class="val">0.963</span></div>
     </div>
     <table class="compare" style="margin-top:12px">
-      <tr><th>Variante</th><th>Parámetros</th><th>PSNR</th><th>SSIM</th><th>Lectura</th></tr>
-      <tr><td>Básico</td><td>2,43 M</td><td>18.28 dB</td><td>0.585</td><td>Cuello puro: borroso</td></tr>
-      <tr><td>Grande</td><td>10,72 M</td><td>18.54 dB</td><td>0.607</td><td>4× más grande… apenas mejora (sigue limitado por el cuello)</td></tr>
-      <tr><td>U-Net</td><td>5,05 M</td><td>28.54 dB</td><td>0.963</td><td>Las <i>skips</i> transforman la calidad con la mitad de parámetros que "Grande"</td></tr>
+      <tr><th>Variante</th><th>Parámetros</th><th>PSNR</th><th>SSIM</th><th>Qué nos dice</th></tr>
+      <tr><td>Básica</td><td>2,43 M</td><td>18.28 dB</td><td>0.585</td><td>El punto de partida: borroso.</td></tr>
+      <tr><td>Grande</td><td>10,72 M</td><td>18.54 dB</td><td>0.607</td><td>4 veces más grande… y casi no mejora. El tamaño no era el problema.</td></tr>
+      <tr><td>U-Net</td><td>5,05 M</td><td>28.54 dB</td><td>0.963</td><td>Las conexiones de atajo lo cambian todo, ¡y con menos piezas que la Grande!</td></tr>
     </table>
-    <div class="tint" style="--accent:#0c9f6e;--accent-soft:#e9fbf4"><div class="t">La lección que descubrió el bucle agéntico</div>Hacer la red <b>más grande no resolvió nada</b> (18,3 → 18,5 dB pese a 4× parámetros): el límite era el <i>cuello de botella</i>, no la capacidad. La mejora real fue <b>cambiar la arquitectura</b> a U-Net: +10 dB de PSNR y SSIM de 0,59 a 0,96, además con menos parámetros que la variante "Grande".</div>
 
     <div class="imgrow">
-      <figure><img src="assets/ae_metrics_grande.jpg" /><figcaption>Variante <b>Grande</b></figcaption></figure>
-      <figure><img src="assets/ae_metrics_unet.jpg" /><figcaption>Variante <b>U-Net</b> (skip connections)</figcaption></figure>
+      <figure><img src="assets/ae_metrics_grande.jpg" /><figcaption>Variante <b>Grande</b>: más capacidad, casi la misma borrosidad.</figcaption></figure>
+      <figure><img src="assets/ae_metrics_unet.jpg" /><figcaption>Variante <b>U-Net</b>: las conexiones de atajo dan caras nítidas.</figcaption></figure>
     </div>
-    <div class="note">Matiz de laboratorio: la U-Net reconstruye mejor porque sus <i>skips</i> evitan el cuello… pero por eso su <span class="mono">z</span> guarda menos información. Mejor reconstrucción no siempre significa mejor espacio latente: es justo el tipo de compromiso que el laboratorio deja ver.</div>
+
+    <h3 class="sub">Conclusiones</h3>
+    <p>Antes de las cifras, una nota sobre qué significan los dos números que hemos usado:</p>
+    <ul>
+      <li><b>PSNR</b> mide cuánto se parece la reconstrucción al original, en <i>decibelios</i> (la misma unidad del sonido). Por encima de 30 dB es excelente; alrededor de 18 dB se ve borroso. Pasar de 18 a 28 dB es, a ojo, ir de «foto desenfocada» a «foto casi nítida».</li>
+      <li><b>SSIM</b> mide el parecido <i>estructural</i> (¿están las formas en su sitio?), en una escala de 0 a 1. Pasar de 0,59 a 0,96 significa casi clavar la estructura de la cara.</li>
+    </ul>
+    <div class="takeaway"><div class="t">La lección práctica</div><div class="bd">Hacer la red <b>más grande no resolvió nada</b> (de 18,3 a 18,5 dB pese a cuadruplicar el tamaño): el límite no era la potencia, sino el <b>diseño</b>. La mejora de verdad llegó al <b>cambiar la arquitectura</b> a U-Net: +10 dB de nitidez y un parecido estructural casi perfecto, además con la mitad de piezas que la variante Grande. Moraleja, válida mucho más allá de la IA: <i>antes de gastar en más potencia, vale la pena entender dónde está realmente el cuello de botella.</i></div></div>
+    <div class="note">Un matiz honesto que el laboratorio deja ver: la U-Net reconstruye mejor porque sus atajos «esquivan» el cuello… pero precisamente por eso su resumen <span class="mono">z</span> guarda menos información. Reconstruir mejor no siempre significa tener mejor «memoria»: es justo el tipo de compromiso que conviene ver con los propios ojos.</div>
   </div>
 </section>
 
 <!-- ============ VAE ============ -->
 <section class="section">
-  <div class="band b-violet"><div class="n">MODELO 02</div><h2>VAE · Variational Autoencoder</h2>
-    <div class="tag">De reconstruir a generar: un latente probabilístico y ordenado</div></div>
+  <div class="band b-violet"><div class="n">MODELO 02 · EL PRIMER GENERADOR</div><h2>VAE</h2>
+    <div class="tag">De copiar a inventar: ordenar la «memoria» para crear caras nuevas</div></div>
   <div class="pad" style="--accent:#7c3aed;--accent-soft:#f4effe">
-    <h3 class="sub">Teoría</h3>
-    <p>El VAE tiene el mismo esqueleto que el autoencoder, pero el encoder no produce un punto: produce una <b>distribución</b> (una media <span class="mono">μ</span> y una varianza <span class="mono">σ²</span>). Se muestrea <span class="mono">z = μ + σ·ε</span> (reparametrización) y se añade un término <b>KL</b> que empuja el latente hacia una gaussiana estándar <span class="mono">N(0, I)</span>. Al ordenar así el espacio, basta con muestrear de esa gaussiana para <b>generar caras nuevas</b>.</p>
-    <div class="formula">pérdida = reconstrucción + β · KL( N(μ,σ²) ‖ N(0,I) )</div>
 
-    <h3 class="sub">Parámetros importantes</h3>
-    <table class="params">
-      <tr><th>Parámetro</th><th>Qué controla</th></tr>
-      <tr><td class="k">β (peso del KL)</td><td>El compromiso clave. β=0 → un AE normal (latente desordenado); β=1 → equilibrio; β alto → latente muy ordenado pero muestras más borrosas.</td></tr>
-      <tr><td class="k">latent_dim</td><td>Dimensión del latente probabilístico.</td></tr>
-      <tr><td class="k">loss · lr · epochs</td><td>Como en el AE.</td></tr>
-    </table>
-
-    <h3 class="sub">La interfaz y los resultados</h3>
-    <figure><img src="assets/tab_vae.jpg" /><figcaption>Pestaña VAE: además del flujo y el mapa latente, un panel de <b>Generación</b> que crea caras nuevas muestreando del prior N(0,I).</figcaption></figure>
-
-    <h3 class="sub">Problema → mejora agéntica</h3>
-    <div class="pm">
-      <div class="box prob"><div class="h">⚠ El problema</div>Hereda el desenfoque del MSE y lo agrava la regularización KL: las caras generadas salen suaves y algo "promediadas".</div>
-      <div class="box mejo"><div class="h">✔ La mejora</div>Se expone <b>β como control interactivo</b> para explorar el compromiso, y el VAE reutiliza el backbone convolucional mejorado del autoencoder. La lección no es eliminar el desenfoque (es intrínseco), sino <i>entender de dónde viene</i> y por qué lo resuelven la GAN y la difusión.</div>
+    <h3 class="sub">¿Qué es un VAE?</h3>
+    <p>VAE son las siglas de <span class="term">Variational Autoencoder</span> (autoencoder «variacional»). Tiene el mismo esqueleto que el autoencoder anterior —un encoder que resume y un decoder que reconstruye—, pero con un cambio decisivo: aprende su «memoria» de forma <b>ordenada</b>, de modo que ya no solo sabe copiar caras conocidas, sino <b>inventar caras nuevas que nunca ha visto</b>. Es, por tanto, el primer modelo <i>generativo</i> de verdad de este recorrido.</p>
+    <p>¿Cómo lo consigue? En vez de guardar cada cara como un punto exacto, el VAE la guarda como una pequeña <b>«nube»</b>: no dice «esta cara está aquí», sino «esta cara está por esta zona, más o menos». Cuando muchas nubes se solapan, el espacio de la memoria queda <i>relleno</i>, sin huecos. Y si no hay huecos, puedes señalar cualquier punto al azar, pedirle al decoder que lo dibuje, y saldrá una cara plausible.</p>
+    <div class="analogy">
+      <div class="ic">🗺️</div>
+      <div class="bd"><div class="t">Una analogía</div>El autoencoder ordena sus recuerdos como <b>chinchetas sueltas</b> en un corcho: entre chincheta y chincheta hay zonas vacías, y si pinchas en el vacío no hay nada. El VAE, en cambio, ordena sus recuerdos como <b>ciudades en un mapa de población</b>: cada cara es una mancha difusa, las manchas vecinas se tocan y el territorio queda cubierto. Por eso puedes plantar el dedo en cualquier punto del mapa y siempre caes en «zona habitada»: una cara con sentido.</div>
     </div>
-    <table class="compare">
-      <tr><th>Valor de β</th><th>Efecto en la reconstrucción</th><th>Efecto en el latente / generación</th></tr>
-      <tr><td>β = 0</td><td>Más nítida (es un AE)</td><td>Latente con huecos: muestrear da basura</td></tr>
-      <tr><td>β = 1</td><td>Algo más borrosa</td><td>Equilibrio: se puede generar y interpolar</td></tr>
-      <tr><td>β &gt; 1</td><td>Más borrosa</td><td>Latente muy ordenado y suave</td></tr>
+
+    <h3 class="sub">¿Para qué sirve? (en el mundo real)</h3>
+    <div class="uses">
+      <div class="use"><div class="h"><span class="e">🎭</span>Generar variaciones</div><p>Crear muchas versiones distintas de algo (caras, productos, moléculas) explorando su «mapa» de posibilidades.</p></div>
+      <div class="use"><div class="h"><span class="e">🧪</span>Datos sintéticos</div><p>Fabricar ejemplos artificiales realistas para entrenar otros sistemas cuando los datos reales escasean o son sensibles.</p></div>
+      <div class="use"><div class="h"><span class="e">🎚️</span>Editar con «mandos»</div><p>Como la memoria está ordenada, a veces se encuentran ejes que controlan rasgos (sonrisa, edad) y permiten retocarlos a voluntad.</p></div>
+      <div class="use"><div class="h"><span class="e">🚨</span>Detección de anomalías</div><p>Igual que el autoencoder, pero con una medida de «cuán probable» es algo, útil en medicina o control de calidad.</p></div>
+    </div>
+
+    <h3 class="sub">Cómo es la red (su estructura)</h3>
+    <p>La columna vertebral es idéntica a la del autoencoder (encoder de 4 pasos que comprime 64→32→16→8→4, y decoder simétrico que amplía de vuelta). La única diferencia está en el cuello de botella: en lugar de producir un único resumen, el encoder produce <b>dos</b>: el <b>centro de la nube</b> (su posición, que llamamos <span class="mono">μ</span>) y su <b>tamaño</b> (cuánta incertidumbre tiene, que llamamos <span class="mono">σ</span>). Para reconstruir o generar, se toma un punto al azar dentro de esa nube y se le pasa al decoder. En total son unos <b>3,0 millones de parámetros</b>.</p>
+    <div class="pipe">
+      <div class="stage"><div class="nm">Imagen</div><div class="dim">64×64×3</div></div>
+      <div class="arrow">→</div>
+      <div class="stage"><div class="nm">Encoder</div><div class="dim">comprime</div></div>
+      <div class="arrow">→</div>
+      <div class="stage" style="border-color:#7c3aed;background:#f4effe"><div class="nm" style="color:#7c3aed">Nube z</div><div class="dim">centro μ<br/>+ tamaño σ</div></div>
+      <div class="arrow">→</div>
+      <div class="stage"><div class="nm">Decoder</div><div class="dim">reconstruye</div></div>
+      <div class="arrow">→</div>
+      <div class="stage"><div class="nm">Resultado</div><div class="dim">64×64×3</div></div>
+    </div>
+    <div class="tint"><div class="t">La pieza que ordena la memoria</div>Durante el entrenamiento, el VAE añade una «fuerza de orden» (su nombre técnico es <span class="term">término KL</span>) que empuja todas las nubes hacia un mismo molde común y centrado. Eso impide que el modelo haga trampa encogiendo las nubes a puntos —que sería volver al autoencoder— y es lo que deja el mapa relleno y sin huecos. Sin esa fuerza, no se podría generar.</div>
+
+    <h3 class="sub">El experimento: objetivo, datos y parámetros</h3>
+    <p>Mismos <b>datos</b> que antes (las 43.102 caras de anime de 64×64, sin etiquetas) y mismo método de entrenamiento. La diferencia está en el <b>objetivo</b>: además de reconstruir bien, el modelo debe mantener su memoria ordenada. Por eso su «nota» combina dos cosas: cuánto se parece la reconstrucción al original <i>y</i> cuán ordenadas están las nubes. El ajuste estrella aquí es la letra griega <span class="mono">β</span> (beta), que decide a cuál de las dos dar más importancia.</p>
+    <table class="params">
+      <tr><th>Ajuste</th><th>Qué es y qué efecto tiene</th></tr>
+      <tr><td class="k">β (beta)</td><td><b>El equilibrio clave del VAE, exclusivo de este modelo.</b> Decide cuánto importa tener la memoria ordenada frente a reconstruir con fidelidad. β bajo → caras más nítidas pero memoria con huecos (peor para inventar); β alto → memoria muy ordenada pero caras más borrosas. El valor por defecto (1) es el equilibrio clásico.</td></tr>
+      <tr><td class="k">latent_dim</td><td><b>Cuántos números resumen cada cara</b>, igual que en el autoencoder (128 por defecto).</td></tr>
+      <tr><td class="k">loss · learning_rate · epochs</td><td><b>Cómo se mide el error, el tamaño del paso de aprendizaje y cuántos repasos se dan</b>, exactamente igual que en el autoencoder.</td></tr>
     </table>
+
+    <h3 class="sub">La interfaz</h3>
+    <figure><img src="assets/tab_vae.jpg" /><figcaption>La pestaña del VAE. Reconoces el flujo y el mapa latente del autoencoder, pero ahora hay algo nuevo y especial: un panel de <b>Generación</b> que crea caras desde cero —sin partir de ninguna foto— simplemente señalando puntos al azar en el mapa de la memoria y pidiéndole al decoder que los dibuje.</figcaption></figure>
+
+    <h3 class="sub">Resultados y la mejora con agentes</h3>
+    <p>El VAE consigue lo que el autoencoder no podía: <b>inventar caras nuevas</b>. A cambio, las caras que genera salen algo <b>suaves o «promediadas»</b>. Y aquí la lección es interesante, porque el problema <i>no</i> tiene una solución dentro del propio VAE: el desenfoque viene de dos sitios a la vez —de medir el error píxel a píxel (la misma «maldición del promedio» del autoencoder) y de la propia fuerza de orden, que al solapar nubes empuja al decoder a dibujar algo «medio» que valga para todas.</p>
+    <div class="pm">
+      <div class="box prob"><div class="h">⚠ El problema</div>Ya genera caras nuevas, pero <b>borrosas</b>. Y no es un bug que se pueda parchear: el desenfoque es <i>intrínseco</i> a cómo funciona el modelo.</div>
+      <div class="box mejo"><div class="h">✔ Qué aportó el bucle</div>Dos cosas. Una práctica: reutilizar la columna convolucional mejorada del autoencoder y dejar <b>β como un mando interactivo</b> para que cualquiera explore el compromiso en vivo. Y una conceptual, más valiosa: entender que para nitidez de verdad hace falta <b>cambiar de enfoque</b>, no afinar este. Justo lo que harán los dos modelos siguientes.</div>
+    </div>
+    <p>El comportamiento de <span class="mono">β</span> resume toda la «personalidad» del VAE en una tabla:</p>
+    <table class="compare">
+      <tr><th>Valor de β</th><th>Efecto en la reconstrucción</th><th>Efecto en la capacidad de inventar</th></tr>
+      <tr><td>β = 0</td><td>Más nítida (se comporta como un autoencoder)</td><td>La memoria vuelve a tener huecos: señalar al azar da imágenes rotas.</td></tr>
+      <tr><td>β = 1</td><td>Algo más borrosa</td><td>El equilibrio: se puede generar e interpolar con sentido.</td></tr>
+      <tr><td>β &gt; 1</td><td>Más borrosa</td><td>Memoria muy ordenada y suave; a veces aparecen «mandos» de rasgos.</td></tr>
+    </table>
+
+    <h3 class="sub">Conclusiones</h3>
+    <div class="takeaway"><div class="t">La lección práctica</div><div class="bd">El VAE da el salto de <b>copiar a inventar</b> con un truco elegante: guardar cada recuerdo como una nube difusa para que el «mapa» de la memoria quede relleno. El precio es cierta borrosidad, y la enseñanza más útil es saber <b>distinguir un defecto que se arregla de una limitación de fondo</b>: aquí el desenfoque es de fondo, y reconocerlo nos dice exactamente por qué necesitamos los dos modelos siguientes. Además, exponer el mando <span class="mono">β</span> ilustra una idea general de la IA: casi todo es un <i>compromiso</i>, y verlo con un control deslizante vale más que mil fórmulas.</div></div>
   </div>
 </section>
 
 <!-- ============ GAN ============ -->
 <section class="section">
-  <div class="band b-pink"><div class="n">MODELO 03</div><h2>GAN · Generative Adversarial Network</h2>
-    <div class="tag">Dos redes que compiten: nitidez a cambio de estabilidad</div></div>
+  <div class="band b-pink"><div class="n">MODELO 03 · DOS RIVALES</div><h2>GAN</h2>
+    <div class="tag">Un falsificador contra un detective: la competición que da nitidez</div></div>
   <div class="pad" style="--accent:#db2777;--accent-soft:#fdeef6">
-    <h3 class="sub">Teoría</h3>
-    <p>La GAN tira el encoder y plantea un <b>juego entre dos redes</b>: el <b>generador</b> crea caras a partir de ruido <span class="mono">z</span>; el <b>discriminador</b> intenta distinguir las reales de las falsas. Entrenan en competición. Como el "juez" es otra red (no un error por píxel), la GAN no tiene la presión hacia el promedio y suele dar <b>las caras más nítidas</b>.</p>
 
-    <h3 class="sub">Parámetros importantes</h3>
+    <h3 class="sub">¿Qué es una GAN?</h3>
+    <p>GAN son las siglas de <span class="term">Generative Adversarial Network</span> (red generativa «adversaria», es decir, basada en una rivalidad). La idea es radicalmente distinta a las anteriores: aquí no hay un encoder que resuma imágenes. En su lugar, <b>se enfrentan dos redes que aprenden compitiendo</b>. Una, el <span class="term">generador</span>, fabrica caras partiendo de números al azar. La otra, el <span class="term">discriminador</span>, hace de juez: recibe una cara y decide si es real (del conjunto de datos) o falsa (recién fabricada por el generador).</p>
+    <p>El generador quiere engañar al juez; el juez quiere no dejarse engañar. Cada vez que uno mejora, obliga al otro a mejorar también, y así van subiendo el nivel los dos a la vez. La clave: como el «control de calidad» lo hace <i>otra red</i> (y no una simple comparación píxel a píxel), desaparece la «maldición del promedio» y las caras salen <b>mucho más nítidas</b>.</p>
+    <div class="analogy">
+      <div class="ic">💵</div>
+      <div class="bd"><div class="t">Una analogía</div>Un <b>falsificador de billetes</b> (el generador) y un <b>detective</b> (el discriminador) que aprenden a la vez. Al principio el falsificador hace chapuzas y el detective las pilla sin esfuerzo. Pero con cada billete descubierto, el falsificador refina su técnica; y con cada billete que se le cuela, el detective agudiza el ojo. Tras miles de rondas, los billetes falsos son tan buenos que ni el experto los distingue. Ese «experto cada vez más exigente» es lo que empuja al generador a la excelencia.</div>
+    </div>
+
+    <h3 class="sub">¿Para qué sirve? (en el mundo real)</h3>
+    <div class="uses">
+      <div class="use"><div class="h"><span class="e">🔬</span>Superresolución</div><p>Convertir imágenes de baja calidad en versiones nítidas y detalladas (fotos antiguas, imágenes médicas, satélite).</p></div>
+      <div class="use"><div class="h"><span class="e">🧑‍🎤</span>Avatares y «deepfakes»</div><p>Generar rostros y personas que no existen, para videojuegos, cine o avatares; también la tecnología tras los polémicos deepfakes.</p></div>
+      <div class="use"><div class="h"><span class="e">🎨</span>Arte y diseño</div><p>Crear texturas, estilos y obras visuales; transformar fotos en pinturas o cambiar el estilo de una imagen.</p></div>
+      <div class="use"><div class="h"><span class="e">👗</span>Moda y producto</div><p>Diseñar prendas, muebles o envases ficticios pero realistas para inspirar o prototipar antes de fabricar.</p></div>
+    </div>
+
+    <h3 class="sub">Cómo es la red (su estructura)</h3>
+    <p>Son dos redes espejo. El <b>generador</b> hace el camino del decoder, pero al revés de empezar por una imagen: arranca de un vector de <b>100 números al azar</b> (el «germen» de cada cara) y los va ampliando hasta una imagen de 64×64, pasando por capas cada vez más anchas (512→256→128→64 canales). El <b>discriminador</b> hace el camino contrario: recibe una imagen de 64×64 y la va reduciendo hasta escupir <b>un único número</b>, su veredicto «real o falsa». Juntos suman unos <b>6,3 millones de parámetros</b> (3,6 el generador y 2,8 el discriminador). Es la receta clásica conocida como <span class="term">DCGAN</span>.</p>
+    <div class="pipe">
+      <div class="stage" style="border-color:#db2777;background:#fdeef6"><div class="nm" style="color:#db2777">Azar z</div><div class="dim">100 nº</div></div>
+      <div class="arrow">→</div>
+      <div class="stage"><div class="nm">Generador</div><div class="dim">amplía<br/>4→8→…→64</div></div>
+      <div class="arrow">→</div>
+      <div class="stage"><div class="nm">Cara falsa</div><div class="dim">64×64×3</div></div>
+      <div class="arrow">→</div>
+      <div class="stage"><div class="nm">Discriminador</div><div class="dim">reduce a…</div></div>
+      <div class="arrow">→</div>
+      <div class="stage"><div class="nm">Veredicto</div><div class="dim">¿real o falsa?</div></div>
+    </div>
+    <div class="formula">azar z &nbsp;→&nbsp; G(z) = cara falsa &nbsp;→&nbsp; D(cara) = ¿real o falsa?</div>
+    <div class="tint"><div class="t">El camino va en un solo sentido</div>A diferencia del autoencoder y el VAE, la GAN <b>no tiene encoder</b>: solo sabe ir de «números al azar» a «cara», nunca al revés. Por eso aquí no se puede «reconstruir esta foto concreta»; lo que sí se puede es pasear por el espacio de los números de entrada y ver cómo va cambiando la cara que produce.</div>
+
+    <h3 class="sub">El experimento: objetivo, datos y parámetros</h3>
+    <p>Los mismos <b>datos</b> (43.102 caras de anime de 64×64, sin etiquetas). El <b>objetivo</b> ya no es reconstruir, sino que el generador aprenda a fabricar caras tan convincentes que el juez no las distinga de las reales. Es un entrenamiento peculiar: en vez de una sola red bajando una «nota», son dos redes tirando una de la otra.</p>
     <table class="params">
-      <tr><th>Parámetro</th><th>Qué controla</th></tr>
-      <tr><td class="k">z_dim</td><td>Tamaño del vector de ruido de entrada (100).</td></tr>
-      <tr><td class="k">learning_rate</td><td>Crítico: si es muy alto, el juego se desequilibra y colapsa.</td></tr>
-      <tr><td class="k">epochs</td><td>Iteraciones del juego adversarial.</td></tr>
+      <tr><th>Ajuste</th><th>Qué es y qué efecto tiene</th></tr>
+      <tr><td class="k">z_dim</td><td><b>Cuántos números al azar alimentan al generador</b> (por defecto 100). Es la «semilla» de cada cara: más números dan más variedad posible, pero son más difíciles de cubrir bien.</td></tr>
+      <tr><td class="k">learning_rate</td><td><b>El tamaño del paso de aprendizaje</b>, y aquí es especialmente delicado: si es muy grande, la competición se desequilibra y se estropea. El valor por defecto (0,0002) es el clásico que funciona.</td></tr>
+      <tr><td class="k">epochs</td><td><b>Cuántas rondas dura el duelo.</b> Más rondas suelen mejorar la calidad, hasta que el juego se estanca o se desestabiliza.</td></tr>
+      <tr><td class="k">batch_size</td><td><b>Cuántas imágenes se ven de golpe en cada paso</b> (128 por defecto). Lotes grandes estabilizan algo el entrenamiento, a cambio de más memoria.</td></tr>
     </table>
 
-    <h3 class="sub">La interfaz y los resultados</h3>
-    <figure><img src="assets/tab_gan.jpg" /><figcaption>Pestaña GAN: galería de caras generadas desde ruido (ninguna existe en el dataset), interpolación en el espacio z y curvas de pérdida del generador y el discriminador.</figcaption></figure>
+    <h3 class="sub">La interfaz</h3>
+    <figure><img src="assets/tab_gan.jpg" /><figcaption>La pestaña de la GAN. Arriba, una galería de caras <b>generadas desde cero</b> (ninguna existe en el conjunto de datos). En medio, un paseo que mezcla dos «semillas» al azar y muestra la transición. Abajo, las dos curvas del duelo: el error del generador y el del juez, que se persiguen mutuamente.</figcaption></figure>
 
-    <h3 class="sub">Problema → mejora agéntica</h3>
+    <h3 class="sub">Resultados y la mejora con agentes</h3>
+    <p>La GAN cumple su promesa —caras notablemente más nítidas que las del VAE— pero su entrenamiento es famoso por ser <b>inestable</b>. A diferencia de los otros modelos, aquí no hay una única «nota» que baje tranquilamente: hay un equilibrio móvil entre dos rivales, y mantenerlo es delicado. Dos cosas pueden torcerse: que el juez se vuelva <i>demasiado</i> bueno y aplaste al generador (que entonces deja de recibir pistas útiles y se atasca), o que el generador encuentre un atajo —unas pocas caras que siempre cuelan— y se limite a repetirlas, perdiendo variedad. A esto último se le llama <span class="term">colapso de modo</span>: la galería se llena de caras casi idénticas.</p>
     <div class="pm">
-      <div class="box prob"><div class="h">⚠ El problema</div>El entrenamiento adversarial es inestable: con malas elecciones, el discriminador "gana" y el generador deja de aprender (g_loss se dispara), o aparece <b>colapso de modo</b> (todas las caras iguales).</div>
-      <div class="box mejo"><div class="h">✔ La mejora</div>Se aplicaron las recetas DCGAN verificadas: <span class="mono">BatchNorm</span>, <span class="mono">LeakyReLU</span>, <span class="mono">Adam(0.5, 0.999)</span>, pérdida <i>non-saturating</i>, pesos iniciales N(0, 0.02) y datos en [−1, 1]. Con esto el juego se equilibra y produce caras reconocibles.</div>
+      <div class="box prob"><div class="h">⚠ El problema</div>El duelo se desequilibra con facilidad: o el juez «gana» y el generador deja de aprender, o aparece el <b>colapso de modo</b> (todas las caras se parecen). Sin cuidado, no sale nada decente.</div>
+      <div class="box mejo"><div class="h">✔ La mejora</div>El bucle aplicó las <b>recetas de estabilización ya verificadas</b> de la literatura (la familia DCGAN): ciertos tipos de capa y de activación, un optimizador con ajustes que amortiguan las oscilaciones del duelo, una forma de medir el error que da pistas más útiles cuando el generador aún es malo, y normalizar los datos a un rango concreto. Con todo ello el juego se equilibra y produce caras reconocibles.</div>
     </div>
-    <div class="note">~6,3 M de parámetros (generador + discriminador). La calidad es modesta a propósito (modelo pequeño, pocos epochs): el objetivo es <i>ver el mecanismo</i> adversarial, no competir con modelos enormes.</div>
+    <div class="note">La GAN suma unos <b>6,3 millones de parámetros</b>. La calidad es modesta a propósito: es un modelo pequeño entrenado pocas rondas en un portátil. El objetivo aquí no es competir con los sistemas gigantes, sino <b>ver el mecanismo</b> de la rivalidad funcionando con tus propios ojos.</div>
+
+    <h3 class="sub">Conclusiones</h3>
+    <div class="takeaway"><div class="t">La lección práctica</div><div class="bd">La GAN demuestra que <b>cambiar quién juzga la calidad lo cambia todo</b>: poner a otra red de «control de calidad», en vez de una comparación mecánica, rompe la borrosidad y da nitidez. Pero ese poder viene con un coste real —un entrenamiento <b>delicado e inestable</b>— y con conceptos propios como el colapso de modo. La enseñanza general: en IA, las técnicas más potentes suelen ser también las más temperamentales, y a menudo lo decisivo no es inventar de cero, sino <b>aplicar bien las recetas que ya se sabe que funcionan</b>.</div></div>
   </div>
 </section>
 
 <!-- ============ DIFFUSION ============ -->
 <section class="section">
-  <div class="band b-cyan"><div class="n">MODELO 04</div><h2>Diffusion · DDPM</h2>
-    <div class="tag">Aprender a quitar ruido paso a paso — y un bug de muestreo revelador</div></div>
+  <div class="band b-cyan"><div class="n">MODELO 04 · LO ÚLTIMO</div><h2>Diffusion</h2>
+    <div class="tag">De una pantalla de «nieve» a una cara, quitando ruido poco a poco</div></div>
   <div class="pad" style="--accent:#0891b2;--accent-soft:#e7f7fb">
-    <h3 class="sub">Teoría</h3>
-    <p>Un modelo de difusión aprende el proceso inverso de "ensuciar" una imagen. En el proceso <b>forward</b> se añade ruido gaussiano poco a poco hasta dejar ruido puro. En el <b>reverse</b>, una red (una UNet condicionada en el paso <span class="mono">t</span>) aprende a predecir y quitar ese ruido. Para generar, se parte de ruido puro y se limpia paso a paso hasta una cara.</p>
 
-    <h3 class="sub">Parámetros importantes</h3>
-    <table class="params">
-      <tr><th>Parámetro</th><th>Qué controla</th></tr>
-      <tr><td class="k">timesteps (T)</td><td>Longitud del proceso de ruido (200). Es del modelo.</td></tr>
-      <tr><td class="k">pasos de muestreo</td><td>Cuántos pasos se usan al generar. Más pasos = mejor, pero más lento.</td></tr>
-      <tr><td class="k">schedule</td><td>Cómo se reparte el ruido (cosine por defecto, mejor que lineal a baja resolución).</td></tr>
-      <tr><td class="k">learning_rate · epochs</td><td>Entrenamiento del denoising (pérdida MSE sobre el ruido predicho).</td></tr>
-    </table>
-
-    <h3 class="sub">El problema: generaba ruido (y el modelo no tenía la culpa)</h3>
-    <p>La primera versión <b>generaba manchas de color, no caras</b> — incluso al final del proceso. Lo desconcertante: la pérdida bajaba bien (de 0,50 a 0,084), señal de que la red <i>sí</i> estaba aprendiendo a quitar ruido.</p>
-    <div class="pm">
-      <div class="box prob"><div class="h">⚠ La causa (depuración agéntica)</div>El muestreo aplicaba el paso DDPM clásico, que solo avanza de <span class="mono">t</span> a <span class="mono">t−1</span>, pero <b>submuestreando</b> (50 de 200 pasos). Resultado: solo se quitaban 50 pasos de ruido de los 200 necesarios → la salida seguía siendo ruido. <b>El modelo estaba bien; el sampler estaba roto.</b></div>
-      <div class="box mejo"><div class="h">✔ La solución</div>Se reescribió el muestreo a <b>DDIM</b> (determinista), que <i>salta correctamente</i> entre timesteps arbitrarios reusando la predicción de x₀. Más <b>EMA de pesos</b> y <b>schedule cosine</b>. Efecto inmediato: caras reconocibles — <b>y sin reentrenar</b>, porque el problema era solo cómo se muestreaba.</div>
+    <h3 class="sub">¿Qué es un modelo de difusión?</h3>
+    <p>Es la familia de modelos que hoy domina la generación de imágenes: detrás de herramientas como <b>Stable Diffusion</b>, <b>DALL·E</b> o <b>Midjourney</b> hay esta misma idea. Y la idea es sorprendentemente sencilla: <b>aprender a quitar ruido</b>. El modelo se entrena para que, dada una imagen ensuciada con un poco de ruido (esa «nieve» de las teles antiguas sin señal), adivine ese ruido y lo reste. ¿Y para generar una cara desde cero? Se parte de una pantalla de ruido <i>puro</i> y se aplica esa operación muchas veces seguidas: quita un poco de ruido, otro poco, otro poco… hasta que, paso a paso, emerge una cara.</p>
+    <p>Lo elegante del truco es que convierte <b>un problema imposible en muchos problemas fáciles</b>. Pedirle a una red «dibuja una cara de la nada» sería dificilísimo; pero «a esta imagen casi limpia, quítale el poquito de ruido que le queda» es una tarea sencilla y estable de aprender. Encadenando muchas tareas fáciles se logra lo que de un golpe sería imposible.</p>
+    <div class="analogy">
+      <div class="ic">🗿</div>
+      <div class="bd"><div class="t">Una analogía</div>Como un <b>escultor ante un bloque de mármol</b>. No saca la figura de un solo martillazo: da muchos golpecitos pequeños, retirando un poco de material cada vez, y la figura va «apareciendo». La difusión hace lo mismo, pero retirando ruido en lugar de piedra: empieza con un bloque de pura «nieve» y, golpecito a golpecito, deja al descubierto la cara que había escondida dentro del azar.</div>
     </div>
 
-    <h3 class="sub">El resultado: de ruido a cara</h3>
-    <figure><img src="assets/tab_diffusion.jpg" /><figcaption>Pestaña Diffusion tras el arreglo: la galería genera caras reconocibles y el panel "Proceso de difusión" muestra la trayectoria completa de <b>ruido puro → cara</b>.</figcaption></figure>
-    <table class="compare">
-      <tr><th>Aspecto</th><th>Antes</th><th>Después</th></tr>
-      <tr><td>Muestreo</td><td>DDPM de un paso, submuestreado</td><td>DDIM (salta timesteps correctamente)</td></tr>
-      <tr><td>Pesos para muestrear</td><td>Crudos (oscilan con el minibatch)</td><td>EMA (media móvil, estables)</td></tr>
-      <tr><td>Resultado visual</td><td>Ruido de colores</td><td>Caras reconocibles</td></tr>
-      <tr><td>¿Reentrenar?</td><td>—</td><td>No: era solo el sampler</td></tr>
+    <h3 class="sub">¿Para qué sirve? (en el mundo real)</h3>
+    <div class="uses">
+      <div class="use"><div class="h"><span class="e">🖼️</span>Crear imágenes desde texto</div><p>Es el motor de Stable Diffusion, DALL·E o Midjourney: describes algo con palabras y te lo dibuja.</p></div>
+      <div class="use"><div class="h"><span class="e">🩹</span>Rellenar y reparar (inpainting)</div><p>Borrar un objeto de una foto y reconstruir el fondo, o restaurar zonas dañadas de forma convincente.</p></div>
+      <div class="use"><div class="h"><span class="e">🔭</span>Ampliar y mejorar</div><p>Aumentar la resolución de imágenes y añadir detalle realista, igual que la superresolución de las GAN.</p></div>
+      <div class="use"><div class="h"><span class="e">🎬</span>Vídeo, audio y 3D</div><p>La misma idea de «quitar ruido paso a paso» se usa ya para generar música, voz, vídeo e incluso modelos en 3D.</p></div>
+    </div>
+
+    <h3 class="sub">Cómo es la red (su estructura)</h3>
+    <p>El corazón es una red con forma de <b>U</b> (de ahí su nombre, <span class="term">UNet</span>): primero reduce la imagen para entender el «conjunto» y luego la vuelve a ampliar para afinar el detalle, con cables de atajo que conectan ambos lados. Lo distintivo es que, además de la imagen ruidosa, recibe un dato extra: <b>cuánto ruido tiene</b> en ese momento (un número que llamamos <span class="mono">t</span>, el «paso» del proceso), para saber con cuánta «nieve» está lidiando. La versión de calidad de esta app trabaja directamente a <b>64×64 píxeles</b> e incluye un mecanismo llamado <span class="term">atención</span>, que permite a cada zona de la imagen «mirar» a todas las demás para mantener la coherencia global (que los dos ojos combinen, que el peinado sea simétrico). Esa versión nítida tiene unos <b>21 millones de parámetros</b>.</p>
+    <div class="pipe">
+      <div class="stage" style="border-color:#0891b2;background:#e7f7fb"><div class="nm" style="color:#0891b2">Ruido puro</div><div class="dim">«nieve»</div></div>
+      <div class="arrow">→</div>
+      <div class="stage"><div class="nm">UNet (baja)</div><div class="dim">capta el<br/>conjunto</div></div>
+      <div class="arrow">→</div>
+      <div class="stage"><div class="nm">UNet (sube)</div><div class="dim">afina el<br/>detalle</div></div>
+      <div class="arrow">→</div>
+      <div class="stage"><div class="nm">Quita un poco</div><div class="dim">de ruido</div></div>
+      <div class="arrow">↺</div>
+      <div class="stage"><div class="nm">Cara</div><div class="dim">tras N pasos</div></div>
+    </div>
+    <div class="note">En la app, el botón <b>«Ver la estructura»</b> abre el esquema de la UNet (a la izquierda baja la resolución, a la derecha la sube, con atajos cruzados y la inyección del «reloj» <span class="mono">t</span> en cada bloque), como el de abajo.</div>
+    <figure><img src="assets/diffusion_arch.jpg" /><figcaption>El esquema «Ver la estructura» de la UNet en la app (mostrando la variante ágil): a la izquierda la columna del «reloj» <span class="mono">t</span> que indica cuánto ruido hay; en el centro, la red bajando la resolución; a la derecha, subiéndola de nuevo con atajos para reconstruir. La red no dibuja la cara: predice el ruido que sobra, y el bucle lo va restando.</figcaption></figure>
+
+    <h3 class="sub">El experimento: objetivo, datos y parámetros</h3>
+    <p>Los mismos <b>datos</b> (43.102 caras de anime de 64×64, sin etiquetas). El <b>objetivo de entrenamiento</b> es de lo más simple: se coge una cara real, se le añade una cantidad de ruido elegida al azar, y se le pide a la red que adivine <i>exactamente</i> el ruido que se añadió. Nada más. Como ese único «adivina el ruido» vale para cualquier nivel de suciedad, luego se puede encadenar muchas veces para generar.</p>
+    <table class="params">
+      <tr><th>Ajuste</th><th>Qué es y qué efecto tiene</th></tr>
+      <tr><td class="k">pasos de muestreo</td><td><b>Cuántos «golpecitos» se dan al generar</b> una cara. Más pasos → transición más fina y mejor calidad, pero más lento. Es el compromiso central de la difusión: calidad contra tiempo.</td></tr>
+      <tr><td class="k">timesteps (T)</td><td><b>La longitud total del proceso de ruido</b> con el que se entrena (200 por defecto). Es el «mapa completo»; los pasos de muestreo deciden cuántas paradas hacemos al recorrerlo.</td></tr>
+      <tr><td class="k">schedule</td><td><b>El ritmo al que se añade el ruido.</b> El que usamos por defecto («cosine») destruye el detalle más despacio, lo que a este tamaño pequeño mejora bastante el resultado.</td></tr>
+      <tr><td class="k">learning_rate · epochs</td><td><b>El tamaño del paso de aprendizaje y cuántos repasos se dan</b>, igual que en los demás modelos.</td></tr>
     </table>
+
+    <h3 class="sub">La interfaz</h3>
+    <figure><img src="assets/tab_diffusion.jpg" /><figcaption>La pestaña de Diffusion. Arriba, la galería de caras generadas. Pero la tarjeta estrella es el <b>«Proceso de difusión»</b>: una tira de fotogramas que muestra, literalmente, el viaje de <b>ruido puro (izquierda) → cara limpia (derecha)</b>, paso a paso. Es la mejor forma de ver cómo el modelo «esculpe» la cara a partir del azar.</figcaption></figure>
+
+    <h3 class="sub">Resultados y la mejora con agentes</h3>
+    <p>Este fue el caso más instructivo de todos, porque el primer intento <b>generaba manchas de colores, no caras</b> —incluso al final del proceso—. Lo desconcertante era que el entrenamiento iba <i>bien</i>: el error de la red bajaba con normalidad (de 0,50 a 0,084), señal inequívoca de que la red <b>sí</b> estaba aprendiendo a detectar ruido. ¿Cómo podía aprender bien y aun así generar basura?</p>
+    <p>La depuración con agentes destapó un detalle revelador: <b>el modelo estaba perfecto; el fallo estaba en cómo se le pedía generar</b>. El procedimiento original quitaba el ruido en pasos que solo sabían avanzar «de uno en uno», pero para ir rápido se saltaba la mayoría: daba 50 pasitos cuando el ruido requería 200. Resultado: solo retiraba una cuarta parte de la «nieve» y la salida seguía siendo, literalmente, ruido.</p>
+    <div class="pm">
+      <div class="box prob"><div class="h">⚠ La causa (depuración con agentes)</div>El método de generación solo sabía avanzar paso a paso, pero se saltaba la mayoría (50 de 200) para ir rápido. Así nunca terminaba de limpiar la imagen. <b>El modelo no tenía la culpa: el procedimiento de generado estaba roto.</b></div>
+      <div class="box mejo"><div class="h">✔ La solución</div>Se cambió a un método de generación moderno (<b>DDIM</b>) que sí sabe <i>dar zancadas largas y limpiar de golpe</i> sin perder el rumbo. Se añadió promediar los pesos del modelo para más estabilidad y el ritmo de ruido «cosine». Y un detalle precioso: las primeras caras reconocibles aparecieron <b>sin reentrenar nada</b>, porque el problema nunca estuvo en el aprendizaje.</div>
+    </div>
+    <p>Con la generación arreglada, el siguiente paso del bucle fue subir la calidad: se pasó de una red pequeña que trabajaba en miniatura (32×32) a una <b>red mayor que trabaja directamente a 64×64 y usa atención</b> (los 21 millones de parámetros). El resultado son caras claramente reconocibles:</p>
+    <figure><img src="assets/diffusion_results.jpg" /><figcaption>Caras generadas por el modelo de difusión <b>nítido</b> (a 64×64, con atención) tras arreglar la generación y ampliar la red. Cada una ha nacido de una pantalla de ruido puro, esculpida paso a paso. Ninguna existe en el conjunto de datos.</figcaption></figure>
+    <table class="compare">
+      <tr><th>Aspecto</th><th>Antes (no funcionaba)</th><th>Después (funciona)</th></tr>
+      <tr><td>Cómo se genera</td><td>Pasos «de uno en uno», pero saltándose casi todos</td><td>DDIM: da zancadas largas y limpia bien</td></tr>
+      <tr><td>Pesos al generar</td><td>Los del último momento (inestables)</td><td>Un promedio suavizado (más estables)</td></tr>
+      <tr><td>Tamaño de trabajo</td><td>Miniatura 32×32, red pequeña</td><td>64×64 nativo, red mayor con atención (21 M)</td></tr>
+      <tr><td>Resultado visual</td><td>Manchas de color</td><td>Caras reconocibles</td></tr>
+    </table>
+
+    <h3 class="sub">Conclusiones</h3>
+    <div class="takeaway"><div class="t">La lección práctica</div><div class="bd">La difusión enseña dos cosas. Primero, una idea poderosa: <b>partir un problema imposible en muchos pasos fáciles</b> —quitar ruido poco a poco— es lo que ha llevado a la IA generativa a su nivel actual. Y segundo, una lección de oro para cualquiera que trabaje con sistemas complejos: cuando algo falla, <b>el culpable no siempre es lo que entrenas</b>. Aquí el modelo era impecable y el error estaba en cómo se le pedía trabajar; un buen diagnóstico ahorró tirar a la basura un modelo que estaba perfecto. Saber <i>dónde</i> mirar vale tanto como saber construir.</div></div>
   </div>
 </section>
 
 <!-- ============ CIERRE ============ -->
 <section class="section">
-  <div class="band b-ink"><div class="n">SÍNTESIS</div><h2>Los cuatro, lado a lado</h2>
-    <div class="tag">No hay un "mejor": hay compromisos</div></div>
+  <div class="band b-ink"><div class="n">PARA TERMINAR</div><h2>Los cuatro, cara a cara</h2>
+    <div class="tag">No existe «el mejor»: cada uno hace un trato distinto</div></div>
   <div class="pad">
-    <figure><img src="assets/tab_comparador.jpg" /><figcaption>Pestaña Comparador: tabla de capacidades y galería de los cuatro modelos con la misma semilla.</figcaption></figure>
+    <p>Tras este recorrido, la conclusión más importante es que <b>ninguno de los cuatro modelos es «el mejor»</b>. Cada uno renuncia a algo para ganar otra cosa: el VAE cede algo de nitidez a cambio de poder inventar de forma ordenada; la GAN gana nitidez a cambio de un entrenamiento delicado; la difusión logra la mejor calidad a cambio de ser más lenta al generar. Elegir un modelo es, en realidad, <b>elegir qué compromiso te conviene</b>.</p>
+    <figure><img src="assets/tab_comparador.jpg" /><figcaption>La pestaña Comparador: las salidas de los cuatro modelos puestas una al lado de otra, con la misma semilla de azar, para comparar de un vistazo su estilo y su calidad.</figcaption></figure>
     <table class="compare">
-      <tr><th>Propiedad</th><th>Autoencoder</th><th>VAE</th><th>GAN</th><th>Diffusion</th></tr>
-      <tr><td>¿Tiene encoder?</td><td>Sí</td><td>Sí</td><td>No</td><td>No</td></tr>
-      <tr><td>¿Genera caras nuevas?</td><td>No</td><td>Sí</td><td>Sí</td><td>Sí</td></tr>
-      <tr><td>Entrenamiento</td><td>Estable</td><td>Estable</td><td>Inestable</td><td>Estable</td></tr>
-      <tr><td>Muestreo</td><td>1 paso</td><td>1 paso</td><td>1 paso</td><td>Iterativo (lento)</td></tr>
-      <tr><td>Nitidez típica</td><td>Borrosa</td><td>Borrosa</td><td>Nítida</td><td>Buena</td></tr>
+      <tr><th>Pregunta sencilla</th><th>Autoencoder</th><th>VAE</th><th>GAN</th><th>Diffusion</th></tr>
+      <tr><td>¿Sabe «leer» una imagen (resumirla)?</td><td>Sí</td><td>Sí</td><td>No</td><td>No</td></tr>
+      <tr><td>¿Inventa caras nuevas?</td><td>No</td><td>Sí</td><td>Sí</td><td>Sí</td></tr>
+      <tr><td>¿Es fácil de entrenar?</td><td>Sí</td><td>Sí</td><td>Delicado</td><td>Sí</td></tr>
+      <tr><td>¿Genera rápido?</td><td>Al instante</td><td>Al instante</td><td>Al instante</td><td>Lento (muchos pasos)</td></tr>
+      <tr><td>¿Qué nitidez tiene?</td><td>Borrosa</td><td>Borrosa</td><td>Nítida</td><td>Buena</td></tr>
     </table>
-    <h3 class="sub" style="--accent:#0c9f6e">Conclusión</h3>
-    <p>Cada modelo cambia un compromiso por otro: el VAE cede algo de nitidez por un latente ordenado; la GAN cambia estabilidad por nitidez; la difusión cambia velocidad por calidad. Y, en todos, el <b>bucle de realimentación agéntica</b> —proponer, entrenar, medir y quedarnos con lo que mejora— fue lo que convirtió un primer intento mediocre en algo que funciona: las variantes del autoencoder y, sobre todo, el arreglo del muestreo en difusión.</p>
-    <div class="note">Hecho con un laboratorio 100% local. Código y guía de reproducción en el repositorio (licencia MIT).</div>
+
+    <h3 class="sub" style="--accent:#0c9f6e">Las dos ideas que conviene llevarse</h3>
+    <p><b>1. La generación de imágenes es una escalera de ideas, no una caja negra.</b> Empieza por algo tan simple como «resume y reconstruye» (autoencoder) y, peldaño a peldaño —ordenar la memoria, poner a competir dos redes, quitar ruido paso a paso— se llega a la tecnología que hoy crea imágenes a partir de una frase. Entendido así, deja de parecer magia.</p>
+    <p><b>2. Mejorar es tan importante como construir.</b> En cada modelo, el <b>bucle de realimentación con agentes de IA</b> —proponer, entrenar, medir y quedarse con lo que de verdad mejora— fue lo que convirtió un primer intento mediocre en algo que funciona. Y dejó lecciones que valen mucho más allá de la IA: que <b>más potencia no arregla un mal diseño</b> (el salto del autoencoder a la U-Net), y que <b>cuando algo falla, el culpable no siempre es lo obvio</b> (el modelo de difusión estaba perfecto; el fallo estaba en otra parte).</p>
+    <div class="takeaway"><div class="t">En una frase</div><div class="bd">Cuatro formas de enseñar a una máquina a crear imágenes, de la más simple a la más avanzada, contadas para que se entiendan; y un método para mejorarlas que, al final, es tan valioso como los propios modelos: <b>medir, comparar y quedarse con lo que funciona</b>.</div></div>
+    <div class="note">Todo este laboratorio se ejecuta <b>en local</b>, en un portátil normal, sin enviar nada a la nube. El código y la guía para reproducirlo están disponibles de forma abierta (licencia MIT).</div>
   </div>
 </section>
 
