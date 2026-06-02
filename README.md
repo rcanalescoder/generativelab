@@ -15,12 +15,32 @@ Incluye cuatro modelos y un comparador:
 | **Diffusion** | DDPM (UNet pequeña) | Aprende a quitar ruido paso a paso. Muestra el **proceso** de ruido → cara. |
 | **Comparador** | — | Los cuatro lado a lado: tabla de capacidades + galería con la misma semilla. |
 
-> 📄 **Cuaderno PDF**: [`docs/Laboratorio-de-Modelos-Generativos.pdf`](docs/Laboratorio-de-Modelos-Generativos.pdf)
-> — recorrido visual de los cuatro modelos con teoría, parámetros, capturas, resultados y las
-> mejoras encontradas con realimentación agéntica (p. ej. el AE U-Net: PSNR 18→28 dB).
+## 📄 Cuaderno PDF — descárgalo
 
-> El fichero que GitHub muestra en la portada del repo es **`README.md`** (este). Si
-> necesitas además una copia en texto plano, es una conversión directa de este documento.
+Un **recorrido visual de 32 páginas** por los cuatro modelos: qué es cada uno y para qué sirve,
+su estructura, los parámetros explicados en lenguaje llano, **resultados reales**, el **código
+clave** de cada modelo y las mejoras encontradas con realimentación agéntica (p. ej. el AE
+U-Net: PSNR 18→28 dB). Pensado para entenderse **sin saber de inteligencia artificial**.
+
+<p align="center">
+  <a href="docs/Laboratorio-de-Modelos-Generativos.pdf">
+    <img src="docs/assets/pdf_cover.jpg" width="340" alt="Portada del cuaderno PDF" />
+  </a>
+</p>
+
+<p align="center">
+  <a href="docs/Laboratorio-de-Modelos-Generativos.pdf"><b>⬇️&nbsp;&nbsp;Descargar el PDF</b></a>
+  &nbsp;&nbsp;·&nbsp;&nbsp;32 páginas&nbsp;&nbsp;·&nbsp;&nbsp;~3,4 MB&nbsp;&nbsp;·&nbsp;&nbsp;español
+</p>
+
+<p align="center">
+  <a href="docs/Laboratorio-de-Modelos-Generativos.pdf">
+    <img src="docs/assets/pdf_preview.jpg" width="820" alt="Páginas de muestra del cuaderno PDF" />
+  </a>
+</p>
+
+> 💡 En GitHub puedes **leerlo online** (clic en la portada) o **descargarlo** desde el botón del
+> visor. Es la mejor forma de entender el proyecto de un vistazo.
 
 ---
 
@@ -143,6 +163,8 @@ Se entrena minimizando el error de reconstrucción (MSE o L1).
 - **Interpolación A→B**: caminar en línea recta entre dos `z` y decodificar cada paso.
 - **Grid search**: busca la mejor `latent_dim`/`lr`/`loss` por MSE de reconstrucción.
 
+<p align="center"><img src="docs/assets/tab_autoencoder.jpg" width="780" alt="Pestaña Autoencoder" /><br/><sub>Flujo <i>original → encoder → z → decoder → reconstruida → diferencia</i>, mapa latente, vecinos e interpolación.</sub></p>
+
 ### VAE (Variational Autoencoder)
 Igual que el AE, pero el encoder produce una **distribución** (media `μ` y varianza `σ²`) en
 lugar de un punto. Se muestrea `z = μ + σ·ε` (reparametrización) y se añade el término **KL**
@@ -150,23 +172,32 @@ que empuja el latente hacia un prior `N(0, I)`. El parámetro **β** controla el
 reconstrucción ↔ regularidad. Como el latente queda ordenado, el VAE puede **generar caras
 nuevas** muestreando del prior (panel "Generación"). La curva separa pérdida de reconstrucción y KL.
 
+<p align="center"><img src="docs/assets/tab_vae.jpg" width="780" alt="Pestaña VAE" /><br/><sub>El mismo flujo que el AE más un panel de <b>Generación</b>: caras nuevas muestreadas del prior.</sub></p>
+
 ### GAN (DCGAN)
 Dos redes compiten: el **generador** crea caras a partir de ruido `z`; el **discriminador**
 intenta distinguir reales de falsas. Entrenan en un juego adversarial (pérdidas `g_loss`/`d_loss`).
 No hay encoder, así que **no reconstruye ni tiene mapa latente**: solo genera e interpola en el
 espacio de ruido. Suele dar las caras más nítidas pero es **inestable** de entrenar.
 
+<p align="center"><img src="docs/assets/tab_gan.jpg" width="780" alt="Pestaña GAN" /><br/><sub>Galería de caras generadas desde ruido, paseo entre dos semillas y las dos curvas del duelo G/D.</sub></p>
+
 ### Diffusion (DDPM)
 Aprende el proceso inverso de "ensuciar" una imagen. **Forward**: se añade ruido gaussiano poco
 a poco hasta ruido puro. **Reverse**: la red aprende a predecir y quitar ese ruido paso a paso.
 Para generar, parte de ruido puro y lo va limpiando hasta una cara (panel "Proceso de difusión",
-que muestra la trayectoria). Trabaja internamente a **32×32** por rendimiento; más pasos de
-muestreo = mejor calidad pero más lento.
+que muestra la trayectoria). Hay dos variantes: una **ágil** (32×32, rápida para ver la dinámica)
+y una **nítida** (64×64 con auto-atención, mejor calidad); más pasos de muestreo = mejor calidad
+pero más lento.
+
+<p align="center"><img src="docs/assets/tab_diffusion.jpg" width="780" alt="Pestaña Diffusion" /><br/><sub>La estrella es el <b>Proceso de difusión</b>: la trayectoria de <i>ruido puro → cara limpia</i>, paso a paso.</sub></p>
 
 ### Comparador
 Pone los cuatro lado a lado: una **tabla** (¿encoder?, ¿genera?, tipo de latente, estabilidad,
 muestreo, nitidez) y una **galería** que, con la misma semilla, muestra la salida de cada modelo
 (el AE reconstruye; VAE/GAN/Diffusion generan).
+
+<p align="center"><img src="docs/assets/tab_comparador.jpg" width="780" alt="Pestaña Comparador" /><br/><sub>Los cuatro modelos lado a lado con la misma semilla: compara estilo, nitidez y diversidad de un vistazo.</sub></p>
 
 ---
 
