@@ -9,6 +9,7 @@ import {
   getJSON,
   postJSON,
   streamSSE,
+  type AEMetrics,
   type Device,
   type GridEvent,
   type GridRequest,
@@ -23,6 +24,7 @@ import {
 
 // Re-exportamos los tipos reutilizados para que el tab importe todo desde un único módulo.
 export type {
+  AEMetrics,
   GridEvent,
   GridRequest,
   InterpResult,
@@ -34,6 +36,9 @@ export type {
   Sample,
 }
 
+/** Variantes de arquitectura del VAE (espejo de `AEArch`, pero sin "unet"). */
+export type VAEArch = 'basico' | 'grande'
+
 export interface VAEHyperParams {
   latent_dim: number
   learning_rate: number
@@ -41,6 +46,7 @@ export interface VAEHyperParams {
   loss: 'mse' | 'l1'
   beta: number
   batch_size: number
+  arch: VAEArch
 }
 
 /** Punto de la curva de entrenamiento: pérdida total + sus dos componentes (recon y KL). */
@@ -58,6 +64,8 @@ export interface VAEStatus {
   training: boolean
   seed: number
   device: Device
+  arch: VAEArch
+  archs: VAEArch[]
   hyperparams: VAEHyperParams
   num_params: number
   loss_history: VAELossPoint[]
@@ -98,6 +106,13 @@ export interface VAETrainRequest {
 export const getVAEStatus = () => getJSON<VAEStatus>('/vae/status')
 export const setVAEHyperparams = (patch: Partial<VAEHyperParams>) =>
   postJSON<VAEStatus>('/vae/hyperparams', patch)
+/** Cambia de variante de arquitectura cargando su checkpoint demo al instante (si existe).
+ *  `loaded=false` indica que esa variante aún no tiene demo entrenado. */
+export const setVAEArch = (arch: VAEArch) =>
+  postJSON<VAEStatus & { loaded: boolean }>('/vae/arch', { arch })
+/** Métricas de reconstrucción (PSNR/SSIM/MSE) sobre un held-out fijo, con ejemplos en b64.
+ *  El payload es compatible con `AEMetrics` (mismo esquema en el backend). */
+export const getVAEMetrics = (n = 256) => getJSON<AEMetrics>(`/vae/metrics?n=${n}`)
 
 // ---------- reconstrucción / generación ----------
 export const reconstructVAE = (ids: number[], noise = 0) =>

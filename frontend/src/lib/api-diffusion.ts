@@ -7,6 +7,11 @@
 
 import { getJSON, postJSON, streamSSE, API_BASE, type Device, type LossPoint } from './api'
 
+/** Variante de arquitectura de la UNet de difusión.
+ *  - "agil"   → UNet pequeña a 32×32, sin atención: rápida.
+ *  - "nitido" → UNet mayor a 64×64 nativos con auto-atención: más calidad, más lenta. */
+export type DiffusionArch = 'agil' | 'nitido'
+
 export interface DiffusionHyperParams {
   learning_rate: number
   epochs: number
@@ -14,6 +19,8 @@ export interface DiffusionHyperParams {
   timesteps: number
   /** Schedule de ruido: "cosine" (por defecto, mejor calidad) o "linear". */
   schedule: 'cosine' | 'linear'
+  /** Variante de arquitectura (requiere reentrenar / cargar su demo). */
+  arch: DiffusionArch
 }
 
 export interface DiffusionStatus {
@@ -23,6 +30,8 @@ export interface DiffusionStatus {
   seed: number
   device: Device
   timesteps: number
+  arch: DiffusionArch
+  archs: DiffusionArch[]
   hyperparams: DiffusionHyperParams
   num_params: number
   loss_history: LossPoint[]
@@ -63,6 +72,11 @@ export interface DiffusionTrainRequest {
 
 // ---------- estado ----------
 export const getDiffusionStatus = () => getJSON<DiffusionStatus>('/diffusion/status')
+
+/** Cambia de variante de arquitectura cargando su checkpoint demo al instante (si existe).
+ *  `loaded=false` indica que esa variante aún no tiene demo entrenado. */
+export const setDiffusionArch = (arch: DiffusionArch) =>
+  postJSON<DiffusionStatus & { loaded: boolean }>('/diffusion/arch', { arch })
 
 // ---------- entrenamiento (SSE) ----------
 /** Entrena por SSE el denoising. Llama onEvent por cada evento `data:`. */

@@ -12,7 +12,9 @@ import {
   generateGAN,
   getGANStatus,
   interpolateGAN,
+  setGANArch,
   trainGAN,
+  type GANArch,
   type GANInterpResult,
   type GANLossPoint,
   type GANStatus,
@@ -32,6 +34,7 @@ const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
 /** Valores por defecto (los que ves al abrir la app, ≈ checkpoint demo). */
 const DEFAULTS = {
+  arch: 'basico' as const,
   zDim: 100,
   lrIdx: 2, // 0.0002
   epochs: 25,
@@ -58,11 +61,14 @@ export function GANTab() {
   const [interpSeed, setInterpSeed] = useState(DEFAULTS.interpSeed)
 
   // hiperparámetros del modelo (requieren reentrenar)
+  const [arch, setArch] = useState<GANArch>(DEFAULTS.arch)
   const [zDim, setZDim] = useState(DEFAULTS.zDim)
   const [lrIdx, setLrIdx] = useState(DEFAULTS.lrIdx)
   const [epochs, setEpochs] = useState(DEFAULTS.epochs)
   const [trainSeed, setTrainSeed] = useState(DEFAULTS.trainSeed)
   const [mode, setMode] = useState<'quick' | 'full'>(DEFAULTS.mode)
+  // true cuando la variante elegida aún no tiene checkpoint demo (hay que entrenarla)
+  const [archMissing, setArchMissing] = useState(false)
 
   // entrenamiento en vivo
   const [training, setTraining] = useState(false)
@@ -80,7 +86,11 @@ export function GANTab() {
   const outdated =
     trained &&
     !!status &&
-    (zDim !== status.hyperparams.z_dim ||
+    // el backend ya lo marca (p. ej. al elegir una variante sin demo entrenado)…
+    (status.outdated ||
+      // …o el usuario tocó un parámetro del modelo respecto al checkpoint cargado.
+      arch !== status.arch ||
+      zDim !== status.hyperparams.z_dim ||
       lr !== status.hyperparams.learning_rate ||
       epochs !== status.hyperparams.epochs)
 
@@ -102,6 +112,7 @@ export function GANTab() {
       try {
         const st = await getGANStatus()
         setStatus(st)
+        setArch(st.arch)
         setZDim(st.hyperparams.z_dim)
         setEpochs(st.hyperparams.epochs)
         setLrIdx(nearestLrIdx(st.hyperparams.learning_rate))
@@ -115,6 +126,28 @@ export function GANTab() {
       }
     })()
   }, [])
+
+  /** Cambia de variante de arquitectura (parámetro del modelo: requiere reentrenar).
+   *  Si la variante ya tiene checkpoint demo (loaded=true) sus caras se ven al instante;
+   *  si no, los paneles quedan vacíos ("esta variante aún no tiene demo"). */
+  const changeArch = (next: GANArch) => {
+    if (next === arch) return
+    setArch(next)
+    run(async () => {
+      const st = await setGANArch(next)
+      setStatus(st)
+      setArchMissing(!st.loaded)
+      if (st.loaded && st.trained) {
+        // la variante ya entrenada se ve al instante: refrescamos galería e interpolación
+        setGallery(await generateGAN(nSamples, genSeed))
+        setInterp(await interpolateGAN(interpSteps, interpSeed))
+      } else {
+        // sin demo aún: limpiamos los paneles para mostrar el estado vacío de esta variante
+        setGallery(null)
+        setInterp(null)
+      }
+    })
+  }
 
   const doGenerate = () =>
     run(async () => {
@@ -149,7 +182,7 @@ export function GANTab() {
     const ctrl = new AbortController()
     abortRef.current = ctrl
     trainGAN(
-      { mode, seed: trainSeed, hyperparams: { z_dim: zDim, learning_rate: lr, epochs } },
+      { mode, seed: trainSeed, hyperparams: { arch, z_dim: zDim, learning_rate: lr, epochs } },
       (ev) => {
         if (ev.type === 'epoch') {
           setLiveLoss((prev) => [...prev, { epoch: ev.epoch, g_loss: ev.g_loss, d_loss: ev.d_loss }])
@@ -174,6 +207,7 @@ export function GANTab() {
           const st = await getGANStatus()
           setStatus(st)
           if (st.trained) {
+            setArchMissing(false)
             setGallery(await generateGAN(nSamples, genSeed))
             setInterp(await interpolateGAN(interpSteps, interpSeed))
           }
@@ -187,6 +221,7 @@ export function GANTab() {
   }
 
   const resetDefaults = () => {
+    if (arch !== DEFAULTS.arch) changeArch(DEFAULTS.arch)
     setZDim(DEFAULTS.zDim)
     setLrIdx(DEFAULTS.lrIdx)
     setEpochs(DEFAULTS.epochs)
@@ -208,6 +243,8 @@ export function GANTab() {
     ) : (
       <>iniciando entrenamiento…</>
     )
+  ) : archMissing ? (
+    <span style={{ color: '#B5740B' }}>esta variante aún no tiene demo — entrena para verla</span>
   ) : outdated ? (
     <span style={{ color: '#B5740B' }}>cambios sin aplicar — reentrena para verlos</span>
   ) : trained && status?.loss_history.length ? (
@@ -378,6 +415,19 @@ export function GANTab() {
             onInfo={() => open(C.topics.parametros)}
             infoLabel="Parámetros del modelo"
           />
+          <div className="gm-ctrl">
+            <div className="row">
+              <span className="name">arquitectura</span>
+            </div>
+            <SegmentedControl
+              value={arch}
+              onChange={changeArch}
+              options={[
+                { label: 'Básico', value: 'basico' },
+                { label: 'Grande', value: 'grande' },
+              ]}
+            />
+          </div>
           <Slider label="z_dim" value={zDim} min={16} max={256} step={8} onChange={setZDim} />
           <Slider
             label="learning_rate"

@@ -24,6 +24,7 @@ class HyperParamsIn(BaseModel):
     loss: str | None = None
     beta: float | None = None
     batch_size: int | None = None
+    arch: str | None = None
 
 
 class TrainRequest(BaseModel):
@@ -71,6 +72,10 @@ class GridSearchRequest(BaseModel):
     grid: GridSpec = Field(default_factory=GridSpec)
 
 
+class ArchRequest(BaseModel):
+    arch: str  # "basico" | "grande"
+
+
 def _require_model() -> None:
     if vae_service.model is None:
         raise HTTPException(status_code=409, detail="modelo no entrenado: entrena o carga el checkpoint demo")
@@ -85,6 +90,20 @@ def status() -> dict:
 def set_hyperparams(req: HyperParamsIn) -> dict:
     patch = {k: v for k, v in req.model_dump().items() if v is not None}
     return vae_service.set_hyperparams(patch)
+
+
+@router.post("/arch")
+def set_arch(req: ArchRequest) -> dict:
+    """Cambia de variante cargando su checkpoint demo al instante (si existe).
+
+    Devuelve `{loaded, ...status}`: `loaded=False` si esa variante aún no tiene demo entrenado
+    (el front puede entonces ofrecer entrenarla). Si carga, el status refleja la nueva arch.
+    """
+    loaded = vae_service.load_demo(req.arch)
+    if not loaded:
+        # No hay demo de esa variante: deja registrada la elección como hiperparámetro.
+        vae_service.set_hyperparams({"arch": req.arch})
+    return {"loaded": loaded, **vae_service.status()}
 
 
 @router.post("/train")
@@ -155,6 +174,13 @@ def generate(req: GenerateRequest) -> dict:
     """Genera caras nuevas muestreando del prior N(0,I). Rasgo clave del VAE."""
     _require_model()
     return {"images": vae_service.generate(req.n, req.seed)}
+
+
+@router.get("/metrics")
+def metrics(n: int = Query(256, ge=16, le=2048)) -> dict:
+    """PSNR/SSIM/MSE de reconstrucción (vía μ) sobre un held-out fijo (+ ejemplos en b64)."""
+    _require_model()
+    return vae_service.metrics(n)
 
 
 @router.get("/projection")

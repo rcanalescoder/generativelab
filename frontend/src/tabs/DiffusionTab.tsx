@@ -9,7 +9,9 @@ import {
   generateDiffusion,
   getDiffusionStatus,
   getTrajectory,
+  setDiffusionArch,
   trainDiffusion,
+  type DiffusionArch,
   type DiffusionStatus,
   type TrajectoryFrame,
 } from '../lib/api-diffusion'
@@ -32,6 +34,7 @@ const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
 /** Valores por defecto (los que ves al abrir la app, = checkpoint demo). */
 const DEFAULTS = {
+  arch: 'agil' as const,
   lrIdx: 2, // 0.0002
   epochs: 18,
   seed: 42,
@@ -64,11 +67,14 @@ export function DiffusionTab() {
   const [trajBusy, setTrajBusy] = useState(false)
 
   // hiperparámetros del modelo (requieren reentrenar)
+  const [arch, setArch] = useState<DiffusionArch>(DEFAULTS.arch)
   const [lrIdx, setLrIdx] = useState(DEFAULTS.lrIdx)
   const [epochs, setEpochs] = useState(DEFAULTS.epochs)
   const [seed, setSeed] = useState(DEFAULTS.seed)
   const [mode, setMode] = useState<'quick' | 'full'>(DEFAULTS.mode)
   const [earlyStop, setEarlyStop] = useState(DEFAULTS.earlyStop)
+  // true cuando la variante elegida aún no tiene checkpoint demo (hay que entrenarla)
+  const [archMissing, setArchMissing] = useState(false)
 
   const [training, setTraining] = useState(false)
   const [liveLoss, setLiveLoss] = useState<LossPoint[]>([])
@@ -85,7 +91,9 @@ export function DiffusionTab() {
   const outdated =
     trained &&
     !!status &&
-    (lr !== status.hyperparams.learning_rate || epochs !== status.hyperparams.epochs)
+    (arch !== status.arch ||
+      lr !== status.hyperparams.learning_rate ||
+      epochs !== status.hyperparams.epochs)
 
   // ---------- acciones ----------
   const doGenerate = useCallback(
@@ -126,6 +134,7 @@ export function DiffusionTab() {
       try {
         const st = await getDiffusionStatus()
         setStatus(st)
+        setArch(st.arch)
         setEpochs(st.hyperparams.epochs)
         setLrIdx(nearestLrIdx(st.hyperparams.learning_rate))
         setSeed(st.seed)
@@ -138,6 +147,33 @@ export function DiffusionTab() {
       }
     })()
   }, [])
+
+  /** Cambia de variante (parámetro del modelo: afecta diagrama y requiere reentrenar).
+   *  Si la variante ya tiene checkpoint demo (loaded=true) se ve al instante; si no, los
+   *  paneles quedan vacíos con el aviso "esta variante aún no tiene demo — entrena para verla". */
+  const changeArch = (next: DiffusionArch) => {
+    if (next === arch) return
+    setArch(next)
+    setError(null)
+    ;(async () => {
+      try {
+        const st = await setDiffusionArch(next)
+        setStatus(st)
+        setArchMissing(!st.loaded)
+        if (st.loaded && st.trained) {
+          // la variante ya entrenada se ve al instante: refrescamos galería + trayectoria
+          setGenerated(await generateDiffusion(genN, genSeed, genSteps))
+          setFrames(await getTrajectory(trajSeed, trajSteps, snapshots))
+        } else {
+          // sin demo aún: limpiamos los paneles para mostrar el estado vacío de esta variante
+          setGenerated(null)
+          setFrames(null)
+        }
+      } catch (e) {
+        setError(errMsg(e))
+      }
+    })()
+  }
 
   const newGenSeed = () => {
     const s = genSeed + 1
@@ -161,7 +197,7 @@ export function DiffusionTab() {
     const ctrl = new AbortController()
     abortRef.current = ctrl
     trainDiffusion(
-      { mode, seed, early_stop: earlyStop, hyperparams: { learning_rate: lr, epochs } },
+      { mode, seed, early_stop: earlyStop, hyperparams: { arch, learning_rate: lr, epochs } },
       (ev) => {
         if (ev.type === 'epoch') {
           setLiveLoss((prev) => [...prev, { epoch: ev.epoch, loss: ev.loss }])
@@ -192,6 +228,7 @@ export function DiffusionTab() {
             const st = await getDiffusionStatus()
             setStatus(st)
             if (st.trained) {
+              setArchMissing(false)
               await doGenerate(genN, genSeed, genSteps)
               await doTrajectory(trajSeed, trajSteps, snapshots)
             }
@@ -208,6 +245,7 @@ export function DiffusionTab() {
   }
 
   const resetDefaults = () => {
+    if (arch !== DEFAULTS.arch) changeArch(DEFAULTS.arch)
     setLrIdx(DEFAULTS.lrIdx)
     setEpochs(DEFAULTS.epochs)
     setSeed(DEFAULTS.seed)
@@ -224,6 +262,8 @@ export function DiffusionTab() {
     ) : (
       <>iniciando entrenamiento…</>
     )
+  ) : archMissing ? (
+    <span style={{ color: '#B5740B' }}>esta variante aún no tiene demo — entrena para verla</span>
   ) : outdated ? (
     <span style={{ color: '#B5740B' }}>cambios sin aplicar — reentrena para verlos</span>
   ) : trained && status?.loss_history.length ? (
@@ -238,7 +278,11 @@ export function DiffusionTab() {
     <>sin entrenar — entrena o genera el checkpoint demo</>
   )
 
-  const emptyHint = !trained && !training
+  // "usable" = hay un modelo de ESTA variante listo para muestrear. Si el usuario eligió una
+  // variante sin demo (archMissing), aunque quede en memoria el modelo de otra variante no lo
+  // ofrecemos: los paneles muestran el estado vacío hasta que se entrene esta variante.
+  const usable = trained && !archMissing
+  const emptyHint = !usable && !training
 
   return (
     <>
@@ -320,7 +364,7 @@ export function DiffusionTab() {
               full
               icon={<SparklesIcon />}
               onClick={() => doGenerate()}
-              disabled={!trained || busy || training}
+              disabled={!usable || busy || training}
               className="mt-[10px]"
             >
               {genBusy ? 'Generando…' : 'Generar nuevas'}
@@ -329,7 +373,7 @@ export function DiffusionTab() {
               full
               icon={<RefreshIcon />}
               onClick={newGenSeed}
-              disabled={!trained || busy || training}
+              disabled={!usable || busy || training}
               className="mt-[10px]"
             >
               Nueva semilla
@@ -426,7 +470,7 @@ export function DiffusionTab() {
               full
               icon={<PlayIcon />}
               onClick={() => doTrajectory()}
-              disabled={!trained || busy || training}
+              disabled={!usable || busy || training}
               className="mt-[10px]"
             >
               {trajBusy ? 'Generando proceso…' : 'Nuevo proceso'}
@@ -435,7 +479,7 @@ export function DiffusionTab() {
               full
               icon={<RefreshIcon />}
               onClick={newTrajSeed}
-              disabled={!trained || busy || training}
+              disabled={!usable || busy || training}
               className="mt-[10px]"
             >
               Nueva semilla
@@ -454,6 +498,32 @@ export function DiffusionTab() {
           <div className="gm-sub-d mb-[12px]">
             El modelo aprende a predecir el ruido que se añadió a una imagen. La pérdida es el error de
             esa predicción (MSE).
+          </div>
+
+          <div className="gm-ctrl">
+            <div className="row">
+              <span className="name">arquitectura</span>
+            </div>
+            <SegmentedControl
+              value={arch}
+              onChange={changeArch}
+              options={[
+                { label: 'Ágil', value: 'agil' },
+                { label: 'Nítido', value: 'nitido' },
+              ]}
+            />
+          </div>
+          <div className="gm-caption mb-[10px]">
+            {arch === 'nitido' ? (
+              <>
+                <b>Nítido</b>: UNet grande a 64×64 con auto-atención. Mucha más calidad, pero el
+                entrenamiento y el muestreo son bastante más lentos.
+              </>
+            ) : (
+              <>
+                <b>Ágil</b>: UNet pequeña a 32×32, rápida e interactiva. Ideal para ver la dinámica.
+              </>
+            )}
           </div>
 
           <Slider

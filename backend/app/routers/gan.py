@@ -25,6 +25,7 @@ class HyperParamsIn(BaseModel):
     learning_rate: float | None = None
     epochs: int | None = None
     batch_size: int | None = None
+    arch: str | None = None
 
 
 class TrainRequest(BaseModel):
@@ -43,6 +44,10 @@ class InterpolateRequest(BaseModel):
     seed: int = 42
 
 
+class ArchRequest(BaseModel):
+    arch: str  # "basico" | "grande"
+
+
 def _require_model() -> None:
     if gan_service.generator is None:
         raise HTTPException(status_code=409, detail="modelo no entrenado: entrena o carga el checkpoint demo")
@@ -57,6 +62,20 @@ def status() -> dict:
 def set_hyperparams(req: HyperParamsIn) -> dict:
     patch = {k: v for k, v in req.model_dump().items() if v is not None}
     return gan_service.set_hyperparams(patch)
+
+
+@router.post("/arch")
+def set_arch(req: ArchRequest) -> dict:
+    """Cambia de variante cargando su checkpoint demo al instante (si existe).
+
+    Devuelve `{loaded, ...status}`: `loaded=False` si esa variante aún no tiene demo entrenado
+    (el front puede entonces ofrecer entrenarla). Si carga, el status refleja la nueva arch.
+    """
+    loaded = gan_service.load_demo(req.arch)
+    if not loaded:
+        # No hay demo de esa variante: deja registrada la elección como hiperparámetro.
+        gan_service.set_hyperparams({"arch": req.arch})
+    return {"loaded": loaded, **gan_service.status()}
 
 
 @router.post("/train")

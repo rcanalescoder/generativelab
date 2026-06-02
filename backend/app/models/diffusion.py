@@ -1,33 +1,72 @@
-"""Modelo de difusión DDPM pequeño (CLAUDE.md §4.4).
+"""Modelo de difusión DDPM (CLAUDE.md §4.4) con DOS variantes elegibles.
 
 Un modelo de difusión NO tiene encoder: aprende a GENERAR partiendo de ruido puro y
 limpiándolo paso a paso. Aquí implementamos:
 
-1. Una UNet PEQUEÑA condicionada en el tiempo `t` (embedding sinusoidal) que, dada una
-   imagen ruidosa `x_t` y el paso `t`, predice el ruido `ε` que se le añadió.
+1. Una UNet condicionada en el tiempo `t` (embedding sinusoidal) que, dada una imagen
+   ruidosa `x_t` y el paso `t`, predice el ruido `ε` que se le añadió. La UNet es
+   PARAMETRIZABLE (`TimeUNet(img_size, base, ch_mults, attn_res)`): cambiando esos
+   argumentos obtenemos arquitecturas de distinto tamaño/resolución.
 2. El proceso DDPM (Ho et al., 2020):
    - schedule lineal de `β_t`, y de ahí `α_t = 1−β_t` y `ᾱ_t = ∏ α_s` (alphas_cumprod).
    - forward `q(x_t | x_0)`: `x_t = √ᾱ_t · x_0 + √(1−ᾱ_t) · ε`   (`q_sample`).
    - reverse `p(x_{t-1} | x_t)`: un paso de denoising que usa el ε predicho (`p_sample`),
-     y el bucle completo de muestreo (`sample_loop`).
+     y el bucle completo de muestreo **DDIM** (`sample_loop`).
 
-RENDIMIENTO (MPS/CPU): trabajamos a 32×32×3 con una UNet de pocos canales y `T=200`. El
-muestreo puede submuestrear pasos (p. ej. 50) para ser interactivo. La parametrización y
-la varianza del paso reverse son las estándar de DDPM (varianza fija = β_t).
+VARIANTES (`build_diffusion(arch)`, `DIFF_ARCHS`):
+  - "agil"   → UNet pequeña a 32×32, base 64, sin atención. Rápida (lo de siempre).
+  - "nitido" → resolución NATIVA 64×64 (sin reescalado 32→64 que emborrona), UNet mayor
+               (base 96, multiplicadores (1,2,2,4) → 64→32→16→8) con bloques de
+               auto-atención multi-cabeza en las resoluciones 16 y 8. Es la de calidad.
+
+RENDIMIENTO (MPS/CPU): "agil" trabaja a 32×32×3 con pocos canales y `T=200` (muestreo
+interactivo con DDIM y pocos pasos). "nitido" es bastante más pesada (más canales, más
+resolución y atención): mejor calidad a cambio de muestreo más lento. El schedule y la
+parametrización del reverse son las estándar de DDPM y son AGNÓSTICOS a la resolución.
 """
 
 from __future__ import annotations
 
 import math
+from dataclasses import dataclass
 
 import torch
 from torch import nn
 from torch.nn import functional as F
 
 IMG_CH = 3
-IMG_SIZE = 32          # resolución interna del modelo (downsample del dataset 64→32)
-BASE = 64              # canales base de la UNet (64→128→128 por el camino down)
+IMG_SIZE = 32          # resolución por defecto (= variante "agil"); cada modelo expone su .img_size
+BASE = 64              # canales base por defecto (= variante "agil")
 TIME_DIM = 128         # dimensión del embedding temporal
+ATTN_HEADS = 4         # nº de cabezas de la auto-atención (variante "nitido")
+
+# ---- variantes disponibles (en orden de presentación en la UI) ----------------------
+DIFF_ARCHS = ("agil", "nitido")
+
+
+@dataclass(frozen=True)
+class ArchSpec:
+    """Configuración de una variante de la UNet de difusión.
+
+    - `img_size`  : resolución nativa a la que trabaja el modelo (datos y muestreo).
+    - `base`      : canales de la primera resolución; se multiplican por `ch_mults`.
+    - `ch_mults`  : multiplicadores de canales por nivel (cada nivel baja ×2 la resolución).
+    - `attn_res`  : resoluciones (en píxeles) donde insertar auto-atención.
+    """
+
+    img_size: int
+    base: int
+    ch_mults: tuple[int, ...]
+    attn_res: tuple[int, ...]
+
+
+# "agil": la UNet de SIEMPRE (in_conv→64 a 32×32; dos niveles 64→128→128, 32→16→8;
+#   bottleneck 8×8 @128; sin atención). `ch_mults=(2,2)` reproduce exactamente esa red.
+# "nitido": resolución nativa 64×64, base 96, (1,2,2,4) → 64→32→16→8, atención en 16 y 8.
+ARCH_SPECS: dict[str, ArchSpec] = {
+    "agil": ArchSpec(img_size=32, base=64, ch_mults=(2, 2), attn_res=()),
+    "nitido": ArchSpec(img_size=64, base=96, ch_mults=(1, 2, 2, 4), attn_res=(16, 8)),
+}
 
 # ---- schedule DDPM (constantes del módulo) -------------------------------------------
 TIMESTEPS = 200        # T: nº de pasos del proceso de difusión
@@ -129,31 +168,83 @@ def timestep_embedding(t: torch.Tensor, dim: int) -> torch.Tensor:
 
 
 # ---- bloques de la UNet --------------------------------------------------------------
-class ResBlock(nn.Module):
-    """Bloque residual con inyección del embedding temporal (FiLM-additivo)."""
+def _group_norm(ch: int) -> nn.GroupNorm:
+    """GroupNorm con un nº de grupos seguro (divisor de `ch`, ≤8). Evita assert con bases
+    como 96 (no divisible por 8 en algún nivel: 96 sí, pero los multiplicadores grandes dan
+    canales como 384 que sí lo son; este helper es robusto para cualquier `base`)."""
+    for g in (8, 4, 2, 1):
+        if ch % g == 0:
+            return nn.GroupNorm(g, ch)
+    return nn.GroupNorm(1, ch)
 
-    def __init__(self, cin: int, cout: int, time_dim: int) -> None:
+
+class SelfAttention2d(nn.Module):
+    """Auto-atención espacial multi-cabeza sobre el mapa de activaciones (GroupNorm + MHA).
+
+    Aplana H*W en una secuencia de "tokens" de `ch` canales y deja que cada posición atienda
+    a TODAS las demás (atención global), algo que las convoluciones —locales— no capturan.
+    Es la pieza que más ayuda a la coherencia global de la cara en la variante "nitido"; se
+    inserta solo en resoluciones bajas (16, 8) porque su coste crece con (H*W)².
+
+    Residual: `x + Attn(Norm(x))`, con una proyección de salida inicializada a cero para que
+    el bloque empiece como la identidad (entrenamiento estable).
+    """
+
+    def __init__(self, ch: int, heads: int = ATTN_HEADS) -> None:
         super().__init__()
-        self.norm1 = nn.GroupNorm(8, cin)
+        # nº de cabezas que divida `ch` (de `heads` hacia abajo)
+        h = heads
+        while h > 1 and ch % h != 0:
+            h -= 1
+        self.norm = _group_norm(ch)
+        self.qkv = nn.Conv2d(ch, ch * 3, 1)
+        self.proj = nn.Conv2d(ch, ch, 1)
+        nn.init.zeros_(self.proj.weight)
+        nn.init.zeros_(self.proj.bias)
+        self.heads = h
+        self.head_dim = ch // h
+        self.scale = self.head_dim ** -0.5
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        b, c, hgt, wid = x.shape
+        qkv = self.qkv(self.norm(x))                      # (B, 3C, H, W)
+        q, k, v = qkv.chunk(3, dim=1)
+        # (B, heads, head_dim, H*W) -> (B, heads, H*W, head_dim)
+        q = q.view(b, self.heads, self.head_dim, hgt * wid).transpose(-1, -2)
+        k = k.view(b, self.heads, self.head_dim, hgt * wid).transpose(-1, -2)
+        v = v.view(b, self.heads, self.head_dim, hgt * wid).transpose(-1, -2)
+        attn = torch.softmax((q @ k.transpose(-1, -2)) * self.scale, dim=-1)
+        out = attn @ v                                    # (B, heads, H*W, head_dim)
+        out = out.transpose(-1, -2).reshape(b, c, hgt, wid)
+        return x + self.proj(out)
+
+
+class ResBlock(nn.Module):
+    """Bloque residual con inyección del embedding temporal (FiLM-additivo) y atención opcional."""
+
+    def __init__(self, cin: int, cout: int, time_dim: int, attn: bool = False) -> None:
+        super().__init__()
+        self.norm1 = _group_norm(cin)
         self.conv1 = nn.Conv2d(cin, cout, 3, padding=1)
         self.time_mlp = nn.Linear(time_dim, cout)
-        self.norm2 = nn.GroupNorm(8, cout)
+        self.norm2 = _group_norm(cout)
         self.conv2 = nn.Conv2d(cout, cout, 3, padding=1)
         self.skip = nn.Conv2d(cin, cout, 1) if cin != cout else nn.Identity()
+        self.attn = SelfAttention2d(cout) if attn else nn.Identity()
 
     def forward(self, x: torch.Tensor, t_emb: torch.Tensor) -> torch.Tensor:
         h = self.conv1(F.silu(self.norm1(x)))
         h = h + self.time_mlp(t_emb)[:, :, None, None]
         h = self.conv2(F.silu(self.norm2(h)))
-        return h + self.skip(x)
+        return self.attn(h + self.skip(x))
 
 
 class Down(nn.Module):
-    """Bloque residual + downsample ×2 (stride-2 conv)."""
+    """Bloque residual (con atención opcional) + downsample ×2 (stride-2 conv)."""
 
-    def __init__(self, cin: int, cout: int, time_dim: int) -> None:
+    def __init__(self, cin: int, cout: int, time_dim: int, attn: bool = False) -> None:
         super().__init__()
-        self.block = ResBlock(cin, cout, time_dim)
+        self.block = ResBlock(cin, cout, time_dim, attn=attn)
         self.down = nn.Conv2d(cout, cout, 4, stride=2, padding=1)
 
     def forward(self, x: torch.Tensor, t_emb: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
@@ -162,16 +253,16 @@ class Down(nn.Module):
 
 
 class Up(nn.Module):
-    """Upsample ×2 + concat de la skip + bloque residual.
+    """Upsample ×2 + concat de la skip + bloque residual (con atención opcional).
 
     `in_ch`: canales de la entrada (del nivel inferior); `skip_ch`: canales de la skip que
     se concatena; `out_ch`: canales de salida del bloque.
     """
 
-    def __init__(self, in_ch: int, skip_ch: int, out_ch: int, time_dim: int) -> None:
+    def __init__(self, in_ch: int, skip_ch: int, out_ch: int, time_dim: int, attn: bool = False) -> None:
         super().__init__()
         self.up = nn.ConvTranspose2d(in_ch, in_ch, 4, stride=2, padding=1)
-        self.block = ResBlock(in_ch + skip_ch, out_ch, time_dim)
+        self.block = ResBlock(in_ch + skip_ch, out_ch, time_dim, attn=attn)
 
     def forward(self, x: torch.Tensor, skip: torch.Tensor, t_emb: torch.Tensor) -> torch.Tensor:
         x = self.up(x)
@@ -180,44 +271,112 @@ class Up(nn.Module):
 
 
 class TimeUNet(nn.Module):
-    """UNet pequeña condicionada en `t` para predecir el ruido ε de imágenes 32×32×3.
+    """UNet PARAMETRIZABLE condicionada en `t` para predecir el ruido ε.
 
-    Camino: 32→16→8 (down), bottleneck en 8×8, y 8→16→32 (up) con skip connections.
-    Pocos canales (BASE=64) para que sea viable en MPS/CPU. Las skip connections llevan los
-    canales de salida de cada bloque down: s1 → c2, s2 → c3.
+    `TimeUNet(img_size, base, ch_mults, attn_res)` construye un encoder-decoder simétrico:
+    cada nivel de bajada divide la resolución entre 2 y multiplica los canales por el factor
+    correspondiente de `ch_mults`; el bottleneck (dos ResBlock) opera en la resolución más
+    baja; el decoder sube de vuelta concatenando las skip connections de cada nivel.
+
+    Atención: se inserta auto-atención (`SelfAttention2d`) en TODO nivel cuya resolución esté
+    en `attn_res`, tanto en el camino down como en el bottleneck y en el up correspondiente.
+
+    Ejemplos (los de las variantes):
+      - "agil"   : img_size=32, base=64, ch_mults=(1,2,2), attn_res=()      → 32→16→8.
+      - "nitido" : img_size=64, base=96, ch_mults=(1,2,2,4), attn_res=(16,8) → 64→32→16→8.
+
+    El modelo expone `.img_size` (lo usan el muestreo y el ruido inicial) y `.arch` (nombre).
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        img_size: int = IMG_SIZE,
+        base: int = BASE,
+        ch_mults: tuple[int, ...] = (1, 2, 2),
+        attn_res: tuple[int, ...] = (),
+        arch: str = "agil",
+    ) -> None:
         super().__init__()
-        c1, c2, c3 = BASE, BASE * 2, BASE * 2  # 64, 128, 128
+        self.img_size = int(img_size)
+        self.arch = str(arch)
+        attn_set = set(int(r) for r in attn_res)
+
+        # `in_conv` define un nivel "0" de `base` canales a resolución plena; cada nivel de
+        # bajada produce `base*ch_mults[i]` canales y divide la resolución entre 2. El decoder
+        # es simétrico y vuelve a `base` arriba. p.ej.:
+        #   agil   : in_conv=64;  down → [128,128]            (32→16→8),   sin atención.
+        #   nitido : in_conv=96;  down → [96,192,192,384]     (64→32→16→8), atención en 16 y 8.
+        level_ch = [base * m for m in ch_mults]
+        n_levels = len(level_ch)
+
         # MLP del embedding temporal compartido por todos los bloques
         self.time_mlp = nn.Sequential(
             nn.Linear(TIME_DIM, TIME_DIM),
             nn.SiLU(),
             nn.Linear(TIME_DIM, TIME_DIM),
         )
-        self.in_conv = nn.Conv2d(IMG_CH, c1, 3, padding=1)   # 32×32, c1
-        self.down1 = Down(c1, c2, TIME_DIM)                  # 32 -> 16 (skip s1: c2)
-        self.down2 = Down(c2, c3, TIME_DIM)                  # 16 -> 8  (skip s2: c3)
-        # bottleneck 8×8 con DOS bloques residuales: aumento de capacidad barato (resolución
-        # más baja) que ayuda a la calidad sin penalizar mucho el coste de muestreo.
-        self.mid1 = ResBlock(c3, c3, TIME_DIM)
-        self.mid2 = ResBlock(c3, c3, TIME_DIM)
-        self.up1 = Up(c3, c3, c2, TIME_DIM)                  # 8  -> 16, concat s2(c3) -> c2
-        self.up2 = Up(c2, c2, c1, TIME_DIM)                  # 16 -> 32, concat s1(c2) -> c1
-        self.out_norm = nn.GroupNorm(8, c1)
-        self.out_conv = nn.Conv2d(c1, IMG_CH, 3, padding=1)
+        self.in_conv = nn.Conv2d(IMG_CH, base, 3, padding=1)  # img_size×img_size, base
+
+        # --- camino DOWN: el nivel i toma la salida anterior (base en i=0) y saca level_ch[i] ---
+        self.downs = nn.ModuleList()
+        res = self.img_size
+        skip_ch: list[int] = []   # canales de la skip que produce cada nivel (= su salida)
+        cin = base
+        for i in range(n_levels):
+            cout = level_ch[i]
+            self.downs.append(Down(cin, cout, TIME_DIM, attn=res in attn_set))
+            skip_ch.append(cout)
+            cin = cout
+            res //= 2  # tras bajar, la resolución del SIGUIENTE nivel es la mitad
+
+        # --- bottleneck en la resolución más baja (res) con DOS ResBlock; atención si toca ---
+        cbott = level_ch[-1]
+        mid_attn = res in attn_set
+        self.mid1 = ResBlock(cbott, cbott, TIME_DIM, attn=mid_attn)
+        self.mid2 = ResBlock(cbott, cbott, TIME_DIM, attn=False)
+
+        # --- camino UP: simétrico; cada nivel concatena su skip y vuelve a la anchura del
+        # nivel superior (el último vuelve a `base`, la anchura de in_conv). ---
+        self.ups = nn.ModuleList()
+        cprev = cbott
+        for i in reversed(range(n_levels)):
+            res *= 2  # subimos: la atención se decide a la resolución de ESTE nivel
+            sch = skip_ch[i]
+            cout = level_ch[i - 1] if i > 0 else base
+            self.ups.append(Up(cprev, sch, cout, TIME_DIM, attn=res in attn_set))
+            cprev = cout
+
+        self.out_norm = _group_norm(base)
+        self.out_conv = nn.Conv2d(base, IMG_CH, 3, padding=1)
 
     def forward(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
         t_emb = self.time_mlp(timestep_embedding(t, TIME_DIM))
-        h0 = self.in_conv(x)
-        h1, s1 = self.down1(h0, t_emb)
-        h2, s2 = self.down2(h1, t_emb)
-        m = self.mid1(h2, t_emb)
-        m = self.mid2(m, t_emb)
-        u = self.up1(m, s2, t_emb)
-        u = self.up2(u, s1, t_emb)
-        return self.out_conv(F.silu(self.out_norm(u)))
+        h = self.in_conv(x)
+        skips: list[torch.Tensor] = []
+        for down in self.downs:
+            h, s = down(h, t_emb)
+            skips.append(s)
+        h = self.mid1(h, t_emb)
+        h = self.mid2(h, t_emb)
+        for up in self.ups:
+            h = up(h, skips.pop(), t_emb)
+        return self.out_conv(F.silu(self.out_norm(h)))
+
+
+def build_diffusion(arch: str = "agil") -> TimeUNet:
+    """Construye la UNet de la variante pedida. `arch` desconocida → 'agil' (degrada bien).
+
+    Devuelve una `TimeUNet` con `.img_size` y `.arch` ya fijados a los de la variante.
+    """
+    arch = arch if arch in ARCH_SPECS else "agil"
+    spec = ARCH_SPECS[arch]
+    return TimeUNet(
+        img_size=spec.img_size,
+        base=spec.base,
+        ch_mults=spec.ch_mults,
+        attn_res=spec.attn_res,
+        arch=arch,
+    )
 
 
 def count_params(model: nn.Module) -> int:
@@ -357,7 +516,10 @@ def sample_loop(
     capture_set = set(capture or [])
     acp = sched.alphas_cumprod
 
-    x = torch.randn(n, IMG_CH, IMG_SIZE, IMG_SIZE, device=device)
+    # CRÍTICO: el ruido inicial vive a la resolución NATIVA del modelo (cada variante la
+    # suya), NO en la constante global IMG_SIZE. El schedule es agnóstico a la resolución.
+    img_size = getattr(model, "img_size", IMG_SIZE)
+    x = torch.randn(n, IMG_CH, img_size, img_size, device=device)
     snapshots: list[torch.Tensor] = []
     if 0 in capture_set:
         snapshots.append(_to_img(x))

@@ -11,7 +11,7 @@ forma perezosa la primera vez que se necesita el modelo.
 from __future__ import annotations
 
 import json
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from queue import Empty
 
 from fastapi import APIRouter, HTTPException, Request
@@ -30,6 +30,11 @@ class HyperParamsIn(BaseModel):
     batch_size: int | None = None
     timesteps: int | None = None
     schedule: str | None = None  # "cosine" (def.) | "linear"
+    arch: str | None = None      # "agil" | "nitido"
+
+
+class ArchRequest(BaseModel):
+    arch: str  # "agil" | "nitido"
 
 
 class TrainRequest(BaseModel):
@@ -64,6 +69,21 @@ def _require_model() -> None:
 @router.get("/status")
 def status() -> dict:
     return diffusion_service.status()
+
+
+@router.post("/arch")
+def set_arch(req: ArchRequest) -> dict:
+    """Cambia de variante cargando su checkpoint demo al instante (si existe).
+
+    Devuelve `{loaded, ...status}`: `loaded=False` si esa variante aún no tiene demo entrenado
+    (el front puede entonces ofrecer entrenarla). Si carga, el status refleja la nueva arch.
+    """
+    loaded = diffusion_service.load_demo(req.arch)
+    if not loaded:
+        # No hay demo de esa variante: deja registrada la elección como hiperparámetro
+        # (saneada contra DIFF_ARCHS) para que /train la propague.
+        diffusion_service.hp = replace(diffusion_service.hp, arch=req.arch).sanitized()
+    return {"loaded": loaded, **diffusion_service.status()}
 
 
 @router.post("/train")

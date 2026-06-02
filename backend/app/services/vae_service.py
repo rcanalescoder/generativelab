@@ -15,13 +15,21 @@ import numpy as np
 import torch
 from torch import nn
 
-from .. import imaging
+from .. import imaging, metrics as metrics_mod
 from ..data import dataset
 from ..device import get_device
-from ..models.vae import ConvVAE, count_params
+from ..models.vae import VAE_ARCHS, build_vae, count_params
 from ..seeding import set_seed
 
-DEMO_PATH = Path(__file__).resolve().parents[1] / "checkpoints" / "vae_demo.pt"
+CKPT_DIR = Path(__file__).resolve().parents[1] / "checkpoints"
+# Checkpoint demo "legacy" (sin variantes): se trata como el demo de "basico".
+LEGACY_DEMO_PATH = CKPT_DIR / "vae_demo.pt"
+
+
+def demo_path(arch: str) -> Path:
+    """Ruta del checkpoint demo por variante, p. ej. vae_basico_demo.pt."""
+    return CKPT_DIR / f"vae_{arch}_demo.pt"
+
 
 QUICK_N = 6000          # subconjunto para el modo "quick" (solo cambia el tamaño de datos)
 DEMO_EPOCHS = 12        # checkpoint demo (modo full)
@@ -29,6 +37,8 @@ LOG_EVERY = 25          # steps entre eventos de progreso
 EARLY_STOP_MIN_DELTA = 1e-4  # mejora mínima de pérdida por epoch para resetear la paciencia
 PREVIEW_IDS = [12, 800, 4096, 20000]  # caras fijas para la vista previa
 EMBED_SAMPLE = 1200     # nº de z muestreados para el mapa latente / vecinos / clusters
+METRICS_N = 256         # tamaño del held-out fijo para PSNR/SSIM/MSE
+METRICS_SEED = 1234     # semilla fija del held-out de métricas (independiente del entrenamiento)
 
 
 def _kl_divergence(mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
@@ -48,6 +58,7 @@ class VAEHyperParams:
     loss: str = "mse"  # "mse" | "l1"  (término de reconstrucción)
     beta: float = 1.0  # peso del término KL (β-VAE)
     batch_size: int = 256
+    arch: str = "basico"  # "basico" | "grande"
 
     def sanitized(self) -> "VAEHyperParams":
         return VAEHyperParams(
@@ -57,6 +68,7 @@ class VAEHyperParams:
             loss="l1" if str(self.loss).lower() == "l1" else "mse",
             beta=float(max(0.0, min(10.0, self.beta))),
             batch_size=int(max(16, min(512, self.batch_size))),
+            arch=self.arch if self.arch in VAE_ARCHS else "basico",
         )
 
 
@@ -65,7 +77,7 @@ class VAEService:
 
     def __init__(self) -> None:
         self.device = get_device()
-        self.model: ConvVAE | None = None
+        self.model: nn.Module | None = None
         self.hp = VAEHyperParams()
         self.seed = 42
         self.trained = False
@@ -87,6 +99,8 @@ class VAEService:
             "training": self.training,
             "seed": self.seed,
             "device": self.device.type,
+            "arch": self.hp.arch,
+            "archs": list(VAE_ARCHS),
             "hyperparams": asdict(self.hp),
             "num_params": count_params(self.model) if self.model is not None else 0,
             "loss_history": self.loss_history,
@@ -112,7 +126,7 @@ class VAEService:
             t = torch.from_numpy(chunk).float().div_(255).permute(0, 3, 1, 2).contiguous()
             yield t.to(self.device)
 
-    def _preview(self, model: ConvVAE) -> list[str]:
+    def _preview(self, model: nn.Module) -> list[str]:
         """Reconstrucción determinista (vía μ) de unas caras fijas para la vista previa."""
         was_training = model.training
         model.eval()
@@ -152,7 +166,7 @@ class VAEService:
             n_use = min(QUICK_N, n_total) if quick else n_total
             epochs = hp.epochs
 
-            model = ConvVAE(hp.latent_dim).to(self.device)
+            model = build_vae(hp.latent_dim, hp.arch).to(self.device)
             model.train()
             opt = torch.optim.Adam(model.parameters(), lr=hp.learning_rate)
             recon_crit: nn.Module = nn.L1Loss() if hp.loss == "l1" else nn.MSELoss()
@@ -265,7 +279,7 @@ class VAEService:
         return q
 
     # ---------- búsqueda en rejilla (grid search) ----------
-    def _eval_mse(self, model: ConvVAE, ids: np.ndarray) -> float:
+    def _eval_mse(self, model: nn.Module, ids: np.ndarray) -> float:
         """MSE de reconstrucción (determinista, vía μ) por píxel sobre un conjunto de evaluación."""
         model.eval()
         tot = 0.0
@@ -294,6 +308,7 @@ class VAEService:
             losses = [x for x in ["mse", "l1"] if x in set(grid.get("loss", ["mse"]))] or ["mse"]
             combos = [(ld, lr, ls) for ld in lds for lr in lrs for ls in losses][:16]
             total = len(combos)
+            arch = self.hp.arch  # la rejilla varía ld/lr/loss sobre la variante actual
 
             n = dataset.count()
             rng = np.random.default_rng(seed)
@@ -312,7 +327,7 @@ class VAEService:
                     yield {"type": "cancelled"}
                     return
                 set_seed(seed)
-                model = ConvVAE(ld).to(self.device)
+                model = build_vae(ld, arch).to(self.device)
                 model.train()
                 opt = torch.optim.Adam(model.parameters(), lr=lr)
                 recon_crit: nn.Module = nn.L1Loss() if ls == "l1" else nn.MSELoss()
@@ -330,7 +345,7 @@ class VAEService:
                             return
                     yield {"type": "progress", "index": idx, "total": total,
                            "epoch": ep + 1, "epochs": epochs}
-                cfg = {"latent_dim": ld, "learning_rate": lr, "loss": ls, "epochs": epochs}
+                cfg = {"latent_dim": ld, "learning_rate": lr, "loss": ls, "epochs": epochs, "arch": arch}
                 res = {**cfg, "eval_mse": self._eval_mse(model, eval_ids)}
                 results.append(res)
                 if best is None or res["eval_mse"] < best["eval_mse"]:
@@ -362,37 +377,76 @@ class VAEService:
         return q
 
     # ---------- checkpoint ----------
-    def save_checkpoint(self, path: Path = DEMO_PATH) -> None:
-        """Guarda el modelo. Solo lo usa el script generador del demo (`__main__`)."""
+    def save_checkpoint(self, path: Path | None = None) -> None:
+        """Guarda el modelo en `vae_<arch>_demo.pt`. Solo lo usa el `__main__` generador del demo."""
         if self.model is None:
             return
+        path = path or demo_path(self.hp.arch)
         path.parent.mkdir(parents=True, exist_ok=True)
         torch.save(
             {
                 "state_dict": self.model.state_dict(),
                 "hyperparams": asdict(self.hp),
+                "arch": self.hp.arch,
                 "seed": self.seed,
                 "loss_history": self.loss_history,
-                "version": 1,
+                "version": 2,
             },
             path,
         )
 
-    def load_checkpoint(self) -> bool:
-        if not DEMO_PATH.exists():
+    def _load_path(self, path: Path) -> bool:
+        """Carga un checkpoint desde una ruta concreta. Tolera arch desconocida (devuelve False)."""
+        if not path.exists():
             return False
-        ckpt = torch.load(DEMO_PATH, map_location=self.device)
-        self.hp = VAEHyperParams(**ckpt["hyperparams"]).sanitized()
-        model = ConvVAE(self.hp.latent_dim).to(self.device)
-        model.load_state_dict(ckpt["state_dict"])
+        ckpt = torch.load(path, map_location=self.device)
+        hp = VAEHyperParams(**ckpt["hyperparams"])
+        # arch puede venir suelta (v2) o dentro de hyperparams; v1 (legacy) → "basico".
+        arch = ckpt.get("arch", getattr(hp, "arch", "basico"))
+        if arch not in VAE_ARCHS:
+            return False  # checkpoint de una variante que ya no existe: no crashear
+        hp = replace(hp, arch=arch).sanitized()
+        try:
+            model = build_vae(hp.latent_dim, hp.arch).to(self.device)
+            model.load_state_dict(ckpt["state_dict"])
+        except (RuntimeError, KeyError):
+            return False  # incompatibilidad de pesos: degradar sin romper
         model.eval()
         self.model = model
+        self.hp = hp
         self.seed = ckpt.get("seed", 42)
         self.loss_history = ckpt.get("loss_history", [])
         self.trained = True
         self.outdated = False
         self._invalidate_embedding()
         return True
+
+    def load_demo(self, arch: str) -> bool:
+        """Carga el checkpoint demo de la variante `arch` (`vae_<arch>_demo.pt`).
+
+        Devuelve True si se cargó. Compatibilidad: si se pide "basico" y solo existe el viejo
+        `vae_demo.pt`, se usa ese. Lo usa la UI para cambiar de variante al instante.
+        """
+        if arch not in VAE_ARCHS:
+            return False
+        path = demo_path(arch)
+        if not path.exists() and arch == "basico" and LEGACY_DEMO_PATH.exists():
+            path = LEGACY_DEMO_PATH
+        return self._load_path(path)
+
+    def load_checkpoint(self, arch: str | None = None) -> bool:
+        """Carga el demo de la variante `arch` (o la actual). Compatible con el viejo `vae_demo.pt`.
+
+        Al arrancar el servidor se llama sin argumentos: intenta la variante actual y, si no hay,
+        cae a "basico" (que cubre el legacy `vae_demo.pt`) para que la app siempre tenga un demo.
+        """
+        if arch is not None:
+            return self.load_demo(arch)
+        if self.load_demo(self.hp.arch):
+            return True
+        if self.hp.arch != "basico":
+            return self.load_demo("basico")
+        return False
 
     # ---------- reconstrucción ----------
     def reconstruct(self, ids: list[int], noise: float = 0.0) -> list[dict]:
@@ -433,6 +487,67 @@ class VAEService:
             "original": imaging.tensor_to_b64(x),
             "reconstruction": imaging.tensor_to_b64(recon),
             "diff": imaging.diff_b64(x.cpu(), recon.cpu()),
+        }
+
+    # ---------- métricas de reconstrucción ----------
+    def _heldout_ids(self, n: int) -> np.ndarray:
+        """Subconjunto held-out FIJO por semilla (independiente del entrenamiento)."""
+        total = dataset.count()
+        rng = np.random.default_rng(METRICS_SEED)
+        n = int(max(1, min(n, total)))
+        return np.sort(rng.choice(total, size=n, replace=False))
+
+    def metrics(self, n: int = METRICS_N, n_examples: int = 6) -> dict:
+        """Reconstruye un held-out fijo y devuelve MSE/PSNR/SSIM agregados + unos ejemplos.
+
+        Usa la reconstrucción determinista (vía μ, sin muestrear): mide la calidad real del
+        modelo sin el ruido del término estocástico.
+        """
+        if self.model is None:
+            raise RuntimeError("modelo no entrenado")
+        arr = dataset.load_array()
+        ids = self._heldout_ids(n)
+        self.model.eval()
+
+        mse_tot = psnr_tot = ssim_tot = 0.0
+        cnt = 0
+        examples: list[dict] = []
+        ex_ids = set(ids[:n_examples].tolist())
+        with torch.no_grad():
+            for i in range(0, len(ids), 128):
+                idx = ids[i : i + 128]
+                x = (
+                    torch.from_numpy(np.asarray(arr[idx])).float().div(255)
+                    .permute(0, 3, 1, 2).contiguous().to(self.device)
+                )
+                xhat = self.model.decode(self.model.encode_mu(x)).clamp(0, 1)
+                b = x.shape[0]
+                mse_tot += metrics_mod.mse(x, xhat) * b
+                psnr_tot += metrics_mod.psnr(x, xhat) * b
+                ssim_tot += metrics_mod.ssim(x, xhat) * b
+                cnt += b
+                for k, pid in enumerate(idx.tolist()):
+                    if pid in ex_ids:
+                        xk, xhk = x[k], xhat[k]
+                        examples.append(
+                            {
+                                "id": int(pid),
+                                "original": imaging.tensor_to_b64(xk),
+                                "reconstruction": imaging.tensor_to_b64(xhk),
+                                "diff": imaging.diff_b64(xk.cpu(), xhk.cpu()),
+                                "psnr": round(metrics_mod.psnr(xk, xhk), 2),
+                                "ssim": round(metrics_mod.ssim(xk, xhk), 4),
+                            }
+                        )
+        examples.sort(key=lambda e: e["id"])
+        return {
+            "mse": mse_tot / max(cnt, 1),
+            "psnr": psnr_tot / max(cnt, 1),
+            "ssim": ssim_tot / max(cnt, 1),
+            "n": int(cnt),
+            "arch": self.hp.arch,
+            "latent_dim": self.hp.latent_dim,
+            "examples": examples,
         }
 
     # ---------- generación (muestreo del prior) ----------
@@ -566,17 +681,35 @@ vae_service = VAEService()
 
 
 if __name__ == "__main__":
-    # Genera el checkpoint demo:  python -m app.services.vae_service
-    svc = VAEService()
-    print(f"[vae] entrenando checkpoint demo (full, {DEMO_EPOCHS} epochs, beta=1.0) en {svc.device.type}…", flush=True)
-    for ev in svc.iter_train("full", VAEHyperParams(epochs=DEMO_EPOCHS, beta=1.0, batch_size=256), seed=42):
-        if ev["type"] == "epoch":
-            print(
-                f"[vae]   epoch {ev['epoch']}/{ev['epochs']} · loss {ev['loss']:.5f}"
-                f" (recon {ev['recon_loss']:.5f} · kl {ev['kl_loss']:.5f})",
-                flush=True,
-            )
-        elif ev["type"] == "done":
-            print(f"[vae] listo · loss final {ev['loss']:.5f}", flush=True)
-    svc.save_checkpoint(DEMO_PATH)
-    print(f"[vae] checkpoint demo guardado en {DEMO_PATH}", flush=True)
+    # Genera el checkpoint demo de LAS DOS variantes:  python -m app.services.vae_service
+    # Cada una entrena en modo full acotado (DEMO_EPOCHS, β=1.0) y se guarda en vae_<arch>_demo.pt.
+    summary: list[dict] = []
+    for arch in VAE_ARCHS:
+        svc = VAEService()
+        print(f"[vae] === variante '{arch}' · full {DEMO_EPOCHS} epochs (β=1.0) en {svc.device.type} ===",
+              flush=True)
+        hp = VAEHyperParams(epochs=DEMO_EPOCHS, beta=1.0, batch_size=256, arch=arch)
+        for ev in svc.iter_train("full", hp, seed=42):
+            if ev["type"] == "epoch":
+                print(
+                    f"[vae]   [{arch}] epoch {ev['epoch']}/{ev['epochs']} · loss {ev['loss']:.5f}"
+                    f" (recon {ev['recon_loss']:.5f} · kl {ev['kl_loss']:.5f})",
+                    flush=True,
+                )
+            elif ev["type"] == "done":
+                print(f"[vae]   [{arch}] listo · loss final {ev['loss']:.5f}", flush=True)
+        path = demo_path(arch)
+        svc.save_checkpoint(path)
+        print(f"[vae]   [{arch}] checkpoint guardado en {path}", flush=True)
+        m = svc.metrics()
+        print(f"[vae]   [{arch}] held-out (n={m['n']}): "
+              f"MSE {m['mse']:.5f} · PSNR {m['psnr']:.2f} dB · SSIM {m['ssim']:.4f} "
+              f"· params {count_params(svc.model) / 1e6:.2f}M", flush=True)
+        summary.append({"arch": arch, **{k: m[k] for k in ("mse", "psnr", "ssim")},
+                        "params": count_params(svc.model)})
+
+    print("\n[vae] === Resumen de variantes (held-out fijo) ===", flush=True)
+    print(f"[vae] {'arch':8s} {'params':>10s} {'MSE':>10s} {'PSNR(dB)':>10s} {'SSIM':>8s}", flush=True)
+    for r in summary:
+        print(f"[vae] {r['arch']:8s} {r['params'] / 1e6:9.2f}M {r['mse']:10.5f} "
+              f"{r['psnr']:10.2f} {r['ssim']:8.4f}", flush=True)

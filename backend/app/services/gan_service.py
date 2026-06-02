@@ -4,6 +4,10 @@ checkpoint y muestreo. Mismo patrón hilo+cola para SSE que el autoencoder (CLAU
 Un GAN no reconstruye ni tiene vecinos: su esencia es **generar** desde ruido z y el juego
 entre el generador (G) y el discriminador (D). El entrenamiento emite el preview de un z
 fijo en cada epoch para ver cómo el generador "aprende a dibujar" caras.
+
+Dos variantes de arquitectura ("basico"/"grande", ver `models/gan.py`) con checkpoints demo
+separados (`gan_<arch>_demo.pt`), igual que el AE. El GAN no tiene métrica de reconstrucción:
+la comparación entre variantes es **visual** (galería de caras generadas).
 """
 
 from __future__ import annotations
@@ -22,15 +26,23 @@ from .. import imaging
 from ..data import dataset
 from ..device import get_device
 from ..models.gan import (
-    Discriminator,
-    Generator,
+    GAN_ARCHS,
+    build_gan,
     count_params,
     init_weights,
     to_image_range,
 )
 from ..seeding import set_seed
 
-DEMO_PATH = Path(__file__).resolve().parents[1] / "checkpoints" / "gan_demo.pt"
+CKPT_DIR = Path(__file__).resolve().parents[1] / "checkpoints"
+# Checkpoint demo "legacy" (sin variantes): se trata como el demo de "basico".
+LEGACY_DEMO_PATH = CKPT_DIR / "gan_demo.pt"
+
+
+def demo_path(arch: str) -> Path:
+    """Ruta del checkpoint demo por variante, p. ej. gan_basico_demo.pt."""
+    return CKPT_DIR / f"gan_{arch}_demo.pt"
+
 
 QUICK_N = 6000           # subconjunto para el modo "quick" (solo cambia el tamaño de datos)
 DEMO_N = 15000           # subconjunto para el checkpoint demo (acota el tiempo)
@@ -46,6 +58,7 @@ class GANHyperParams:
     learning_rate: float = 2e-4
     epochs: int = 30
     batch_size: int = 128
+    arch: str = "basico"  # "basico" | "grande"
 
     def sanitized(self) -> "GANHyperParams":
         return GANHyperParams(
@@ -53,6 +66,7 @@ class GANHyperParams:
             learning_rate=float(max(1e-5, min(1e-2, self.learning_rate))),
             epochs=int(max(1, min(200, self.epochs))),
             batch_size=int(max(16, min(256, self.batch_size))),
+            arch=self.arch if self.arch in GAN_ARCHS else "basico",
         )
 
 
@@ -61,8 +75,8 @@ class GANService:
 
     def __init__(self) -> None:
         self.device = get_device()
-        self.generator: Generator | None = None
-        self.discriminator: Discriminator | None = None
+        self.generator: nn.Module | None = None
+        self.discriminator: nn.Module | None = None
         self.hp = GANHyperParams()
         self.seed = 42
         self.trained = False
@@ -84,6 +98,8 @@ class GANService:
             "seed": self.seed,
             "device": self.device.type,
             "z_dim": self.hp.z_dim,
+            "arch": self.hp.arch,
+            "archs": list(GAN_ARCHS),
             "hyperparams": asdict(self.hp),
             # num_params = G + D (para la UI). Desglose por si interesa.
             "num_params": ng + nd,
@@ -113,7 +129,7 @@ class GANService:
             t = t.permute(0, 3, 1, 2).contiguous()
             yield t.to(self.device)
 
-    def _preview(self, generator: Generator, fixed_z: torch.Tensor) -> list[str]:
+    def _preview(self, generator: nn.Module, fixed_z: torch.Tensor) -> list[str]:
         """Grid pequeño de caras generadas desde un z fijo (para ver el progreso)."""
         was_training = generator.training
         generator.eval()
@@ -153,8 +169,9 @@ class GANService:
             # El nº de epochs del slider se respeta siempre; "quick" solo reduce el subconjunto.
             epochs = hp.epochs
 
-            generator = Generator(hp.z_dim).to(self.device)
-            discriminator = Discriminator().to(self.device)
+            generator, discriminator = build_gan(hp.z_dim, hp.arch)
+            generator = generator.to(self.device)
+            discriminator = discriminator.to(self.device)
             generator.apply(init_weights)
             discriminator.apply(init_weights)
             generator.train()
@@ -271,7 +288,7 @@ class GANService:
         return q
 
     # ---------- generación / interpolación ----------
-    def _require_generator(self) -> Generator:
+    def _require_generator(self) -> nn.Module:
         if self.generator is None:
             raise RuntimeError("modelo no entrenado")
         return self.generator
@@ -309,43 +326,82 @@ class GANService:
         return {"steps": steps, "seed": int(seed), "frames": frames}
 
     # ---------- checkpoint ----------
-    def save_checkpoint(self, path: Path = DEMO_PATH) -> None:
-        """Guarda G + D. Solo lo usa el script generador del demo (`__main__`)."""
+    def save_checkpoint(self, path: Path | None = None) -> None:
+        """Guarda G + D en `gan_<arch>_demo.pt`. Solo lo usa el `__main__` generador del demo."""
         if self.generator is None or self.discriminator is None:
             return
+        path = path or demo_path(self.hp.arch)
         path.parent.mkdir(parents=True, exist_ok=True)
         torch.save(
             {
                 "generator": self.generator.state_dict(),
                 "discriminator": self.discriminator.state_dict(),
                 "hyperparams": asdict(self.hp),
+                "arch": self.hp.arch,
                 "seed": self.seed,
                 "loss_history": self.loss_history,
-                "version": 1,
+                "version": 2,
             },
             path,
         )
 
-    def load_checkpoint(self) -> bool:
-        """Carga el generador (y el discriminador) para inferencia."""
-        if not DEMO_PATH.exists():
+    def _load_path(self, path: Path) -> bool:
+        """Carga un checkpoint desde una ruta concreta. Tolera arch desconocida (devuelve False)."""
+        if not path.exists():
             return False
-        ckpt = torch.load(DEMO_PATH, map_location=self.device)
-        self.hp = GANHyperParams(**ckpt["hyperparams"]).sanitized()
-        generator = Generator(self.hp.z_dim).to(self.device)
-        generator.load_state_dict(ckpt["generator"])
+        ckpt = torch.load(path, map_location=self.device)
+        hp = GANHyperParams(**ckpt["hyperparams"])
+        # arch puede venir suelta (v2) o dentro de hyperparams; v1 (legacy) → "basico".
+        arch = ckpt.get("arch", getattr(hp, "arch", "basico"))
+        if arch not in GAN_ARCHS:
+            return False  # checkpoint de una variante que ya no existe: no crashear
+        hp = replace(hp, arch=arch).sanitized()
+        try:
+            generator, discriminator = build_gan(hp.z_dim, hp.arch)
+            generator = generator.to(self.device)
+            discriminator = discriminator.to(self.device)
+            generator.load_state_dict(ckpt["generator"])
+            if "discriminator" in ckpt:
+                discriminator.load_state_dict(ckpt["discriminator"])
+        except (RuntimeError, KeyError):
+            return False  # incompatibilidad de pesos: degradar sin romper
         generator.eval()
-        self.generator = generator
-        discriminator = Discriminator().to(self.device)
-        if "discriminator" in ckpt:
-            discriminator.load_state_dict(ckpt["discriminator"])
         discriminator.eval()
+        self.generator = generator
         self.discriminator = discriminator
+        self.hp = hp
         self.seed = ckpt.get("seed", 42)
         self.loss_history = ckpt.get("loss_history", [])
         self.trained = True
         self.outdated = False
         return True
+
+    def load_demo(self, arch: str) -> bool:
+        """Carga el checkpoint demo de la variante `arch` (`gan_<arch>_demo.pt`).
+
+        Devuelve True si se cargó. Compatibilidad: si se pide "basico" y solo existe el viejo
+        `gan_demo.pt`, se usa ese. Lo usa la UI para cambiar de variante al instante.
+        """
+        if arch not in GAN_ARCHS:
+            return False
+        path = demo_path(arch)
+        if not path.exists() and arch == "basico" and LEGACY_DEMO_PATH.exists():
+            path = LEGACY_DEMO_PATH
+        return self._load_path(path)
+
+    def load_checkpoint(self, arch: str | None = None) -> bool:
+        """Carga el demo de la variante `arch` (o la actual). Compatible con el viejo `gan_demo.pt`.
+
+        Al arrancar el servidor se llama sin argumentos: intenta la variante actual y, si no hay,
+        cae a "basico" (que cubre el legacy `gan_demo.pt`) para que la app siempre tenga un demo.
+        """
+        if arch is not None:
+            return self.load_demo(arch)
+        if self.load_demo(self.hp.arch):
+            return True
+        if self.hp.arch != "basico":
+            return self.load_demo("basico")
+        return False
 
 
 # Singleton compartido por los routers.
@@ -353,32 +409,56 @@ gan_service = GANService()
 
 
 if __name__ == "__main__":
-    # Genera el checkpoint demo:  python -m app.services.gan_service
-    # Config acotada para que el tiempo sea razonable en un Mac: subconjunto de DEMO_N
-    # imágenes y DEMO_EPOCHS epochs. La calidad será tosca (es educativo); ver "riesgos".
+    # Genera el checkpoint demo de LAS DOS variantes:  python -m app.services.gan_service
+    # Cada una se entrena en modo full acotado (subconjunto DEMO_N · DEMO_EPOCHS epochs) y se
+    # guarda en gan_<arch>_demo.pt. La calidad será tosca (es educativo). El GAN no tiene
+    # métrica de reconstrucción: la comparación entre variantes es visual (galería).
     import time
 
-    svc = GANService()
-    print(
-        f"[gan] entrenando checkpoint demo en {svc.device.type} · "
-        f"subconjunto {DEMO_N} · {DEMO_EPOCHS} epochs · z_dim=100 · lr=2e-4 · Adam(0.5,0.999)…",
-        flush=True,
-    )
-    hp = GANHyperParams(z_dim=100, learning_rate=2e-4, epochs=DEMO_EPOCHS, batch_size=DEMO_BATCH)
-    t0 = time.time()
-    # modo "full" pero acotado a DEMO_N imágenes vía n_override (sin tocar el dataset global).
-    for ev in svc.iter_train("full", hp, seed=42, n_override=DEMO_N):
-        if ev["type"] == "epoch":
-            print(
-                f"[gan]   epoch {ev['epoch']:>2}/{ev['epochs']} · "
-                f"g_loss {ev['g_loss']:.4f} · d_loss {ev['d_loss']:.4f}",
-                flush=True,
-            )
-        elif ev["type"] == "done":
-            print(
-                f"[gan] listo · g_loss {ev['g_loss']:.4f} · d_loss {ev['d_loss']:.4f} · "
-                f"{time.time() - t0:.0f}s",
-                flush=True,
-            )
-    svc.save_checkpoint(DEMO_PATH)
-    print(f"[gan] checkpoint demo guardado en {DEMO_PATH}", flush=True)
+    summary: list[dict] = []
+    for arch in GAN_ARCHS:
+        svc = GANService()
+        ng = count_params(build_gan(100, arch)[0])
+        nd = count_params(build_gan(100, arch)[1])
+        print(
+            f"[gan] === variante '{arch}' · {arch} · subconjunto {DEMO_N} · {DEMO_EPOCHS} epochs "
+            f"en {svc.device.type} · z_dim=100 · lr=2e-4 · Adam(0.5,0.999) · "
+            f"G+D≈{(ng + nd) / 1e6:.1f}M params ===",
+            flush=True,
+        )
+        hp = GANHyperParams(
+            z_dim=100, learning_rate=2e-4, epochs=DEMO_EPOCHS, batch_size=DEMO_BATCH, arch=arch
+        )
+        t0 = time.time()
+        # modo "full" pero acotado a DEMO_N imágenes vía n_override (sin tocar el dataset global).
+        for ev in svc.iter_train("full", hp, seed=42, n_override=DEMO_N):
+            if ev["type"] == "epoch":
+                print(
+                    f"[gan]   [{arch}] epoch {ev['epoch']:>2}/{ev['epochs']} · "
+                    f"g_loss {ev['g_loss']:.4f} · d_loss {ev['d_loss']:.4f}",
+                    flush=True,
+                )
+            elif ev["type"] == "done":
+                print(
+                    f"[gan]   [{arch}] listo · g_loss {ev['g_loss']:.4f} · "
+                    f"d_loss {ev['d_loss']:.4f} · {time.time() - t0:.0f}s",
+                    flush=True,
+                )
+        path = demo_path(arch)
+        svc.save_checkpoint(path)
+        print(f"[gan]   [{arch}] checkpoint demo guardado en {path}", flush=True)
+        summary.append(
+            {
+                "arch": arch,
+                "params": ng + nd,
+                "g_loss": svc.loss_history[-1]["g_loss"] if svc.loss_history else None,
+                "d_loss": svc.loss_history[-1]["d_loss"] if svc.loss_history else None,
+            }
+        )
+
+    print("\n[gan] === Resumen de variantes (la comparación real es VISUAL) ===", flush=True)
+    print(f"[gan] {'arch':8s} {'params':>10s} {'g_loss':>10s} {'d_loss':>10s}", flush=True)
+    for r in summary:
+        gl = f"{r['g_loss']:.4f}" if r["g_loss"] is not None else "—"
+        dl = f"{r['d_loss']:.4f}" if r["d_loss"] is not None else "—"
+        print(f"[gan] {r['arch']:8s} {r['params'] / 1e6:9.2f}M {gl:>10s} {dl:>10s}", flush=True)

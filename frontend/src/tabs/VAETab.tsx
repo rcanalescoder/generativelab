@@ -17,6 +17,7 @@ import {
   SparklesIcon,
 } from '../lib/icons'
 import { ArchitectureModal } from '../components/lab/ArchitectureModal'
+import { VAEMetricsPanel } from '../components/lab/VAEMetricsPanel'
 import { ARCHITECTURES } from '../content/architectures'
 import {
   cancelVAEGridSearch,
@@ -29,12 +30,14 @@ import {
   gridSearchVAE,
   interpolateVAE,
   reconstructVAE,
+  setVAEArch,
   trainVAE,
   type InterpResult,
   type NeighborsResult,
   type Projection,
   type ReconItem,
   type Sample,
+  type VAEArch,
   type VAELossPoint,
   type VAEStatus,
 } from '../lib/api-vae'
@@ -57,6 +60,7 @@ const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
 /** Valores por defecto (los que ves al abrir la app, = checkpoint demo). */
 const DEFAULTS = {
+  arch: 'basico' as const,
   latentDim: 128,
   lrIdx: 2,
   epochs: 12,
@@ -100,6 +104,7 @@ export function VAETab() {
   const [genSeed, setGenSeed] = useState(DEFAULTS.genSeed)
 
   // hiperparámetros del modelo (requieren reentrenar)
+  const [arch, setArch] = useState<VAEArch>(DEFAULTS.arch)
   const [latentDim, setLatentDim] = useState(DEFAULTS.latentDim)
   const [lrIdx, setLrIdx] = useState(DEFAULTS.lrIdx)
   const [epochs, setEpochs] = useState(DEFAULTS.epochs)
@@ -123,6 +128,9 @@ export function VAETab() {
   const [error, setError] = useState<string | null>(null)
   const [gridOpen, setGridOpen] = useState(false)
   const [archOpen, setArchOpen] = useState(false)
+  const [metricsOpen, setMetricsOpen] = useState(false)
+  // true cuando la variante elegida aún no tiene checkpoint demo (hay que entrenarla)
+  const [archMissing, setArchMissing] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
 
   const lr = LR_VALUES[lrIdx]
@@ -130,7 +138,11 @@ export function VAETab() {
   const outdated =
     trained &&
     !!status &&
-    (latentDim !== status.hyperparams.latent_dim ||
+    // el backend ya lo marca (p. ej. al elegir una variante sin demo entrenado)…
+    (status.outdated ||
+      // …o el usuario tocó un parámetro del modelo respecto al checkpoint cargado.
+      arch !== status.arch ||
+      latentDim !== status.hyperparams.latent_dim ||
       lr !== status.hyperparams.learning_rate ||
       epochs !== status.hyperparams.epochs ||
       loss !== status.hyperparams.loss ||
@@ -154,6 +166,7 @@ export function VAETab() {
       try {
         const st = await getVAEStatus()
         setStatus(st)
+        setArch(st.arch)
         setLatentDim(st.hyperparams.latent_dim)
         setEpochs(st.hyperparams.epochs)
         setLoss(st.hyperparams.loss)
@@ -180,6 +193,38 @@ export function VAETab() {
       }
     })()
   }, [])
+
+  /** Cambia de variante de arquitectura (parámetro del modelo: afecta diagrama y requiere reentrenar).
+   *  Si la variante ya tiene checkpoint demo (loaded=true) se ve al instante; si no, los paneles
+   *  quedan en "entrena para ver esta variante". */
+  const changeArch = (next: VAEArch) => {
+    if (next === arch) return
+    setArch(next)
+    run(async () => {
+      const st = await setVAEArch(next)
+      setStatus(st)
+      setArchMissing(!st.loaded)
+      if (st.loaded && st.trained) {
+        // la variante ya entrenada se ve al instante: refrescamos los paneles
+        const id = pipelineId ?? samples[0]?.id ?? null
+        if (id != null) {
+          setPipelineId(id)
+          const items = await reconstructVAE([id], noise)
+          setPipelineItem(items[0] ?? null)
+          setNeighbors(await getVAENeighbors(id, k))
+        }
+        setProjection(await computeVAEClusters(nClusters))
+        setGenerated(await generateVAE(genN, genSeed))
+      } else {
+        // sin demo aún: limpiamos los paneles para mostrar el estado vacío de esta variante
+        setPipelineItem(null)
+        setProjection(null)
+        setNeighbors(null)
+        setInterp(null)
+        setGenerated(null)
+      }
+    })
+  }
 
   const selectSample = (id: number) =>
     run(async () => {
@@ -265,7 +310,7 @@ export function VAETab() {
     const ctrl = new AbortController()
     abortRef.current = ctrl
     trainVAE(
-      { mode, seed, early_stop: earlyStop, hyperparams: { latent_dim: latentDim, learning_rate: lr, epochs, loss, beta } },
+      { mode, seed, early_stop: earlyStop, hyperparams: { arch, latent_dim: latentDim, learning_rate: lr, epochs, loss, beta } },
       (ev) => {
         if (ev.type === 'epoch') {
           setLiveLoss((prev) => [...prev, { epoch: ev.epoch, loss: ev.loss, recon: ev.recon_loss, kl: ev.kl_loss }])
@@ -289,6 +334,7 @@ export function VAETab() {
         run(async () => {
           const st = await getVAEStatus()
           setStatus(st)
+          if (st.trained) setArchMissing(false)
           if (st.trained) {
             if (pipelineId != null) {
               const items = await reconstructVAE([pipelineId], noise)
@@ -308,6 +354,7 @@ export function VAETab() {
   }
 
   const resetDefaults = () => {
+    if (arch !== DEFAULTS.arch) changeArch(DEFAULTS.arch)
     setLatentDim(DEFAULTS.latentDim)
     setLrIdx(DEFAULTS.lrIdx)
     setEpochs(DEFAULTS.epochs)
@@ -340,6 +387,8 @@ export function VAETab() {
     ) : (
       <>iniciando entrenamiento…</>
     )
+  ) : archMissing ? (
+    <span style={{ color: '#B5740B' }}>esta variante aún no tiene demo — entrena para verla</span>
   ) : outdated ? (
     <span style={{ color: '#B5740B' }}>cambios sin aplicar — reentrena para verlos</span>
   ) : trained && status?.loss_history.length ? (
@@ -509,6 +558,19 @@ export function VAETab() {
             onInfo={() => open(C.topics['parametros-modelo'])}
             infoLabel="Parámetros del modelo"
           />
+          <div className="gm-ctrl">
+            <div className="row">
+              <span className="name">arquitectura</span>
+            </div>
+            <SegmentedControl
+              value={arch}
+              onChange={changeArch}
+              options={[
+                { label: 'Básico', value: 'basico' },
+                { label: 'Grande', value: 'grande' },
+              ]}
+            />
+          </div>
           <Slider label="latent_dim" value={latentDim} min={16} max={256} step={8} onChange={setLatentDim} />
           <Slider label="learning_rate" value={lrIdx} min={0} max={LR_VALUES.length - 1} onChange={setLrIdx} format={() => lr} />
           <Slider label="epochs" value={epochs} min={1} max={100} onChange={setEpochs} />
@@ -645,6 +707,16 @@ export function VAETab() {
           >
             Ver la estructura
           </Button>
+
+          <Button
+            full
+            icon={<SparklesIcon />}
+            onClick={() => setMetricsOpen(true)}
+            disabled={!trained || busy || training || outdated || archMissing}
+            className="mt-[11px]"
+          >
+            Ver métricas
+          </Button>
         </Card>
       </div>
 
@@ -677,6 +749,10 @@ export function VAETab() {
           latentDim={latentDim}
           onClose={() => setArchOpen(false)}
         />
+      )}
+
+      {metricsOpen && (
+        <VAEMetricsPanel arch={arch} latentDim={latentDim} onClose={() => setMetricsOpen(false)} />
       )}
     </>
   )

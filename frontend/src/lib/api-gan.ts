@@ -8,11 +8,15 @@
 
 import { getJSON, postJSON, streamSSE, type Device } from './api'
 
+/** Variante de arquitectura del GAN (capacidad del generador/discriminador). */
+export type GANArch = 'basico' | 'grande'
+
 export interface GANHyperParams {
   z_dim: number
   learning_rate: number
   epochs: number
   batch_size: number
+  arch: GANArch
 }
 
 /** Punto de la curva doble: una pérdida para el generador y otra para el discriminador. */
@@ -30,6 +34,8 @@ export interface GANStatus {
   seed: number
   device: Device
   z_dim: number
+  arch: GANArch
+  archs: GANArch[]
   hyperparams: GANHyperParams
   num_params: number
   num_params_g: number
@@ -75,6 +81,10 @@ export interface GANTrainRequest {
 export const getGANStatus = () => getJSON<GANStatus>('/gan/status')
 export const setGANHyperparams = (patch: Partial<GANHyperParams>) =>
   postJSON<GANStatus>('/gan/hyperparams', patch)
+/** Cambia de variante de arquitectura cargando su checkpoint demo al instante (si existe).
+ *  `loaded=false` indica que esa variante aún no tiene demo entrenado. */
+export const setGANArch = (arch: GANArch) =>
+  postJSON<GANStatus & { loaded: boolean }>('/gan/arch', { arch })
 
 // ---------- entrenamiento (SSE) ----------
 /** Entrena el GAN por SSE. Llama onEvent por cada evento (incluye g_loss/d_loss/preview). */
