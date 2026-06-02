@@ -1650,3 +1650,133 @@
 .gm-rise-5 {
   animation-delay: 0.24s;
 }
+
+/* ------------------------------------------------------------------ *
+ * MetricsPanel — panel "i" de métricas de reconstrucción (PSNR/SSIM/MSE).
+ * Reutiliza la cáscara .gm-ip (banner + scroll + secciones). Bloque propio.
+ * ------------------------------------------------------------------ */
+.gm-ip.gm-mp {
+  width: min(880px, 100%);
+}
+
+/* estado cargando */
+.gm-mp-state {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 22px 4px;
+  font-size: 14px;
+  color: var(--slate);
+}
+
+/* rejilla de las tres cifras grandes */
+.gm-mp-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.gm-mp-big {
+  --acc: #2563eb;
+  --acc-soft: #eff4fe;
+  --acc-line: #dce7fb;
+  background: var(--acc-soft);
+  border: 1px solid var(--acc-line);
+  border-radius: 15px;
+  padding: 16px 16px 15px;
+  display: flex;
+  flex-direction: column;
+}
+.gm-mp-big-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--acc);
+}
+.gm-mp-big-num {
+  margin-top: 6px;
+  font-family: var(--ff-mono);
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.05;
+  color: var(--ink);
+  font-feature-settings: 'tnum';
+}
+.gm-mp-big-unit {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--slate);
+}
+.gm-mp-big-scale {
+  margin-top: 5px;
+  font-size: 11.5px;
+  font-family: var(--ff-mono);
+  color: var(--acc);
+  opacity: 0.85;
+}
+.gm-mp-big-help {
+  margin-top: 10px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #3f444d;
+}
+
+/* rejilla de ejemplos (original / reconstruida / diferencia) */
+.gm-mp-examples {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.gm-mp-ex {
+  margin: 0;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  padding: 9px;
+}
+.gm-mp-ex-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.gm-mp-ex-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.gm-mp-ex-cell img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #f4f5f8;
+  image-rendering: auto;
+}
+.gm-mp-ex-cell figcaption {
+  font-size: 10.5px;
+  color: var(--muted);
+  font-family: var(--ff-mono);
+}
+.gm-mp-ex-stats {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 7px;
+  border-top: 1px solid #f1f2f5;
+  font-size: 12px;
+  color: var(--slate);
+}
+.gm-mp-ex-stats .mono {
+  font-family: var(--ff-mono);
+  color: var(--ink);
+}
+
+@media (max-width: 720px) {
+  .gm-mp-grid {
+    grid-template-columns: 1fr;
+  }
+}

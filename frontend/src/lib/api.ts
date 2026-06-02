@@ -30,12 +30,15 @@ export interface Sample {
   image: string
 }
 
+export type AEArch = 'basico' | 'grande' | 'unet'
+
 export interface AEHyperParams {
   latent_dim: number
   learning_rate: number
   epochs: number
   loss: 'mse' | 'l1'
   batch_size: number
+  arch: AEArch
 }
 
 export interface LossPoint {
@@ -50,6 +53,8 @@ export interface AEStatus {
   training: boolean
   seed: number
   device: Device
+  arch: AEArch
+  archs: AEArch[]
   hyperparams: AEHyperParams
   num_params: number
   loss_history: LossPoint[]
@@ -60,6 +65,25 @@ export interface ReconItem {
   original: string
   reconstruction: string
   diff: string
+}
+
+export interface AEMetricExample {
+  id: number
+  original: string
+  reconstruction: string
+  diff: string
+  psnr: number
+  ssim: number
+}
+
+export interface AEMetrics {
+  mse: number
+  psnr: number
+  ssim: number
+  n: number
+  arch: AEArch
+  latent_dim: number
+  examples: AEMetricExample[]
 }
 
 export interface ProjectionPoint {
@@ -186,6 +210,12 @@ export const computeClusters = (n_clusters: number) =>
   postJSON<Projection>('/autoencoder/cluster', { n_clusters })
 export const interpolate = (a_id: number, b_id: number, steps: number) =>
   postJSON<InterpResult>('/autoencoder/interpolate', { a_id, b_id, steps })
+/** Métricas de reconstrucción (PSNR/SSIM/MSE) sobre un held-out fijo, con ejemplos en b64. */
+export const getAEMetrics = (n = 256) => getJSON<AEMetrics>(`/autoencoder/metrics?n=${n}`)
+/** Cambia de variante de arquitectura cargando su checkpoint demo al instante (si existe).
+ *  `loaded=false` indica que esa variante aún no tiene demo entrenado. */
+export const setAEArch = (arch: AEArch) =>
+  postJSON<AEStatus & { loaded: boolean }>('/autoencoder/arch', { arch })
 
 export async function uploadImage(file: File): Promise<ReconItem> {
   const form = new FormData()

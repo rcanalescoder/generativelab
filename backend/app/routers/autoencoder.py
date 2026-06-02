@@ -22,6 +22,7 @@ class HyperParamsIn(BaseModel):
     epochs: int | None = None
     loss: str | None = None
     batch_size: int | None = None
+    arch: str | None = None
 
 
 class TrainRequest(BaseModel):
@@ -64,6 +65,10 @@ class GridSearchRequest(BaseModel):
     grid: GridSpec = Field(default_factory=GridSpec)
 
 
+class ArchRequest(BaseModel):
+    arch: str  # "basico" | "grande" | "unet"
+
+
 def _require_model() -> None:
     if ae_service.model is None:
         raise HTTPException(status_code=409, detail="modelo no entrenado: entrena o carga el checkpoint demo")
@@ -78,6 +83,20 @@ def status() -> dict:
 def set_hyperparams(req: HyperParamsIn) -> dict:
     patch = {k: v for k, v in req.model_dump().items() if v is not None}
     return ae_service.set_hyperparams(patch)
+
+
+@router.post("/arch")
+def set_arch(req: ArchRequest) -> dict:
+    """Cambia de variante cargando su checkpoint demo al instante (si existe).
+
+    Devuelve `{loaded, ...status}`: `loaded=False` si esa variante aún no tiene demo entrenado
+    (el front puede entonces ofrecer entrenarla). Si carga, el status refleja la nueva arch.
+    """
+    loaded = ae_service.load_demo(req.arch)
+    if not loaded:
+        # No hay demo de esa variante: deja registrada la elección como hiperparámetro.
+        ae_service.set_hyperparams({"arch": req.arch})
+    return {"loaded": loaded, **ae_service.status()}
 
 
 @router.post("/train")
@@ -141,6 +160,13 @@ async def gridsearch(req: GridSearchRequest, request: Request) -> StreamingRespo
 def reconstruct(req: ReconstructRequest) -> dict:
     _require_model()
     return {"items": ae_service.reconstruct(req.ids, req.noise)}
+
+
+@router.get("/metrics")
+def metrics(n: int = Query(256, ge=16, le=2048)) -> dict:
+    """PSNR/SSIM/MSE de reconstrucción sobre un held-out fijo (+ ejemplos en b64)."""
+    _require_model()
+    return ae_service.metrics(n)
 
 
 @router.get("/projection")

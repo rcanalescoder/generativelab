@@ -5,7 +5,7 @@ import { ModelFlowCard } from '../components/lab/ModelFlowCard'
 import { LatentMap } from '../components/lab/LatentMap'
 import { ResultsCard } from '../components/lab/ResultsCard'
 import { TrainingChart } from '../components/lab/TrainingChart'
-import { ClustersIcon, GridIcon, InterpolateIcon, LayersIcon, PlayIcon, RefreshIcon, SearchIcon } from '../lib/icons'
+import { ClustersIcon, GridIcon, InterpolateIcon, LayersIcon, PlayIcon, RefreshIcon, SearchIcon, SparklesIcon } from '../lib/icons'
 import {
   cancelTraining,
   computeClusters,
@@ -16,8 +16,10 @@ import {
   getSamples,
   interpolate,
   reconstruct,
+  setAEArch,
   trainAE,
   uploadImage,
+  type AEArch,
   type AEStatus,
   type DatasetInfo,
   type GridConfig,
@@ -32,7 +34,8 @@ import { useInfo } from '../components/info/InfoProvider'
 import { autoencoderContent } from '../content'
 import { GridSearchModal } from '../components/lab/GridSearchModal'
 import { ArchitectureModal } from '../components/lab/ArchitectureModal'
-import { ARCHITECTURES } from '../content/architectures'
+import { MetricsPanel } from '../components/lab/MetricsPanel'
+import { aeArchitecture } from '../content/architectures'
 
 const LR_VALUES = [0.0001, 0.0003, 0.001, 0.003, 0.01]
 const nearestLrIdx = (lr: number) => {
@@ -46,6 +49,7 @@ const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
 /** Valores por defecto (los que ves al abrir la app, = checkpoint demo). */
 const DEFAULTS = {
+  arch: 'basico' as const,
   latentDim: 128,
   lrIdx: 2,
   epochs: 10,
@@ -76,6 +80,7 @@ export function AutoencoderTab() {
   const [alpha, setAlpha] = useState(0.5)
 
   // hiperparámetros del modelo (requieren reentrenar)
+  const [arch, setArch] = useState<AEArch>('basico')
   const [latentDim, setLatentDim] = useState(128)
   const [lrIdx, setLrIdx] = useState(2)
   const [epochs, setEpochs] = useState(10)
@@ -97,6 +102,9 @@ export function AutoencoderTab() {
   const [error, setError] = useState<string | null>(null)
   const [gridOpen, setGridOpen] = useState(false)
   const [archOpen, setArchOpen] = useState(false)
+  const [metricsOpen, setMetricsOpen] = useState(false)
+  // true cuando la variante elegida aún no tiene checkpoint demo (hay que entrenarla)
+  const [archMissing, setArchMissing] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
 
   const lr = LR_VALUES[lrIdx]
@@ -104,7 +112,11 @@ export function AutoencoderTab() {
   const outdated =
     trained &&
     !!status &&
-    (latentDim !== status.hyperparams.latent_dim ||
+    // el backend ya lo marca (p. ej. al elegir una variante sin demo entrenado)…
+    (status.outdated ||
+      // …o el usuario tocó un parámetro del modelo respecto al checkpoint cargado.
+      arch !== status.arch ||
+      latentDim !== status.hyperparams.latent_dim ||
       lr !== status.hyperparams.learning_rate ||
       epochs !== status.hyperparams.epochs ||
       loss !== status.hyperparams.loss)
@@ -127,6 +139,7 @@ export function AutoencoderTab() {
       try {
         const st = await getAEStatus()
         setStatus(st)
+        setArch(st.arch)
         setLatentDim(st.hyperparams.latent_dim)
         setEpochs(st.hyperparams.epochs)
         setLoss(st.hyperparams.loss)
@@ -151,6 +164,36 @@ export function AutoencoderTab() {
       }
     })()
   }, [])
+
+  /** Cambia de variante de arquitectura (parámetro del modelo: afecta diagrama y requiere reentrenar).
+   *  Si la variante ya tiene checkpoint demo (loaded=true) se ve al instante; si no, los paneles
+   *  quedan en "entrena para ver esta variante". */
+  const changeArch = (next: AEArch) => {
+    if (next === arch) return
+    setArch(next)
+    run(async () => {
+      const st = await setAEArch(next)
+      setStatus(st)
+      setArchMissing(!st.loaded)
+      if (st.loaded && st.trained) {
+        // la variante ya entrenada se ve al instante: refrescamos los paneles
+        const id = pipelineId ?? samples[0]?.id ?? null
+        if (id != null) {
+          setPipelineId(id)
+          const items = await reconstruct([id], noise)
+          setPipelineItem(items[0] ?? null)
+          setNeighbors(await getNeighbors(id, k))
+        }
+        setProjection(await computeClusters(nClusters))
+      } else {
+        // sin demo aún: limpiamos los paneles para mostrar el estado vacío de esta variante
+        setPipelineItem(null)
+        setProjection(null)
+        setNeighbors(null)
+        setInterp(null)
+      }
+    })
+  }
 
   const selectSample = (id: number) =>
     run(async () => {
@@ -222,7 +265,7 @@ export function AutoencoderTab() {
     const ctrl = new AbortController()
     abortRef.current = ctrl
     trainAE(
-      { mode, seed, early_stop: earlyStop, hyperparams: { latent_dim: latentDim, learning_rate: lr, epochs, loss } },
+      { mode, seed, early_stop: earlyStop, hyperparams: { arch, latent_dim: latentDim, learning_rate: lr, epochs, loss } },
       (ev) => {
         if (ev.type === 'epoch') {
           setLiveLoss((prev) => [...prev, { epoch: ev.epoch, loss: ev.loss }])
@@ -246,6 +289,7 @@ export function AutoencoderTab() {
         run(async () => {
           const st = await getAEStatus()
           setStatus(st)
+          if (st.trained) setArchMissing(false)
           if (st.trained && pipelineId != null) {
             const items = await reconstruct([pipelineId], noise)
             setPipelineItem(items[0] ?? null)
@@ -262,6 +306,7 @@ export function AutoencoderTab() {
   }
 
   const resetDefaults = () => {
+    if (arch !== DEFAULTS.arch) changeArch(DEFAULTS.arch)
     setLatentDim(DEFAULTS.latentDim)
     setLrIdx(DEFAULTS.lrIdx)
     setEpochs(DEFAULTS.epochs)
@@ -291,6 +336,8 @@ export function AutoencoderTab() {
     ) : (
       <>iniciando entrenamiento…</>
     )
+  ) : archMissing ? (
+    <span style={{ color: '#B5740B' }}>esta variante aún no tiene demo — entrena para verla</span>
   ) : outdated ? (
     <span style={{ color: '#B5740B' }}>cambios sin aplicar — reentrena para verlos</span>
   ) : trained && status?.loss_history.length ? (
@@ -398,6 +445,20 @@ export function AutoencoderTab() {
             onInfo={() => open(C.topics['parametros-modelo'])}
             infoLabel="Parámetros del modelo"
           />
+          <div className="gm-ctrl">
+            <div className="row">
+              <span className="name">arquitectura</span>
+            </div>
+            <SegmentedControl
+              value={arch}
+              onChange={changeArch}
+              options={[
+                { label: 'Básico', value: 'basico' },
+                { label: 'Grande', value: 'grande' },
+                { label: 'U-Net', value: 'unet' },
+              ]}
+            />
+          </div>
           <Slider label="latent_dim" value={latentDim} min={16} max={256} step={8} onChange={setLatentDim} />
           <Slider label="learning_rate" value={lrIdx} min={0} max={LR_VALUES.length - 1} onChange={setLrIdx} format={() => lr} />
           <Slider label="epochs" value={epochs} min={1} max={100} onChange={setEpochs} />
@@ -496,6 +557,16 @@ export function AutoencoderTab() {
           >
             Ver la estructura
           </Button>
+
+          <Button
+            full
+            icon={<SparklesIcon />}
+            onClick={() => setMetricsOpen(true)}
+            disabled={!trained || busy || training || outdated || archMissing}
+            className="mt-[11px]"
+          >
+            Ver métricas
+          </Button>
         </Card>
       </div>
 
@@ -521,10 +592,14 @@ export function AutoencoderTab() {
 
       {archOpen && (
         <ArchitectureModal
-          arch={ARCHITECTURES.ae}
+          arch={aeArchitecture(arch)}
           latentDim={latentDim}
           onClose={() => setArchOpen(false)}
         />
+      )}
+
+      {metricsOpen && (
+        <MetricsPanel arch={arch} latentDim={latentDim} onClose={() => setMetricsOpen(false)} />
       )}
     </>
   )

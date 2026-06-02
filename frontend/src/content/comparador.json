@@ -10,7 +10,8 @@
         "accent": "violet",
         "icon": "info",
         "blocks": [
-          { "type": "p", "text": "Has visto cuatro modelos por separado. Aquí los pones lado a lado para entender en qué se parecen y en qué se diferencian: cómo aprenden, si pueden inventar caras nuevas y qué pinta tienen sus resultados." },
+          { "type": "p", "text": "Has visto cuatro modelos por separado. Aquí los pones lado a lado para entender en qué se parecen y en qué se diferencian: cómo aprenden, si pueden inventar caras nuevas y qué pinta tienen sus resultados, todos sobre el mismo dataset de 43.102 caras de anime." },
+          { "type": "p", "text": "La gran lección de la página es que no hay un modelo «mejor»: cada uno hace un trato distinto entre calidad, diversidad, estabilidad de entrenamiento, velocidad y control del espacio latente. Elegir es elegir qué compromiso te conviene." },
           { "type": "note", "tone": "info", "text": "El Autoencoder no inventa caras: solo reconstruye las que le das. Los otros tres sí generan caras nuevas, cada uno a su manera." }
         ]
       },
@@ -20,11 +21,24 @@
         "icon": "read",
         "blocks": [
           { "type": "defs", "items": [
-            { "term": "Autoencoder", "desc": "Comprime y reconstruye. Aprende un resumen (z) de cada cara, pero su espacio latente no está pensado para muestrear." },
-            { "term": "VAE", "desc": "Como el AE, pero su latente es una distribución ordenada (N(0,I)); por eso puede generar caras nuevas muestreando del prior." },
-            { "term": "GAN", "desc": "Dos redes compiten: una genera, otra distingue real de falso. Suele dar las caras más nítidas, pero entrena de forma inestable." },
-            { "term": "Diffusion", "desc": "Aprende a quitar ruido paso a paso. Parte de ruido puro y lo va limpiando hasta una cara. Calidad alta, muestreo lento." }
+            { "term": "Autoencoder", "desc": "Comprime y reconstruye. Aprende un resumen (z) de cada cara, pero su espacio latente tiene huecos y no está pensado para muestrear. ~2,4 M de parámetros." },
+            { "term": "VAE", "desc": "Como el AE, pero su latente es una distribución ordenada (N(0,I)); por eso puede generar caras nuevas muestreando del prior. ~3,0 M de parámetros." },
+            { "term": "GAN", "desc": "Dos redes compiten: una genera, otra distingue real de falso. Suele dar las caras más nítidas, pero entrena de forma inestable. ~6,3 M de parámetros (G + D)." },
+            { "term": "Diffusion", "desc": "Aprende a quitar ruido paso a paso. Parte de ruido puro y lo va limpiando hasta una cara. Calidad y diversidad altas, muestreo lento. ~3,0 M de parámetros." }
           ] }
+        ]
+      },
+      {
+        "heading": "Las dos grandes divisiones",
+        "accent": "pink",
+        "icon": "flow",
+        "blocks": [
+          { "type": "p", "text": "Para ordenar mentalmente los cuatro, ayudan dos preguntas:" },
+          { "type": "defs", "items": [
+            { "term": "¿Tiene encoder?", "desc": "AE y VAE sí: pueden tomar una imagen y convertirla en su código (reconstruir, buscar vecinos). GAN y Diffusion no: solo van de ruido a imagen, nunca al revés." },
+            { "term": "¿Cómo mide el «acierto»?", "desc": "AE, VAE y Diffusion comparan números (error por píxel o ruido) — fácil de entrenar, tiende a suavizar. La GAN usa otra red como juez — más nítido, pero un entrenamiento inestable." }
+          ] },
+          { "type": "note", "tone": "info", "text": "Casi todas las diferencias prácticas que verás abajo se deducen de estas dos preguntas." }
         ]
       },
       {
@@ -34,7 +48,7 @@
         "blocks": [
           { "type": "list", "items": [
             "¿Necesitas comprimir o detectar anomalías? Autoencoder.",
-            "¿Quieres generar y además un latente manejable? VAE.",
+            "¿Quieres generar y además un latente manejable (vecinos, interpolación)? VAE.",
             "¿Buscas máxima nitidez y no te importa pelearte con el entrenamiento? GAN.",
             "¿Quieres la mejor calidad/diversidad y aceptas muestreo lento? Diffusion."
           ] }
@@ -53,12 +67,27 @@
           "accent": "cyan",
           "icon": "read",
           "blocks": [
-            { "type": "p", "text": "Cada fila es una propiedad; cada columna, un modelo. Resume las diferencias prácticas que has visto en cada pestaña." },
+            { "type": "p", "text": "Cada fila es una propiedad; cada columna, un modelo. Resume las diferencias prácticas que has visto en cada pestaña, para tenerlas todas de un vistazo." },
             { "type": "defs", "items": [
-              { "term": "Encoder", "desc": "Si el modelo sabe convertir una imagen dada en un código (reconstruir/buscar similares)." },
-              { "term": "Genera", "desc": "Si puede inventar caras nuevas que no estaban en el dataset." },
-              { "term": "Muestreo", "desc": "Cuántos pasos necesita para producir una imagen (1 = rápido; iterativo = lento)." }
+              { "term": "Encoder", "desc": "Si el modelo sabe convertir una imagen dada en un código (y por tanto reconstruir o buscar similares). Solo AE y VAE." },
+              { "term": "Genera", "desc": "Si puede inventar caras nuevas que no estaban en el dataset. VAE, GAN y Diffusion sí; el AE no (su latente tiene huecos)." },
+              { "term": "Muestreo", "desc": "Cuántos pasos necesita para producir una imagen. AE, VAE y GAN: un solo paso por la red (rápido). Diffusion: iterativo, decenas de pasos (lento)." }
             ] }
+          ]
+        },
+        {
+          "heading": "Los trade-offs detrás de la tabla",
+          "accent": "violet",
+          "icon": "info",
+          "blocks": [
+            { "type": "p", "text": "La tabla dice el «qué»; aquí va el «por qué», que es lo que conviene recordar:" },
+            { "type": "defs", "items": [
+              { "term": "Nitidez", "desc": "GAN suele ganar (su juez penaliza lo borroso). AE y VAE tienden a suavizar por medir el error píxel a píxel. Diffusion alcanza buena nitidez a base de muchos pasos." },
+              { "term": "Diversidad", "desc": "Diffusion y VAE cubren bien la variedad de caras. La GAN puede sufrir colapso de modo y repetirse." },
+              { "term": "Estabilidad de entrenamiento", "desc": "AE, VAE y Diffusion minimizan una sola pérdida: estable. La GAN es un juego de dos redes: delicada, sensible al learning_rate." },
+              { "term": "Control del latente", "desc": "VAE y AE permiten reconstruir e interpolar entre imágenes reales. GAN y Diffusion solo dejan pasear por su espacio de ruido." }
+            ] },
+            { "type": "note", "tone": "info", "text": "Ningún modelo gana en todo: la GAN cambia estabilidad por nitidez; la difusión cambia velocidad por calidad; el VAE cambia algo de nitidez por un latente ordenado." }
           ]
         }
       ]
@@ -73,7 +102,21 @@
           "accent": "pink",
           "icon": "sparkles",
           "blocks": [
-            { "type": "p", "text": "Con la misma semilla, cada modelo produce su salida: el Autoencoder reconstruye caras del dataset; el VAE, el GAN y el Diffusion generan caras nuevas. Compara nitidez, diversidad y artefactos." },
+            { "type": "p", "text": "Con la misma semilla, cada modelo produce su salida: el Autoencoder reconstruye caras del dataset; el VAE, el GAN y el Diffusion generan caras nuevas. Compara nitidez, diversidad y artefactos entre las cuatro columnas." },
+            { "type": "note", "tone": "info", "text": "La misma semilla no produce «la misma cara» en cada modelo: cada uno interpreta el azar a su manera (el AE ni siquiera parte de ruido, parte de imágenes reales). Lo comparable es el estilo y la calidad de cada columna, no que coincidan cara a cara." }
+          ]
+        },
+        {
+          "heading": "En qué fijarte",
+          "accent": "violet",
+          "icon": "read",
+          "blocks": [
+            { "type": "list", "items": [
+              "Autoencoder: ¿cómo de fiel es la reconstrucción? Busca el suavizado típico del MSE en bordes y pelo.",
+              "VAE: caras nuevas, pero algo «promediadas» por su regularización del latente.",
+              "GAN: probablemente las más nítidas, pero ojo a artefactos y a caras repetidas (colapso).",
+              "Diffusion: caras nuevas y diversas; recuerda que cada una ha pasado por decenas de pasos de denoising."
+            ] },
             { "type": "note", "tone": "warn", "text": "Si un modelo aparece vacío es que aún no tiene checkpoint entrenado. Entrénalo en su pestaña (o genera el demo) y vuelve aquí." }
           ]
         }

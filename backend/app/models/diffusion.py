@@ -335,18 +335,27 @@ def sample_loop(
     steps: int | None = None,
     capture: list[int] | None = None,
 ) -> tuple[torch.Tensor, list[torch.Tensor]]:
-    """Muestrea `n` imágenes desde ruido puro hacia imagen limpia.
+    """Muestrea `n` imágenes desde ruido puro hacia imagen limpia con **DDIM** (Song et al.,
+    2021), determinista (η=0).
+
+    Por qué DDIM y no el reverse DDPM ancestral: el paso DDPM clásico solo avanza de t a t−1.
+    Si submuestreamos (p. ej. 50 de 200 pasos) y aplicamos el paso de un solo t, NO se quita
+    suficiente ruido y la salida queda ruidosa. DDIM, en cambio, salta correctamente entre
+    timesteps arbitrarios reusando la predicción de x₀, así que funciona con pocos pasos.
+
+    En cada paso: ε̂ = modelo(x_t, t); x̂₀ = (x_t − √(1−ᾱ_t)·ε̂)/√ᾱ_t (recortado a [−1,1]);
+    x_{t_prev} = √ᾱ_{t_prev}·x̂₀ + √(1−ᾱ_{t_prev})·ε̂.   En el último paso ᾱ_prev=1 → x = x̂₀.
 
     - `steps`: nº de pasos de muestreo (submuestreo de T). None = todos.
-    - `capture`: lista de POSICIONES (índices en la secuencia de pasos) en las que guardar
-      una instantánea de las imágenes; útil para visualizar la trayectoria de difusión.
+    - `capture`: POSICIONES en la secuencia donde guardar una instantánea (trayectoria).
 
-    Devuelve (x_final, snapshots). Cada snapshot y x_final son tensores en [0,1] (B,C,H,W).
+    Devuelve (x_final, snapshots), todos en [0,1] (B,C,H,W).
     """
     was_training = model.training
     model.eval()
-    ts = sampling_timesteps(sched.timesteps, steps or sched.timesteps)
+    ts = sampling_timesteps(sched.timesteps, steps or sched.timesteps)  # descendente
     capture_set = set(capture or [])
+    acp = sched.alphas_cumprod
 
     x = torch.randn(n, IMG_CH, IMG_SIZE, IMG_SIZE, device=device)
     snapshots: list[torch.Tensor] = []
@@ -355,7 +364,12 @@ def sample_loop(
 
     for pos, t_idx in enumerate(ts):
         t = torch.full((n,), t_idx, device=device, dtype=torch.long)
-        x = p_sample(model, sched, x, t, t_idx)
+        eps = model(x, t)
+        acp_t = acp[t_idx]
+        x0 = ((x - torch.sqrt(1.0 - acp_t) * eps) / torch.sqrt(acp_t)).clamp(-1.0, 1.0)
+        t_next = ts[pos + 1] if pos + 1 < len(ts) else -1
+        acp_prev = acp[t_next] if t_next >= 0 else torch.ones((), device=device)
+        x = torch.sqrt(acp_prev) * x0 + torch.sqrt(1.0 - acp_prev) * eps
         if (pos + 1) in capture_set:
             snapshots.append(_to_img(x))
 

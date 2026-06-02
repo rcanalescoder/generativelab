@@ -12,6 +12,8 @@
  * una arquitectura es escribir datos aquí, no tocar el componente.
  */
 
+import type { AEArch } from '../lib/api'
+
 /** Acento de color de una caja/sección (mapea a las clases `gm-acc-*` del CSS). */
 export type ArchAccent = 'blue' | 'violet' | 'pink' | 'green' | 'amber' | 'cyan'
 
@@ -70,16 +72,16 @@ export interface Architecture {
 }
 
 /* ------------------------------------------------------------------ *
- * AUTOENCODER  (ae.py · BASE=32 · 64×64×3 → z → 64×64×3)
+ * AUTOENCODER · variante "basico"  (ae.py · ConvAutoencoder · BASE=32)
  * encoder: 4 bloques Conv 4×4 stride-2 (cada uno /2): 64→32→16→8→4
  *          canales 3→32→64→128→256, luego flatten + Linear → z
  * decoder: Linear → 4×4×256, 3 bloques ConvT ×2 + ConvT final, Sigmoid
  * ------------------------------------------------------------------ */
-const ae: Architecture = {
+const ae_basico: Architecture = {
   modelo: 'ae',
-  titulo: 'Autoencoder convolucional',
+  titulo: 'Autoencoder convolucional · Básico',
   resumen:
-    'Comprime la imagen a un código z con un cuello de botella y la reconstruye con un decoder simétrico.',
+    'Comprime la imagen a un código z con un cuello de botella y la reconstruye con un decoder simétrico. La variante más ligera (base 32).',
   entrada: 'Entrada: 64×64×3',
   columnas: [
     {
@@ -119,6 +121,112 @@ const ae: Architecture = {
     'Pérdida de reconstrucción MSE o L1 entre la imagen original y la reconstruida.',
   ],
 }
+
+/* ------------------------------------------------------------------ *
+ * AUTOENCODER · variante "grande"  (ae.py · BigAutoencoder · BASE=64)
+ * Mismo esqueleto que el básico pero con MÁS canales (64→128→256→512) y un
+ * bloque residual tras cada nivel (salvo el cuello 512×4×4) → más capacidad.
+ * El cuello sigue siendo z = latent_dim, para que el latente sea comparable.
+ * ------------------------------------------------------------------ */
+const ae_grande: Architecture = {
+  modelo: 'ae',
+  titulo: 'Autoencoder convolucional · Grande',
+  resumen:
+    'Misma idea que el básico pero con más canales (base 64) y bloques residuales en cada nivel: más capacidad y reconstrucciones más fieles.',
+  entrada: 'Entrada: 64×64×3',
+  columnas: [
+    {
+      titulo: 'ENCODER',
+      subtitulo: 'imagen → código',
+      acento: 'blue',
+      capas: [
+        { nombre: 'Entrada', detalle: 'imagen RGB', forma: '64×64×3', destacada: true },
+        { nombre: 'Conv 4×4 /2 + ResBlock', detalle: '3→64 · LeakyReLU(0.2)', forma: '32×32×64' },
+        { nombre: 'Conv 4×4 /2 + ResBlock', detalle: '64→128 · BatchNorm · LeakyReLU', forma: '16×16×128' },
+        { nombre: 'Conv 4×4 /2 + ResBlock', detalle: '128→256 · BatchNorm · LeakyReLU', forma: '8×8×256' },
+        { nombre: 'Conv 4×4 /2', detalle: '256→512 · BatchNorm · LeakyReLU', forma: '4×4×512' },
+        { nombre: 'Flatten + Linear', detalle: '8192 → latent_dim', forma: 'z ({DIM})' },
+      ],
+    },
+    {
+      titulo: 'DECODER',
+      subtitulo: 'código → imagen',
+      acento: 'green',
+      capas: [
+        { nombre: 'Linear + Reshape', detalle: 'latent_dim → 8192', forma: '4×4×512' },
+        { nombre: 'ConvT 4×4 ×2 + ResBlock', detalle: '512→256 · BatchNorm · ReLU', forma: '8×8×256' },
+        { nombre: 'ConvT 4×4 ×2 + ResBlock', detalle: '256→128 · BatchNorm · ReLU', forma: '16×16×128' },
+        { nombre: 'ConvT 4×4 ×2 + ResBlock', detalle: '128→64 · BatchNorm · ReLU', forma: '32×32×64' },
+        { nombre: 'ConvT 4×4 ×2', detalle: '64→3 · Sigmoid → [0,1]', forma: '64×64×3', destacada: true },
+      ],
+    },
+  ],
+  latente: {
+    titulo: 'ESPACIO LATENTE z',
+    acento: 'amber',
+    lineas: ['z ∈ ℝ^{DIM}', 'vector determinista', 'cuello más expresivo'],
+    usaLatentDim: true,
+  },
+  notas: [
+    'Un ResBlock conserva resolución y canales (Conv 3×3 ×2 + atajo): añade profundidad sin estrechar más el cuello.',
+    'Más parámetros que el básico → mejor reconstrucción, pero entrena algo más lento.',
+  ],
+}
+
+/* ------------------------------------------------------------------ *
+ * AUTOENCODER · variante "unet"  (ae.py · UNetAutoencoder · BASE=48)
+ * Encoder por niveles que guarda cada salida como SKIP (s1,s2,s3); el decoder
+ * concatena el skip correspondiente en cada subida → reconstrucción nítida.
+ * `encode(x)` devuelve SOLO el cuello (sin skips) para un latente comparable:
+ * por eso al decodificar un z suelto (interpolación, ruido) sale más borroso.
+ * ------------------------------------------------------------------ */
+const ae_unet: Architecture = {
+  modelo: 'ae',
+  titulo: 'Autoencoder con skips · U-Net',
+  resumen:
+    'Encoder y decoder conectados por skip connections (estilo U-Net, base 48): el decoder recibe detalle de cada nivel del encoder y reconstruye muy nítido.',
+  entrada: 'Entrada: 64×64×3',
+  columnas: [
+    {
+      titulo: 'ENCODER',
+      subtitulo: 'imagen → código (+ skips)',
+      acento: 'blue',
+      capas: [
+        { nombre: 'Entrada', detalle: 'imagen RGB', forma: '64×64×3', destacada: true },
+        { nombre: 'Conv 4×4 /2', detalle: '3→48 · LeakyReLU(0.2)  ⟶ skip s1', forma: '32×32×48' },
+        { nombre: 'Conv 4×4 /2', detalle: '48→96 · BatchNorm · LeakyReLU  ⟶ skip s2', forma: '16×16×96' },
+        { nombre: 'Conv 4×4 /2', detalle: '96→192 · BatchNorm · LeakyReLU  ⟶ skip s3', forma: '8×8×192' },
+        { nombre: 'Conv 4×4 /2', detalle: '192→384 · BatchNorm · LeakyReLU', forma: '4×4×384' },
+        { nombre: 'Flatten + Linear', detalle: '6144 → latent_dim', forma: 'z ({DIM})' },
+      ],
+    },
+    {
+      titulo: 'DECODER',
+      subtitulo: 'código (+ skips) → imagen',
+      acento: 'green',
+      capas: [
+        { nombre: 'Linear + Reshape', detalle: 'latent_dim → 6144', forma: '4×4×384' },
+        { nombre: 'ConvT 4×4 ×2  ↺ s3', detalle: '384→192 · concat s3 → 384', forma: '8×8×192' },
+        { nombre: 'ConvT 4×4 ×2  ↺ s2', detalle: '384→96 · concat s2 → 192', forma: '16×16×96' },
+        { nombre: 'ConvT 4×4 ×2  ↺ s1', detalle: '192→48 · concat s1 → 96', forma: '32×32×48' },
+        { nombre: 'ConvT 4×4 ×2', detalle: '96→3 · Sigmoid → [0,1]', forma: '64×64×3', destacada: true },
+      ],
+    },
+  ],
+  latente: {
+    titulo: 'ESPACIO LATENTE z',
+    acento: 'amber',
+    lineas: ['z ∈ ℝ^{DIM} (solo el cuello)', 'las skips puentean el cuello', 'desde z suelto → más borroso'],
+    usaLatentDim: true,
+  },
+  notas: [
+    'Las skip connections (s1, s2, s3) llevan detalle de cada nivel del encoder al decoder, concatenándose por canales.',
+    'encode(x) usa solo el cuello (sin skips) para que el mapa latente y los vecinos sean comparables con las otras variantes; por eso decodificar un z suelto (interpolación, ruido) sale más borroso: la lección de que los skips puentean el cuello.',
+  ],
+}
+
+/** Alias retro-compatible: `ae` = variante básica (no romper otros usos). */
+const ae = ae_basico
 
 /* ------------------------------------------------------------------ *
  * VAE  (vae.py · mismo stack que el AE, pero z probabilístico)
@@ -271,8 +379,30 @@ const diffusion: Architecture = {
   ],
 }
 
-/** Mapa de arquitecturas por clave de modelo. */
-export const ARCHITECTURES = { ae, vae, gan, diffusion } as const
+/** Mapa de arquitecturas por clave de modelo.
+ *  Las tres variantes del autoencoder conviven con el alias `ae` (= `ae_basico`). */
+export const ARCHITECTURES = {
+  ae,
+  ae_basico,
+  ae_grande,
+  ae_unet,
+  vae,
+  gan,
+  diffusion,
+} as const
 
 /** Atajo tipado para obtener una arquitectura por modelo. */
 export type ArchitectureKey = keyof typeof ARCHITECTURES
+
+/** Esquema del autoencoder según la variante de arquitectura del backend. */
+export function aeArchitecture(arch: AEArch): Architecture {
+  switch (arch) {
+    case 'grande':
+      return ae_grande
+    case 'unet':
+      return ae_unet
+    case 'basico':
+    default:
+      return ae_basico
+  }
+}
