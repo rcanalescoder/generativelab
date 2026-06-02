@@ -134,6 +134,33 @@
   h3.sub{ break-after:avoid; page-break-after:avoid; }
   figure,.pm,.bars,.uses,.analogy,.takeaway,.pipe,table.compare,table.params,.defs{
     break-inside:avoid; page-break-inside:avoid; }
+  .code,.tree{ break-inside:avoid; page-break-inside:avoid; }
+
+  /* ---------- sección técnica: bloques de código tipo editor ---------- */
+  .b-green{ background:linear-gradient(120deg,#0c9f6e,#10b981); }
+  .code{ border-radius:11px; overflow:hidden; margin:9px 0; box-shadow:0 9px 24px -15px rgba(17,24,39,.55); }
+  .code .fn{ font-family:"SFMono-Regular",Menlo,monospace; font-size:8.1pt; font-weight:600; color:#fff;
+    background:var(--accent,#2563eb); padding:6px 13px; display:flex; justify-content:space-between; align-items:center; }
+  .code .fn .role{ font-family:-apple-system,"Segoe UI",sans-serif; font-weight:700; text-transform:uppercase;
+    letter-spacing:.6px; font-size:6.8pt; opacity:.92; }
+  .code pre{ margin:0; padding:12px 15px; background:#0f172a; color:#dbe4f0;
+    font-family:"SFMono-Regular",Menlo,Consolas,monospace; font-size:8.1pt; line-height:1.54; white-space:pre-wrap; }
+  .code .cm{ color:#7e8da6; font-style:italic; }
+  .codecap{ font-size:8.7pt; color:var(--muted); margin:-1px 0 12px; padding-left:2px; }
+
+  /* árbol de ficheros */
+  .tree{ background:#0f172a; color:#dbe4f0; border-radius:11px; padding:14px 18px; margin:11px 0;
+    font-family:"SFMono-Regular",Menlo,monospace; font-size:8.6pt; line-height:1.62; white-space:pre-wrap;
+    box-shadow:0 9px 24px -15px rgba(17,24,39,.55); }
+  .tree .dir{ color:#7dd3fc; font-weight:600; }
+  .tree .cm{ color:#7e8da6; }
+  .tree .hot{ color:#fcd34d; font-weight:700; }
+
+  /* portada: créditos (autor / licencia / repo) */
+  .cover .credits{ margin-top:30px; display:flex; flex-direction:column; gap:6px; }
+  .cover .cr{ display:flex; align-items:baseline; gap:14px; font-size:11.5pt; }
+  .cover .cr .lbl{ min-width:34mm; font-size:8.5pt; letter-spacing:2px; text-transform:uppercase; opacity:.72; font-weight:700; }
+  .cover .cr .val{ font-weight:600; }
 </style>
 </head>
 <body>
@@ -148,6 +175,11 @@
     <span class="chip">VAE</span>
     <span class="chip">GAN</span>
     <span class="chip">Diffusion</span>
+  </div>
+  <div class="credits">
+    <div class="cr"><span class="lbl">Autor</span><span class="val">Roberto Canales Mora &nbsp;·&nbsp; con Claude Chat / Code</span></div>
+    <div class="cr"><span class="lbl">Licencia</span><span class="val">MIT</span></div>
+    <div class="cr"><span class="lbl">Repositorio</span><span class="val mono">github.com/rcanalescoder/generativelab</span></div>
   </div>
   <div class="foot"><span>Laboratorio interactivo · se ejecuta en un portátil normal</span><span>Aprende con 43.102 caras de dibujo (anime) de 64×64 píxeles</span></div>
 </section>
@@ -502,6 +534,239 @@
     <p><b>2. Mejorar es tan importante como construir.</b> En cada modelo, el <b>bucle de realimentación con agentes de IA</b> —proponer, entrenar, medir y quedarse con lo que de verdad mejora— fue lo que convirtió un primer intento mediocre en algo que funciona. Y dejó lecciones que valen mucho más allá de la IA: que <b>más potencia no arregla un mal diseño</b> (el salto del autoencoder a la U-Net), y que <b>cuando algo falla, el culpable no siempre es lo obvio</b> (el modelo de difusión estaba perfecto; el fallo estaba en otra parte).</p>
     <div class="takeaway"><div class="t">En una frase</div><div class="bd">Cuatro formas de enseñar a una máquina a crear imágenes, de la más simple a la más avanzada, contadas para que se entiendan; y un método para mejorarlas que, al final, es tan valioso como los propios modelos: <b>medir, comparar y quedarse con lo que funciona</b>.</div></div>
     <div class="note">Todo este laboratorio se ejecuta <b>en local</b>, en un portátil normal, sin enviar nada a la nube. El código y la guía para reproducirlo están disponibles de forma abierta (licencia MIT).</div>
+  </div>
+</section>
+
+<!-- ============ INSTALACIÓN ============ -->
+<section class="section">
+  <div class="band b-green"><div class="n">PONLO EN MARCHA</div><h2>Descárgalo y pruébalo</h2>
+    <div class="tag">Todo corre en tu máquina — sin nube, sin cuentas, sin coste</div></div>
+  <div class="pad" style="--accent:#0c9f6e;--accent-soft:#e9fbf4">
+    <p>El laboratorio es <b>100% local</b> y de código abierto. Está pensado para macOS con Apple Silicon —usa la GPU integrada vía <span class="mono">MPS</span>— pero también funciona en CPU. Necesitas <b>Python ≥ 3.11</b>, <b>Node ≥ 20</b> y <span class="mono">git</span>.</p>
+    <div class="tint"><div class="t">El repositorio</div>Todo el código está en GitHub: <span class="mono">https://github.com/rcanalescoder/generativelab.git</span></div>
+
+    <h3 class="sub" style="--accent:#0c9f6e">1 · Clonar el proyecto</h3>
+    <div class="code"><div class="fn">terminal<span class="role">bash</span></div><pre>git clone https://github.com/rcanalescoder/generativelab.git
+cd generativelab</pre></div>
+
+    <h3 class="sub" style="--accent:#0c9f6e">2 · Arrancar el backend (FastAPI + PyTorch)</h3>
+    <p class="lead">Crea un entorno de Python aislado, instala las dependencias y deja el servidor escuchando en el puerto 8000.</p>
+    <div class="code"><div class="fn">terminal<span class="role">bash</span></div><pre>cd backend
+python3 -m venv .venv             <span class="cm"># entorno de Python aislado</span>
+source .venv/bin/activate
+pip install -r requirements.txt   <span class="cm"># FastAPI, PyTorch, NumPy…</span>
+
+python -m app.data.dataset        <span class="cm"># descarga y cachea las 43.102 caras (solo la 1ª vez)</span>
+PYTORCH_ENABLE_MPS_FALLBACK=1 uvicorn app.main:app --port 8000</pre></div>
+
+    <h3 class="sub" style="--accent:#0c9f6e">3 · Arrancar el frontend (React + Vite)</h3>
+    <p class="lead">En otra terminal, instala y lanza la interfaz. Vite hace de «proxy» de <span class="mono">/api</span> hacia el backend.</p>
+    <div class="code"><div class="fn">terminal<span class="role">bash</span></div><pre>cd frontend
+npm install
+npm run dev                       <span class="cm"># abre http://localhost:5173</span></pre></div>
+    <div class="note">Atajo: desde la raíz del proyecto, <span class="mono">./arrancar.sh</span> levanta (o reinicia) backend y frontend de una vez. Cuando ambos están vivos, la pastilla <b>«MPS activo»</b> del header se pone verde.</div>
+
+    <h3 class="sub" style="--accent:#0c9f6e">4 · (Opcional) Generar los modelos demo</h3>
+    <p>Así cada pestaña aparece lista al instante con un modelo ya entrenado. Si te lo saltas, puedes entrenar desde la propia interfaz en modo «Rápido» en segundos.</p>
+    <div class="code"><div class="fn">terminal<span class="role">bash</span></div><pre><span class="cm"># desde backend/ con el venv activado</span>
+python -m app.services.ae_service          <span class="cm"># Autoencoder</span>
+python -m app.services.vae_service         <span class="cm"># VAE</span>
+python -m app.services.gan_service         <span class="cm"># GAN</span>
+python -m app.services.diffusion_service   <span class="cm"># Diffusion</span></pre></div>
+  </div>
+</section>
+
+<!-- ============ ESTRUCTURA DEL CÓDIGO ============ -->
+<section class="section">
+  <div class="band b-ink"><div class="n">BAJO EL CAPÓ</div><h2>Cómo está organizado el código</h2>
+    <div class="tag">Dónde vive cada cosa — y dónde mirar para entender un modelo</div></div>
+  <div class="pad" style="--accent:#1f2937;--accent-soft:#f1f3f6">
+    <p>El proyecto es un <i>monorepo</i> con dos mitades: un <b>frontend</b> (la interfaz que ves) y un <b>backend</b> (donde viven las redes neuronales y el entrenamiento). La regla mental para orientarse es sencilla:</p>
+    <div class="defs" style="--accent:#1f2937">
+      <dt>la red</dt><dd>de cada modelo está en <span class="mono">backend/app/models/&lt;modelo&gt;.py</span> — ahí se definen el encoder, el decoder y todas las capas.</dd>
+      <dt>el entrenamiento</dt><dd>(y el muestreo, la interpolación…) está en <span class="mono">backend/app/services/&lt;modelo&gt;_service.py</span>.</dd>
+      <dt>la API</dt><dd>que une ambos mundos vive en <span class="mono">backend/app/routers/</span>: un endpoint por modelo.</dd>
+      <dt>la pantalla</dt><dd>de cada modelo es <span class="mono">frontend/src/tabs/&lt;Modelo&gt;Tab.tsx</span>; la teoría de los botones «i», en <span class="mono">content/*.json</span>.</dd>
+    </div>
+    <div class="tree"><span class="dir">generativelab/</span>
+├── <span class="dir">backend/</span>
+│   └── <span class="dir">app/</span>
+│       ├── main.py            <span class="cm"># FastAPI: monta los routers y carga los checkpoints</span>
+│       ├── device.py          <span class="cm"># detecta el dispositivo (MPS / CPU)</span>
+│       ├── <span class="dir">data/</span>             <span class="cm"># descarga y cache del dataset</span>
+│       ├── <span class="dir">models/</span>           <span class="hot"># ← LAS REDES: ae · vae · gan · diffusion</span>
+│       ├── <span class="dir">services/</span>         <span class="hot"># ← ENTRENAMIENTO + lógica (SSE, muestreo, interpolación)</span>
+│       ├── <span class="dir">routers/</span>          <span class="cm"># un endpoint por modelo</span>
+│       └── <span class="dir">checkpoints/</span>      <span class="cm"># pesos demo (*_demo.pt)</span>
+└── <span class="dir">frontend/src/</span>
+    ├── <span class="dir">components/ui/</span>     <span class="cm"># sistema de componentes propio (botones, sliders…)</span>
+    ├── <span class="dir">components/lab/</span>    <span class="cm"># LatentMap, SampleGrid, TrainingChart, Filmstrip…</span>
+    ├── <span class="dir">content/</span>          <span class="cm"># teoría de los botones «i» (JSON, no código)</span>
+    ├── <span class="dir">lib/</span>              <span class="cm"># cliente HTTP/SSE (uno por modelo)</span>
+    └── <span class="dir">tabs/</span>             <span class="cm"># una pantalla por modelo</span></div>
+    <div class="note">Un patrón se repite en los cuatro modelos: el entrenamiento corre en un <b>hilo aparte</b> que va emitiendo eventos por <b>SSE</b> (por eso la curva de pérdida avanza en vivo). Y los <b>checkpoints demo son intocables</b>: entrenar desde la app solo cambia el modelo en memoria; nunca pisa el fichero base.</div>
+  </div>
+</section>
+
+<!-- ============ CÓDIGO CLAVE POR MODELO ============ -->
+<section class="section">
+  <div class="band b-blue"><div class="n">EL CORAZÓN DEL CÓDIGO</div><h2>El código clave, modelo a modelo</h2>
+    <div class="tag">Para cada uno: dónde se define la red, dónde se entrena y algún truco interesante</div></div>
+  <div class="pad">
+
+    <!-- AUTOENCODER -->
+    <h3 class="sub" style="--accent:#2563eb">Autoencoder</h3>
+    <p class="lead">Un encoder que comprime y un decoder simétrico que reconstruye, unidos por el «cuello de botella».</p>
+    <div class="code" style="--accent:#2563eb"><div class="fn">backend/app/models/ae.py<span class="role">la red</span></div><pre>class ConvAutoencoder(nn.Module):
+    def __init__(self, latent_dim=128):
+        c1, c2, c3, c4 = 32, 64, 128, 256
+        <span class="cm"># encoder: 4 convoluciones, cada una parte el lado por la mitad</span>
+        self.encoder = nn.Sequential(
+            _down(3,  c1, norm=False),   <span class="cm"># 64 → 32</span>
+            _down(c1, c2),               <span class="cm"># 32 → 16</span>
+            _down(c2, c3),               <span class="cm"># 16 → 8</span>
+            _down(c3, c4))               <span class="cm"># 8  → 4</span>
+        self.fc_enc = nn.Linear(c4*4*4, latent_dim)   <span class="cm"># 4096 → z (128): el cuello</span>
+        <span class="cm"># decoder: el espejo del encoder, de z de vuelta a 64×64×3</span>
+        self.fc_dec = nn.Linear(latent_dim, c4*4*4)
+        self.decoder = nn.Sequential(
+            _up(c4, c3), _up(c3, c2), _up(c2, c1),              <span class="cm"># 4 → 8 → 16 → 32</span>
+            nn.ConvTranspose2d(c1, 3, 4, 2, 1), nn.Sigmoid())  <span class="cm"># 32 → 64</span></pre></div>
+    <div class="codecap">La red. El truco está en <span class="mono">fc_enc</span>: 4096 números se estrujan a solo 128 — el cuello de botella que obliga a la red a quedarse con lo esencial.</div>
+
+    <div class="code" style="--accent:#2563eb"><div class="fn">backend/app/services/ae_service.py<span class="role">entrenamiento</span></div><pre>opt  = torch.optim.Adam(model.parameters(), lr=hp.learning_rate)
+crit = nn.L1Loss() if hp.loss == "l1" else nn.MSELoss()
+for epoch in range(1, epochs + 1):
+    for batch in self._iter_batches(indices, hp.batch_size):
+        recon, _ = model(batch)        <span class="cm"># imagen → z → reconstrucción</span>
+        loss = crit(recon, batch)      <span class="cm"># ¿se parece a la original?</span>
+        loss.backward(); opt.step()    <span class="cm"># corrige los pesos</span>
+    yield {"type": "epoch", "loss": epoch_loss}   <span class="cm"># evento SSE → curva en vivo</span></pre></div>
+    <div class="codecap">El bucle de entrenamiento. No hay etiquetas: el «profesor» es la propia imagen de entrada.</div>
+
+    <div class="code" style="--accent:#2563eb"><div class="fn">backend/app/services/ae_service.py<span class="role">extra · interpolación</span></div><pre><span class="cm"># Caminar en línea recta entre dos caras A y B dentro del espacio latente</span>
+za, skips_a = model.encode_with_skips(xa)   <span class="cm"># código completo de A</span>
+zb, skips_b = model.encode_with_skips(xb)   <span class="cm"># código completo de B</span>
+for s in range(steps):
+    alpha = s / (steps - 1)                  <span class="cm"># de 0 (A) a 1 (B)</span>
+    z = (1 - alpha) * za + alpha * zb         <span class="cm"># mezcla de los dos códigos</span>
+    skips = [(1-alpha)*a + alpha*b for a, b in zip(skips_a, skips_b)]
+    img = model.decode(z, skips)[0]           <span class="cm"># la cara intermedia</span></pre></div>
+    <div class="codecap">La interpolación A→B: si las caras intermedias salen suaves y con sentido, el modelo aprendió un espacio «con estructura», no un simple diccionario.</div>
+
+    <!-- VAE -->
+    <h3 class="sub" style="--accent:#7c3aed">VAE</h3>
+    <p class="lead" style="--accent:#7c3aed">El mismo esqueleto, pero el encoder produce una distribución y se entrena con un término extra que ordena la memoria.</p>
+    <div class="code" style="--accent:#7c3aed"><div class="fn">backend/app/models/vae.py<span class="role">la red · el truco clave</span></div><pre>def encode(self, x):                    <span class="cm"># x → (μ, logσ²): una DISTRIBUCIÓN, no un punto</span>
+    h = self.encoder(x).flatten(1)
+    return self.fc_mu(h), self.fc_logvar(h)
+
+def reparameterize(self, mu, logvar):   <span class="cm"># el «truco de reparametrización»</span>
+    std = torch.exp(0.5 * logvar)
+    eps = torch.randn_like(std)         <span class="cm"># ruido aleatorio ε ~ N(0, I)</span>
+    return mu + eps * std               <span class="cm"># z = μ + σ·ε  (derivable: deja entrenar)</span>
+
+def sample(self, n, device):            <span class="cm"># GENERAR caras nuevas: muestrear del prior</span>
+    z = torch.randn(n, self.latent_dim, device=device)
+    return self.decode(z)</pre></div>
+    <div class="codecap">La clave del VAE es <span class="mono">reparameterize</span>: muestrear parece incompatible con entrenar (el azar no tiene derivada), pero separando el ruido <span class="mono">ε</span> sí se puede. Y como el latente queda ordenado, <span class="mono">sample</span> inventa caras desde cero.</div>
+
+    <div class="code" style="--accent:#7c3aed"><div class="fn">backend/app/services/vae_service.py<span class="role">entrenamiento</span></div><pre>recon, mu, logvar, _ = model(batch)
+recon_loss = recon_crit(recon, batch)       <span class="cm"># 1) que se parezca al original</span>
+kl_loss    = _kl_divergence(mu, logvar)     <span class="cm"># 2) que el latente sea ordenado, ~ N(0,I)</span>
+loss = recon_loss + hp.beta * kl_loss       <span class="cm"># β decide el equilibrio entre ambos</span>
+loss.backward(); opt.step()</pre></div>
+    <div class="codecap">La pérdida tiene dos partes en tensión: reconstruir bien <i>vs.</i> mantener el «mapa de memoria» ordenado para poder generar. El parámetro <span class="mono">β</span> decide a cuál dar más peso.</div>
+
+    <!-- GAN -->
+    <h3 class="sub" style="--accent:#db2777">GAN</h3>
+    <p class="lead" style="--accent:#db2777">Dos redes que compiten: un generador que falsifica y un discriminador que detecta falsificaciones.</p>
+    <div class="code" style="--accent:#db2777"><div class="fn">backend/app/models/gan.py<span class="role">las dos redes</span></div><pre>class Generator(nn.Module):       <span class="cm"># ruido z → imagen 64×64 (no hay encoder)</span>
+    def __init__(self, z_dim=100):
+        self.net = nn.Sequential(
+            nn.ConvTranspose2d(z_dim, 512, 4, 1, 0), ...,   <span class="cm"># 1 → 4 → … → 64</span>
+            nn.Tanh())                                       <span class="cm"># salida en [-1, 1]</span>
+
+class Discriminator(nn.Module):   <span class="cm"># imagen → un número (¿real o falsa?)</span>
+    def __init__(self):
+        self.net = nn.Sequential(
+            _d_down(3, 64), ..., nn.Conv2d(512, 1, 4, 1, 0))   <span class="cm"># 64×64 → 1 logit</span></pre></div>
+    <div class="codecap">El generador (de ruido a cara) y el discriminador (de cara a veredicto): simétricos e inversos.</div>
+
+    <div class="code" style="--accent:#db2777"><div class="fn">backend/app/services/gan_service.py<span class="role">entrenamiento · el duelo</span></div><pre><span class="cm"># 1) Entrenar al DISCRIMINADOR: que acierte real=1, falsa=0</span>
+fake = generator(z)
+out_real = discriminator(real)
+out_fake = discriminator(fake.detach())     <span class="cm"># detach: aún no toca al generador</span>
+loss_d = criterion(out_real, real_labels) + criterion(out_fake, fake_labels)
+loss_d.backward(); opt_d.step()
+
+<span class="cm"># 2) Entrenar al GENERADOR: que el juez trague sus falsas como reales</span>
+loss_g = criterion(discriminator(fake), real_labels)   <span class="cm"># etiqueta = «real»</span>
+loss_g.backward(); opt_g.step()</pre></div>
+    <div class="codecap">El tira y afloja: el discriminador mejora detectando y el generador mejora engañando. De esa competición salen caras cada vez más nítidas… mientras el equilibrio no se rompa (por eso es inestable).</div>
+
+    <!-- DIFFUSION -->
+    <h3 class="sub" style="--accent:#0891b2">Diffusion</h3>
+    <p class="lead" style="--accent:#0891b2">La red aprende a quitar ruido. Entrenar es ensuciar una imagen y pedirle que adivine el ruido añadido.</p>
+    <div class="code" style="--accent:#0891b2"><div class="fn">backend/app/models/diffusion.py<span class="role">el proceso «forward»</span></div><pre>def q_sample(sched, x0, t, noise):     <span class="cm"># «ensuciar» la imagen x0 hasta el paso t</span>
+    <span class="cm"># x_t = √ᾱ_t · x0 + √(1−ᾱ_t) · ε   (una mezcla de imagen y ruido)</span>
+    sqrt_acp = gather(sched.sqrt_alphas_cumprod, t)
+    sqrt_om  = gather(sched.sqrt_one_minus_alphas_cumprod, t)
+    return sqrt_acp * x0 + sqrt_om * noise</pre></div>
+    <div class="codecap">El proceso «forward» añade ruido de forma controlada: cuanto mayor es <span class="mono">t</span>, más ruido, hasta que solo queda «nieve».</div>
+
+    <div class="code" style="--accent:#0891b2"><div class="fn">backend/app/services/diffusion_service.py<span class="role">entrenamiento</span></div><pre>t = torch.randint(0, timesteps, (b,))    <span class="cm"># un nivel de ruido al azar por imagen</span>
+noise = torch.randn_like(batch)          <span class="cm"># el ruido que vamos a añadir</span>
+x_t = q_sample(sched, batch, t, noise)   <span class="cm"># imagen ensuciada</span>
+eps_pred = model(x_t, t)                 <span class="cm"># la red ADIVINA el ruido</span>
+loss = F.mse_loss(eps_pred, noise)       <span class="cm"># ¿acertó el ruido?</span>
+loss.backward(); opt.step(); ema.update(model)</pre></div>
+    <div class="codecap">Entrenar es sorprendentemente simple: ensucia, predice el ruido, corrige. (La <span class="mono">EMA</span> guarda una media suave de los pesos, que da mejores muestras al generar.)</div>
+
+    <div class="code" style="--accent:#0891b2"><div class="fn">backend/app/models/diffusion.py<span class="role">extra · generar (DDIM)</span></div><pre>x = torch.randn(n, 3, img_size, img_size)    <span class="cm"># partir de ruido PURO</span>
+for t in pasos:                              <span class="cm"># de mucho ruido a nada</span>
+    eps = model(x, t)                        <span class="cm"># ruido estimado en este paso</span>
+    x0 = (x - sqrt(1-ᾱ_t)*eps) / sqrt(ᾱ_t)   <span class="cm"># estima la cara limpia…</span>
+    x  = sqrt(ᾱ_prev)*x0 + sqrt(1-ᾱ_prev)*eps <span class="cm"># …y retrocede un poco el ruido</span></pre></div>
+    <div class="codecap">El muestreo «reverse» con DDIM: partiendo de pura «nieve», repite quitar-un-poco-de-ruido decenas de veces hasta que emerge una cara. Es exactamente lo que ves en el panel «Proceso de difusión».</div>
+  </div>
+</section>
+
+<!-- ============ LICENCIA ============ -->
+<section class="section">
+  <div class="band b-ink"><div class="n">CRÉDITOS</div><h2>Licencia y autoría</h2>
+    <div class="tag">Código abierto bajo licencia MIT</div></div>
+  <div class="pad" style="--accent:#1f2937;--accent-soft:#f1f3f6">
+    <div class="defs" style="--accent:#1f2937">
+      <dt>Autor</dt><dd>Roberto Canales Mora — con Claude Chat / Code (Anthropic) como par de programación.</dd>
+      <dt>Licencia</dt><dd>MIT (texto completo abajo): libertad para usar, copiar, modificar y distribuir el código.</dd>
+      <dt>Repositorio</dt><dd><span class="mono">https://github.com/rcanalescoder/generativelab.git</span></dd>
+      <dt>Dataset</dt><dd><span class="mono">huggan/anime-faces</span> (CC0): 43.102 caras de 64×64 píxeles.</dd>
+    </div>
+
+    <h3 class="sub" style="--accent:#1f2937">Licencia MIT</h3>
+    <div class="code" style="--accent:#1f2937"><div class="fn">LICENSE<span class="role">MIT</span></div><pre>MIT License
+
+Copyright (c) 2026 Roberto Canales Mora
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.</pre></div>
+    <p style="text-align:center;color:var(--muted);font-size:9.5pt;margin-top:16px">Hecho para aprender, compartir y experimentar. ✦</p>
   </div>
 </section>
 

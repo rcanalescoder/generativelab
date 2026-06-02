@@ -266,4 +266,4 @@ Con el backend levantado, la documentación interactiva está en `http://localho
 ## 📜 Licencia y créditos
 
 - Dataset: [`huggan/anime-faces`](https://huggingface.co/datasets/huggan/anime-faces) (CC0).
-- Código del laboratorio: añade aquí la licencia que prefieras (p. ej. MIT) antes de publicar.
+- Código del laboratorio: **MIT** (ver [`LICENSE`](LICENSE)). © 2026 Roberto Canales Mora — con Claude Chat / Code.
