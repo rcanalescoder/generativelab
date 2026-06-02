@@ -429,10 +429,19 @@ class AEService:
                     continue
                 x = imaging.uint8_to_tensor(np.asarray(arr[i])).to(self.device)
                 if noise > 0:
-                    # Camino z+ruido: muestra el efecto del cuello (U-Net sin skips → más borroso).
-                    z = self.model.encode(x.unsqueeze(0))
-                    z = z + noise * torch.randn_like(z)
-                    recon = self.model.decode(z)[0]
+                    # Camino z+ruido: añade ruido al cuello z y reconstruye.
+                    # En la U-Net decodificamos con los skips REALES de la imagen: así la cara
+                    # sigue siendo coherente (no un blob gris) y se aprecia que perturbar el
+                    # cuello apenas la cambia, porque los skips llevan la información. En
+                    # básico/grande el cuello es todo el código, así que el ruido sí degrada.
+                    if hasattr(self.model, "encode_with_skips"):
+                        z, skips = self.model.encode_with_skips(x.unsqueeze(0))
+                        z = z + noise * torch.randn_like(z)
+                        recon = self.model.decode(z, skips)[0]
+                    else:
+                        z = self.model.encode(x.unsqueeze(0))
+                        z = z + noise * torch.randn_like(z)
+                        recon = self.model.decode(z)[0]
                 else:
                     # Reconstrucción nítida: forward usa skips si la variante (U-Net) los tiene.
                     recon = self.model(x.unsqueeze(0))[0][0]
@@ -620,13 +629,28 @@ class AEService:
         b_id = int(max(0, min(n - 1, b_id)))
         steps = int(max(2, min(12, steps)))
         self.model.eval()
+        xa = imaging.uint8_to_tensor(np.asarray(arr[a_id])).unsqueeze(0).to(self.device)
+        xb = imaging.uint8_to_tensor(np.asarray(arr[b_id])).unsqueeze(0).to(self.device)
+        # En la U-Net el cuello z casi no lleva información (los skips lo "puentean"): decodificar
+        # un z suelto sin skips produce un blob gris, no una cara. Para que la interpolación sea
+        # un morphing real, interpolamos el código COMPLETO de esa variante (cuello + skips) y
+        # decodificamos con los skips interpolados. En básico/grande el código es solo z.
+        use_skips = hasattr(self.model, "encode_with_skips")
         with torch.no_grad():
-            za = self.model.encode(imaging.uint8_to_tensor(np.asarray(arr[a_id])).unsqueeze(0).to(self.device))
-            zb = self.model.encode(imaging.uint8_to_tensor(np.asarray(arr[b_id])).unsqueeze(0).to(self.device))
+            if use_skips:
+                za, skips_a = self.model.encode_with_skips(xa)
+                zb, skips_b = self.model.encode_with_skips(xb)
+            else:
+                za, zb = self.model.encode(xa), self.model.encode(xb)
             frames = []
             for s in range(steps):
                 alpha = s / (steps - 1)
-                img = self.model.decode((1 - alpha) * za + alpha * zb)[0]
+                z = (1 - alpha) * za + alpha * zb
+                if use_skips:
+                    skips = [(1 - alpha) * sa + alpha * sb for sa, sb in zip(skips_a, skips_b)]
+                    img = self.model.decode(z, skips)[0]
+                else:
+                    img = self.model.decode(z)[0]
                 frames.append({"alpha": round(alpha, 3), "image": imaging.tensor_to_b64(img)})
         return {"a_id": a_id, "b_id": b_id, "steps": steps, "frames": frames}
 
