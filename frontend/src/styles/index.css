@@ -1376,6 +1376,262 @@
     from { opacity: 0; transform: translateY(10px) scale(0.99); }
     to { opacity: 1; transform: translateY(0) scale(1); }
   }
+
+  /* ====================== Diagrama de arquitectura ====================== */
+  /* El modal reutiliza la cáscara .gm-ip; .gm-arch solo lo ensancha. */
+  .gm-ip.gm-arch {
+    width: min(1080px, 100%);
+  }
+
+  /* línea de meta (entrada/resolución) sobre el diagrama */
+  .gm-arch-meta {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-family: var(--ff-mono);
+    font-size: 12.5px;
+    color: var(--slate);
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    padding: 9px 13px;
+  }
+  .gm-arch-meta-ic {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    background: #f4effe;
+    color: #7c3aed;
+    flex: 0 0 auto;
+  }
+  .gm-arch-meta-ic svg {
+    width: 15px;
+    height: 15px;
+    stroke-width: 1.8;
+  }
+
+  /* contenedor de columnas: fila en desktop, columna en estrecho */
+  .gm-arch-diagram {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 0;
+  }
+  /* cada grupo = columna + su conector (flecha o bloque latente) */
+  .gm-arch-group {
+    display: flex;
+    align-items: stretch;
+    flex: 1 1 240px;
+    min-width: 0;
+  }
+  .gm-arch-group:last-child {
+    flex: 1 1 240px;
+  }
+
+  /* columna (encoder/decoder/generador/rama UNet…) */
+  .gm-arch-col {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--acc-soft);
+    border: 1px solid var(--acc-line);
+    border-radius: 15px;
+    padding: 13px 13px 15px;
+  }
+  .gm-arch-col-head {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed var(--acc-line);
+  }
+  .gm-arch-col-title {
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: 0.7px;
+    text-transform: uppercase;
+    color: var(--acc);
+  }
+  .gm-arch-col-sub {
+    font-size: 11.5px;
+    color: var(--slate);
+  }
+
+  .gm-arch-stack {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+  }
+  .gm-arch-item {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  /* caja de capa */
+  .gm-arch-box {
+    background: #fff;
+    border: 1px solid var(--acc-line);
+    border-radius: 11px;
+    padding: 9px 11px;
+    box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04);
+  }
+  .gm-arch-box.is-edge {
+    border-color: var(--acc);
+    box-shadow: 0 0 0 1px var(--acc) inset, 0 1px 3px rgba(17, 24, 39, 0.06);
+  }
+  .gm-arch-box-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    line-height: 1.3;
+  }
+  .gm-arch-box-detail {
+    margin-top: 2px;
+    font-size: 11.5px;
+    line-height: 1.4;
+    color: var(--slate);
+  }
+  .gm-arch-shape {
+    margin-top: 6px;
+    display: inline-block;
+    align-self: flex-start;
+    font-family: var(--ff-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    color: var(--acc);
+    background: var(--acc-soft);
+    border: 1px solid var(--acc-line);
+    border-radius: 7px;
+    padding: 2px 7px;
+  }
+
+  /* flecha entre cajas de una misma columna */
+  .gm-arch-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 18px;
+    color: var(--acc);
+    font-size: 14px;
+    line-height: 1;
+    opacity: 0.75;
+  }
+
+  /* conector entre columnas (cuando no hay bloque latente) */
+  .gm-arch-connector {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    padding: 0 6px;
+    align-self: center;
+  }
+  .gm-arch-connector-arrow {
+    color: var(--muted);
+    font-size: 20px;
+    line-height: 1;
+  }
+
+  /* bloque latente central (AE/VAE): cuello de botella entre encoder y decoder */
+  .gm-arch-latent {
+    flex: 0 0 auto;
+    align-self: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin: 0 4px;
+    padding: 14px 14px;
+    width: 150px;
+    text-align: center;
+    background: linear-gradient(160deg, var(--acc-soft), #fff);
+    border: 1.5px solid var(--acc);
+    border-radius: 14px;
+    box-shadow: 0 8px 22px -14px var(--acc);
+  }
+  .gm-arch-latent-title {
+    font-family: var(--ff-mono);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--acc);
+    line-height: 1.3;
+  }
+  .gm-arch-latent-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    width: 100%;
+  }
+  .gm-arch-latent-line {
+    font-family: var(--ff-mono);
+    font-size: 10.5px;
+    color: var(--slate);
+    background: #fff;
+    border: 1px solid var(--acc-line);
+    border-radius: 999px;
+    padding: 3px 8px;
+  }
+
+  /* notas al pie del diagrama */
+  .gm-arch-notes {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .gm-arch-notes li {
+    position: relative;
+    padding-left: 18px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--slate);
+  }
+  .gm-arch-notes li::before {
+    content: '';
+    position: absolute;
+    left: 3px;
+    top: 7px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #7c3aed;
+  }
+
+  /* responsive: en estrecho, las columnas se apilan y las flechas giran a vertical */
+  @media (max-width: 760px) {
+    .gm-arch-diagram {
+      flex-direction: column;
+    }
+    .gm-arch-group {
+      flex-direction: column;
+      flex: 1 1 auto;
+    }
+    .gm-arch-connector {
+      padding: 8px 0;
+    }
+    .gm-arch-connector-arrow {
+      transform: rotate(90deg);
+    }
+    .gm-arch-latent {
+      width: auto;
+      align-self: stretch;
+      margin: 8px 0;
+    }
+    .gm-arch-latent-lines {
+      flex-direction: row;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+  }
 }
 
 /* aparición escalonada de tarjetas (delays) */

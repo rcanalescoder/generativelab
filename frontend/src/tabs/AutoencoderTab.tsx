@@ -5,7 +5,7 @@ import { ModelFlowCard } from '../components/lab/ModelFlowCard'
 import { LatentMap } from '../components/lab/LatentMap'
 import { ResultsCard } from '../components/lab/ResultsCard'
 import { TrainingChart } from '../components/lab/TrainingChart'
-import { ClustersIcon, GridIcon, InterpolateIcon, PlayIcon, RefreshIcon, SearchIcon } from '../lib/icons'
+import { ClustersIcon, GridIcon, InterpolateIcon, LayersIcon, PlayIcon, RefreshIcon, SearchIcon } from '../lib/icons'
 import {
   cancelTraining,
   computeClusters,
@@ -31,6 +31,8 @@ import {
 import { useInfo } from '../components/info/InfoProvider'
 import { autoencoderContent } from '../content'
 import { GridSearchModal } from '../components/lab/GridSearchModal'
+import { ArchitectureModal } from '../components/lab/ArchitectureModal'
+import { ARCHITECTURES } from '../content/architectures'
 
 const LR_VALUES = [0.0001, 0.0003, 0.001, 0.003, 0.01]
 const nearestLrIdx = (lr: number) => {
@@ -94,6 +96,7 @@ export function AutoencoderTab() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [gridOpen, setGridOpen] = useState(false)
+  const [archOpen, setArchOpen] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
 
   const lr = LR_VALUES[lrIdx]
@@ -484,6 +487,15 @@ export function AutoencoderTab() {
           >
             Buscar mejores parámetros
           </Button>
+
+          <Button
+            full
+            icon={<LayersIcon />}
+            onClick={() => setArchOpen(true)}
+            className="mt-[11px]"
+          >
+            Ver la estructura
+          </Button>
         </Card>
       </div>
 
@@ -504,6 +516,14 @@ export function AutoencoderTab() {
           seed={seed}
           onClose={() => setGridOpen(false)}
           onApply={applyGrid}
+        />
+      )}
+
+      {archOpen && (
+        <ArchitectureModal
+          arch={ARCHITECTURES.ae}
+          latentDim={latentDim}
+          onClose={() => setArchOpen(false)}
         />
       )}
     </>

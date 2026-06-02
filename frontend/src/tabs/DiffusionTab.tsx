@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button, Card, CardHeader, SegmentedControl, Skeleton, Slider, StatusLine, Tag } from '../components/ui'
 import { TrainingChart } from '../components/lab/TrainingChart'
-import { PlayIcon, RefreshIcon, SparklesIcon } from '../lib/icons'
+import { LayersIcon, PlayIcon, RefreshIcon, SparklesIcon } from '../lib/icons'
+import { ArchitectureModal } from '../components/lab/ArchitectureModal'
+import { ARCHITECTURES } from '../content/architectures'
 import {
   cancelDiffusionTraining,
   generateDiffusion,
@@ -74,6 +76,7 @@ export function DiffusionTab() {
   const [stoppedEarly, setStoppedEarly] = useState<number | null>(null)
   const [preview, setPreview] = useState<string[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [archOpen, setArchOpen] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
 
   const lr = LR_VALUES[lrIdx]
@@ -554,12 +557,25 @@ export function DiffusionTab() {
             </Button>
           )}
 
+          <Button
+            full
+            icon={<LayersIcon />}
+            onClick={() => setArchOpen(true)}
+            className="mt-[11px]"
+          >
+            Ver la estructura
+          </Button>
+
           <div className="gm-caption">
             Entrenar no toca el checkpoint demo: el modelo entrenado vive durante esta sesión. La
             difusión es costosa, así que «Rápido» usa un subconjunto y pocas épocas.
           </div>
         </Card>
       </div>
+
+      {archOpen && (
+        <ArchitectureModal arch={ARCHITECTURES.diffusion} onClose={() => setArchOpen(false)} />
+      )}
     </>
   )
 }

@@ -12,6 +12,8 @@ export interface DiffusionHyperParams {
   epochs: number
   batch_size: number
   timesteps: number
+  /** Schedule de ruido: "cosine" (por defecto, mejor calidad) o "linear". */
+  schedule: 'cosine' | 'linear'
 }
 
 export interface DiffusionStatus {

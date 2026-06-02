@@ -26,8 +26,10 @@ from .. import imaging
 from ..data import dataset
 from ..device import get_device
 from ..models.diffusion import (
+    DEFAULT_SCHEDULE,
     IMG_SIZE,
     TIMESTEPS,
+    EMA,
     DiffusionSchedule,
     TimeUNet,
     count_params,
@@ -44,8 +46,14 @@ DEMO_EPOCHS = 18        # checkpoint demo (modo full, acotado)
 LOG_EVERY = 20          # steps entre eventos de progreso
 EARLY_STOP_MIN_DELTA = 1e-4  # mejora mínima de pérdida por epoch para resetear la paciencia
 PREVIEW_N = 6           # nº de caras del grid de vista previa por epoch
-PREVIEW_STEPS = 40      # pasos de muestreo de la vista previa (rápida)
+PREVIEW_STEPS = 50      # pasos de muestreo de la vista previa (rápida, con pesos EMA)
+DEFAULT_SAMPLE_STEPS = 80  # pasos de muestreo por defecto de generate/trajectory (más calidad)
 DISPLAY_SIZE = 64       # resolución a la que reescalamos para mostrar
+# Decay de la EMA de pesos. 0.999 es el valor habitual; con entrenamientos cortos conviene
+# bajarlo (0.995) para que la EMA "siga" antes a los pesos y no se quede en la inicialización.
+EMA_DECAY = 0.999
+EMA_DECAY_SHORT = 0.995
+EMA_SHORT_EPOCHS = 15      # umbral de epochs por debajo del cual usamos el decay corto
 
 
 @dataclass
@@ -54,6 +62,7 @@ class DiffusionHyperParams:
     epochs: int = 30
     batch_size: int = 128
     timesteps: int = TIMESTEPS
+    schedule: str = DEFAULT_SCHEDULE  # "cosine" (def.) | "linear"
 
     def sanitized(self) -> "DiffusionHyperParams":
         return DiffusionHyperParams(
@@ -61,6 +70,7 @@ class DiffusionHyperParams:
             epochs=int(max(1, min(200, self.epochs))),
             batch_size=int(max(16, min(512, self.batch_size))),
             timesteps=int(max(50, min(1000, self.timesteps))),
+            schedule="linear" if str(self.schedule).lower() == "linear" else "cosine",
         )
 
 
@@ -69,6 +79,8 @@ class DiffusionService:
 
     def __init__(self) -> None:
         self.device = get_device()
+        # `self.model` aloja SIEMPRE los pesos que se usan para muestrear. Tras entrenar o
+        # cargar un checkpoint, son los pesos EMA (suavizados), que dan mejores muestras.
         self.model: TimeUNet | None = None
         self.hp = DiffusionHyperParams()
         self.seed = 42
@@ -76,7 +88,7 @@ class DiffusionService:
         self.training = False
         self.loss_history: list[dict] = []
         self._cancel = False
-        self.sched = DiffusionSchedule(self.hp.timesteps, self.device)
+        self.sched = DiffusionSchedule(self.hp.timesteps, self.device, self.hp.schedule)
 
     # ---------- estado ----------
     def status(self) -> dict:
@@ -95,9 +107,10 @@ class DiffusionService:
     def cancel(self) -> None:
         self._cancel = True
 
-    def _ensure_schedule(self, timesteps: int) -> None:
-        if self.sched.timesteps != timesteps:
-            self.sched = DiffusionSchedule(timesteps, self.device)
+    def _ensure_schedule(self, timesteps: int, schedule: str | None = None) -> None:
+        sched_type = schedule or self.hp.schedule
+        if self.sched.timesteps != timesteps or self.sched.schedule != sched_type:
+            self.sched = DiffusionSchedule(timesteps, self.device, sched_type)
         else:
             self.sched.to(self.device)
 
@@ -143,7 +156,7 @@ class DiffusionService:
         try:
             hp = hp.sanitized()
             set_seed(seed)
-            self._ensure_schedule(hp.timesteps)
+            self._ensure_schedule(hp.timesteps, hp.schedule)
             n_total = dataset.count()
             quick = mode == "quick"
             n_use = min(QUICK_N, n_total) if quick else n_total
@@ -152,6 +165,14 @@ class DiffusionService:
             model = TimeUNet().to(self.device)
             model.train()
             opt = torch.optim.Adam(model.parameters(), lr=hp.learning_rate)
+
+            # EMA de pesos: decay corto si el entrenamiento es breve (para que la EMA se
+            # "caliente" a tiempo y no se quede atascada cerca de la inicialización).
+            ema_decay = EMA_DECAY if epochs >= EMA_SHORT_EPOCHS else EMA_DECAY_SHORT
+            ema = EMA(model, decay=ema_decay)
+            # modelo "shadow" reutilizable donde volcamos los pesos EMA para muestrear.
+            ema_model = TimeUNet().to(self.device)
+            ema_model.eval()
 
             rng = np.random.default_rng(seed)
             indices = (
@@ -182,6 +203,7 @@ class DiffusionService:
                     opt.zero_grad(set_to_none=True)
                     loss.backward()
                     opt.step()
+                    ema.update(model)  # actualizar la EMA tras cada paso del optimizador
                     running += loss.detach()
                     nb += 1
                     global_step += 1
@@ -193,8 +215,10 @@ class DiffusionService:
                         return
                 epoch_loss = float((running / max(nb, 1)).item())
                 history.append({"epoch": epoch, "loss": epoch_loss})
+                # vista previa SIEMPRE con los pesos EMA (mejor calidad que los pesos crudos).
+                ema.copy_to(ema_model)
                 yield {"type": "epoch", "epoch": epoch, "epochs": epochs, "step": global_step,
-                       "loss": epoch_loss, "preview": self._preview_grid(model)}
+                       "loss": epoch_loss, "preview": self._preview_grid(ema_model)}
                 if early_stop:
                     if epoch_loss < best - EARLY_STOP_MIN_DELTA:
                         best = epoch_loss
@@ -205,9 +229,11 @@ class DiffusionService:
                             stopped_early = True
                             break
 
-            # finalizar: adoptar el modelo entrenado (sin tocar el checkpoint demo)
-            model.eval()
-            self.model = model
+            # finalizar: adoptar los pesos EMA (no los crudos) como el modelo de muestreo.
+            # Es lo que da las mejores muestras y lo que guardará el checkpoint demo.
+            ema.copy_to(ema_model)
+            ema_model.eval()
+            self.model = ema_model
             self.hp = hp
             self.seed = seed
             self.trained = True
@@ -245,18 +271,19 @@ class DiffusionService:
         return q
 
     # ---------- generación ----------
-    def generate(self, n: int, seed: int, steps: int) -> list[str]:
+    def generate(self, n: int, seed: int, steps: int | None = None) -> list[str]:
         """Muestrea `n` imágenes desde ruido puro. `steps` = nº de pasos (submuestreo de T)."""
         if self.model is None:
             raise RuntimeError("modelo no entrenado")
         n = int(max(1, min(16, n)))
+        steps = DEFAULT_SAMPLE_STEPS if steps is None else steps
         steps = int(max(2, min(self.hp.timesteps, steps)))
         set_seed(seed)
         self._ensure_schedule(self.hp.timesteps)
         imgs, _ = sample_loop(self.model, self.sched, n, self.device, steps=steps)
         return [self._encode(imgs[k]) for k in range(imgs.shape[0])]
 
-    def trajectory(self, seed: int, steps: int, snapshots: int) -> list[dict]:
+    def trajectory(self, seed: int, steps: int | None = None, snapshots: int = 8) -> list[dict]:
         """Genera UNA imagen y devuelve `snapshots` instantáneas a lo largo del muestreo.
 
         Visualiza el proceso de difusión: de ruido puro (paso 0 del muestreo) a cara (último).
@@ -264,6 +291,7 @@ class DiffusionService:
         """
         if self.model is None:
             raise RuntimeError("modelo no entrenado")
+        steps = DEFAULT_SAMPLE_STEPS if steps is None else steps
         steps = int(max(2, min(self.hp.timesteps, steps)))
         snapshots = int(max(2, min(steps + 1, snapshots)))
         set_seed(seed)
@@ -299,7 +327,11 @@ class DiffusionService:
 
     # ---------- checkpoint ----------
     def save_checkpoint(self, path: Path = DEMO_PATH) -> None:
-        """Guarda el modelo. Solo lo usa el script generador del demo (`__main__`)."""
+        """Guarda el modelo. Solo lo usa el script generador del demo (`__main__`).
+
+        `self.model` contiene los pesos EMA tras entrenar, así que el `state_dict` guardado
+        es directamente la EMA: el demo muestrea con los pesos suavizados (mejor calidad).
+        """
         if self.model is None:
             return
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -315,13 +347,26 @@ class DiffusionService:
         )
 
     def load_checkpoint(self) -> bool:
+        """Carga el checkpoint demo (pesos EMA). Devuelve False si no existe o es incompatible.
+
+        El `state_dict` guardado son los pesos EMA del entrenamiento (ver `iter_train`): el
+        demo muestrea directamente con ellos. Si el checkpoint es de una arquitectura/schedule
+        anterior, se ignora con elegancia (hay que regenerarlo con `python -m
+        app.services.diffusion_service`) en vez de romper el arranque del servidor.
+        """
         if not DEMO_PATH.exists():
             return False
-        ckpt = torch.load(DEMO_PATH, map_location=self.device)
-        self.hp = DiffusionHyperParams(**ckpt["hyperparams"]).sanitized()
-        self._ensure_schedule(self.hp.timesteps)
-        model = TimeUNet().to(self.device)
-        model.load_state_dict(ckpt["state_dict"])
+        try:
+            ckpt = torch.load(DEMO_PATH, map_location=self.device)
+            hp = DiffusionHyperParams(**ckpt["hyperparams"]).sanitized()
+            model = TimeUNet().to(self.device)
+            model.load_state_dict(ckpt["state_dict"])  # estricto: detecta archs incompatibles
+        except Exception as exc:  # checkpoint viejo/corrupto: tratar como "sin demo"
+            print(f"[diffusion] checkpoint demo incompatible, se ignora ({exc}). "
+                  f"Regenéralo con: python -m app.services.diffusion_service", flush=True)
+            return False
+        self.hp = hp
+        self._ensure_schedule(self.hp.timesteps, self.hp.schedule)
         model.eval()
         self.model = model
         self.seed = ckpt.get("seed", 42)
@@ -336,18 +381,27 @@ diffusion_service = DiffusionService()
 
 if __name__ == "__main__":
     # Genera el checkpoint demo:  python -m app.services.diffusion_service
-    # Demo acotado a un subconjunto para que termine en tiempo razonable. El checkpoint no se
-    # versiona (cada usuario lo regenera con este comando). Esto NO afecta al botón "Rápido"
-    # interactivo de la app: aquí se reescriben las constantes solo en este proceso.
-    QUICK_N = 8000
-    DEMO_EPOCHS = 10
+    #
+    # Config orientada a CALIDAD pero acotada en tiempo (~30-40 min en MPS): subconjunto
+    # mayor (20000 imágenes), 30 epochs, lr 2e-4, schedule cosine (T=200) y EMA de pesos.
+    # Guarda los pesos EMA (mejor muestreo). El checkpoint NO se versiona: cada usuario lo
+    # regenera con este comando. Esto NO afecta al botón "Rápido" interactivo de la app:
+    # aquí solo reescribimos las constantes de ESTE proceso.
+    #
+    # La loss de denoising (MSE de ε) NO mide calidad de muestra, así que no la optimizamos
+    # con grid search: aplicamos buenas prácticas (EMA + cosine + más entrenamiento + más
+    # pasos de muestreo). Desactivamos early_stop para gastar el presupuesto completo de epochs.
+    QUICK_N = 20000
+    DEMO_EPOCHS = 30
+    DEMO_LR = 2e-4
     svc = DiffusionService()
+    demo_hp = DiffusionHyperParams(epochs=DEMO_EPOCHS, learning_rate=DEMO_LR, schedule="cosine")
     print(
         f"[diffusion] entrenando checkpoint demo (subconjunto {QUICK_N}, {DEMO_EPOCHS} epochs, "
-        f"T={TIMESTEPS}) en {svc.device.type}…",
+        f"lr {DEMO_LR}, schedule cosine, T={TIMESTEPS}, EMA) en {svc.device.type}…",
         flush=True,
     )
-    for ev in svc.iter_train("quick", DiffusionHyperParams(epochs=DEMO_EPOCHS), seed=42):
+    for ev in svc.iter_train("quick", demo_hp, seed=42, early_stop=False):
         if ev["type"] == "step":
             print(f"[diffusion]   step {ev['step']} · loss {ev['loss']:.5f}", flush=True)
         elif ev["type"] == "epoch":
@@ -356,4 +410,4 @@ if __name__ == "__main__":
             final = ev["loss"]
             print(f"[diffusion] listo · loss final {final:.5f}" if final is not None else "[diffusion] listo", flush=True)
     svc.save_checkpoint(DEMO_PATH)
-    print(f"[diffusion] checkpoint demo guardado en {DEMO_PATH}", flush=True)
+    print(f"[diffusion] checkpoint demo (pesos EMA) guardado en {DEMO_PATH}", flush=True)

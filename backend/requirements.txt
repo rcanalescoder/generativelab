@@ -11,3 +11,4 @@ datasets>=2.19
 scikit-learn>=1.4
 # Subida de imágenes (form-data)
 python-multipart>=0.0.9
+umap-learn

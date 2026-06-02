@@ -26,18 +26,43 @@ from torch.nn import functional as F
 
 IMG_CH = 3
 IMG_SIZE = 32          # resolución interna del modelo (downsample del dataset 64→32)
-BASE = 64              # canales base de la UNet (32→64→128 por el camino down)
+BASE = 64              # canales base de la UNet (64→128→128 por el camino down)
 TIME_DIM = 128         # dimensión del embedding temporal
 
 # ---- schedule DDPM (constantes del módulo) -------------------------------------------
 TIMESTEPS = 200        # T: nº de pasos del proceso de difusión
 BETA_START = 1e-4
 BETA_END = 0.02
+# Schedule por defecto. "cosine" (Nichol & Dhariwal 2021) destruye el detalle más despacio
+# que el lineal y mejora notablemente la calidad de muestreo a pocos pasos/resoluciones bajas.
+DEFAULT_SCHEDULE = "cosine"
+COSINE_S = 0.008       # pequeño offset que evita β_t≈0 cerca de t=0 (paper)
 
 
-def make_beta_schedule(timesteps: int = TIMESTEPS) -> torch.Tensor:
+def make_beta_schedule_linear(timesteps: int = TIMESTEPS) -> torch.Tensor:
     """Schedule lineal de β_t entre BETA_START y BETA_END (Ho et al., 2020)."""
     return torch.linspace(BETA_START, BETA_END, timesteps, dtype=torch.float32)
+
+
+def make_beta_schedule_cosine(timesteps: int = TIMESTEPS, s: float = COSINE_S) -> torch.Tensor:
+    """Schedule cosine (Nichol & Dhariwal 2021).
+
+    Define ᾱ_t = cos²(((t/T)+s)/(1+s) · π/2), normaliza para que ᾱ_0 = 1, y deriva
+    β_t = 1 − ᾱ_t/ᾱ_{t-1}, recortado a [1e-4, 0.999] para estabilidad numérica.
+    """
+    steps = timesteps + 1
+    t = torch.linspace(0, timesteps, steps, dtype=torch.float64) / timesteps
+    acp = torch.cos(((t + s) / (1.0 + s)) * math.pi * 0.5) ** 2
+    acp = acp / acp[0]
+    betas = 1.0 - (acp[1:] / acp[:-1])
+    return betas.clamp(1e-4, 0.999).to(torch.float32)
+
+
+def make_beta_schedule(timesteps: int = TIMESTEPS, schedule: str = DEFAULT_SCHEDULE) -> torch.Tensor:
+    """Devuelve el schedule de β_t pedido ("cosine" por defecto, o "linear")."""
+    if str(schedule).lower() == "linear":
+        return make_beta_schedule_linear(timesteps)
+    return make_beta_schedule_cosine(timesteps)
 
 
 class DiffusionSchedule:
@@ -47,10 +72,16 @@ class DiffusionSchedule:
     el forward/reverse triviales de leer. Se reconstruye si cambia `timesteps`.
     """
 
-    def __init__(self, timesteps: int = TIMESTEPS, device: torch.device | None = None) -> None:
+    def __init__(
+        self,
+        timesteps: int = TIMESTEPS,
+        device: torch.device | None = None,
+        schedule: str = DEFAULT_SCHEDULE,
+    ) -> None:
         self.timesteps = int(timesteps)
+        self.schedule = str(schedule)
         dev = device or torch.device("cpu")
-        betas = make_beta_schedule(self.timesteps).to(dev)
+        betas = make_beta_schedule(self.timesteps, self.schedule).to(dev)
         alphas = 1.0 - betas
         alphas_cumprod = torch.cumprod(alphas, dim=0)
         alphas_cumprod_prev = F.pad(alphas_cumprod[:-1], (1, 0), value=1.0)
@@ -168,7 +199,10 @@ class TimeUNet(nn.Module):
         self.in_conv = nn.Conv2d(IMG_CH, c1, 3, padding=1)   # 32×32, c1
         self.down1 = Down(c1, c2, TIME_DIM)                  # 32 -> 16 (skip s1: c2)
         self.down2 = Down(c2, c3, TIME_DIM)                  # 16 -> 8  (skip s2: c3)
-        self.mid = ResBlock(c3, c3, TIME_DIM)                # bottleneck 8×8
+        # bottleneck 8×8 con DOS bloques residuales: aumento de capacidad barato (resolución
+        # más baja) que ayuda a la calidad sin penalizar mucho el coste de muestreo.
+        self.mid1 = ResBlock(c3, c3, TIME_DIM)
+        self.mid2 = ResBlock(c3, c3, TIME_DIM)
         self.up1 = Up(c3, c3, c2, TIME_DIM)                  # 8  -> 16, concat s2(c3) -> c2
         self.up2 = Up(c2, c2, c1, TIME_DIM)                  # 16 -> 32, concat s1(c2) -> c1
         self.out_norm = nn.GroupNorm(8, c1)
@@ -179,7 +213,8 @@ class TimeUNet(nn.Module):
         h0 = self.in_conv(x)
         h1, s1 = self.down1(h0, t_emb)
         h2, s2 = self.down2(h1, t_emb)
-        m = self.mid(h2, t_emb)
+        m = self.mid1(h2, t_emb)
+        m = self.mid2(m, t_emb)
         u = self.up1(m, s2, t_emb)
         u = self.up2(u, s1, t_emb)
         return self.out_conv(F.silu(self.out_norm(u)))
@@ -187,6 +222,63 @@ class TimeUNet(nn.Module):
 
 def count_params(model: nn.Module) -> int:
     return sum(p.numel() for p in model.parameters())
+
+
+# ---- EMA de pesos (clave para la calidad de muestreo) --------------------------------
+class EMA:
+    """Media móvil exponencial de los parámetros del modelo.
+
+    Mantiene una copia "shadow" de los pesos que se actualiza en cada step de entrenamiento
+    como  θ_ema ← decay·θ_ema + (1−decay)·θ. Muestrear con los pesos EMA (en lugar de los
+    pesos "crudos" que oscilan con el último minibatch) es una de las prácticas que MÁS
+    mejora la calidad visual en DDPM, sin coste de entrenamiento extra apreciable.
+
+    Uso:
+        ema = EMA(model, decay=0.999)
+        ...                       # tras cada opt.step():
+        ema.update(model)
+        ...                       # para muestrear con los pesos suavizados:
+        ema.copy_to(shadow_model)
+    """
+
+    def __init__(self, model: nn.Module, decay: float = 0.999) -> None:
+        self.decay = float(decay)
+        # clones desacoplados del grafo, en el mismo device que el modelo. Solo seguimos los
+        # tensores flotantes (parámetros/buffers float); esta UNet no tiene buffers enteros
+        # (sin BatchNorm), así que `copy_to` reconstruye el modelo de muestreo por completo.
+        self.shadow: dict[str, torch.Tensor] = {
+            name: p.detach().clone()
+            for name, p in model.state_dict().items()
+            if p.dtype.is_floating_point
+        }
+
+    @torch.no_grad()
+    def update(self, model: nn.Module) -> None:
+        d = self.decay
+        msd = model.state_dict()
+        for name, shadow in self.shadow.items():
+            new = msd[name].detach()
+            if shadow.device != new.device:  # robustez si el modelo se movió de device
+                shadow = shadow.to(new.device)
+                self.shadow[name] = shadow
+            # lerp in-place:  shadow = d·shadow + (1−d)·new
+            shadow.mul_(d).add_(new, alpha=1.0 - d)
+
+    @torch.no_grad()
+    def copy_to(self, model: nn.Module) -> None:
+        """Vuelca los pesos EMA en `model` in-place (para muestrear con ellos)."""
+        msd = model.state_dict()
+        for name, shadow in self.shadow.items():
+            msd[name].copy_(shadow.to(msd[name].device))
+
+    def state_dict(self) -> dict[str, torch.Tensor]:
+        """state_dict de los pesos EMA (mismo formato que el del modelo, en CPU)."""
+        return {name: p.detach().cpu().clone() for name, p in self.shadow.items()}
+
+    def to(self, device: torch.device) -> "EMA":
+        for name in list(self.shadow.keys()):
+            self.shadow[name] = self.shadow[name].to(device)
+        return self
 
 
 # ---- proceso DDPM: forward y reverse -------------------------------------------------

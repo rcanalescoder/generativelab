@@ -2,7 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button, Card, CardHeader, SegmentedControl, Skeleton, Slider, StatusLine, Tag } from '../components/ui'
 import { TrainingChart } from '../components/lab/TrainingChart'
 import { useInfo } from '../components/info/InfoProvider'
-import { InterpolateIcon, PlayIcon, RefreshIcon, SparklesIcon } from '../lib/icons'
+import { InterpolateIcon, LayersIcon, PlayIcon, RefreshIcon, SparklesIcon } from '../lib/icons'
+import { ArchitectureModal } from '../components/lab/ArchitectureModal'
+import { ARCHITECTURES } from '../content/architectures'
 import type { ModelContent } from '../content/types'
 import ganContent from '../content/gan.json'
 import {
@@ -70,6 +72,7 @@ export function GANTab() {
 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [archOpen, setArchOpen] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
 
   const lr = LR_VALUES[lrIdx]
@@ -476,8 +479,21 @@ export function GANTab() {
               Entrenar
             </Button>
           )}
+
+          <Button
+            full
+            icon={<LayersIcon />}
+            onClick={() => setArchOpen(true)}
+            className="mt-[11px]"
+          >
+            Ver la estructura
+          </Button>
         </Card>
       </div>
+
+      {archOpen && (
+        <ArchitectureModal arch={ARCHITECTURES.gan} onClose={() => setArchOpen(false)} />
+      )}
     </>
   )
 }

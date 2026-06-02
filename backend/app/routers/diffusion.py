@@ -29,6 +29,7 @@ class HyperParamsIn(BaseModel):
     epochs: int | None = None
     batch_size: int | None = None
     timesteps: int | None = None
+    schedule: str | None = None  # "cosine" (def.) | "linear"
 
 
 class TrainRequest(BaseModel):
@@ -41,12 +42,12 @@ class TrainRequest(BaseModel):
 class GenerateRequest(BaseModel):
     n: int = 6
     seed: int = 42
-    steps: int = 50
+    steps: int = 80  # más pasos = mejor calidad de muestra (submuestreo de T)
 
 
 class TrajectoryRequest(BaseModel):
     seed: int = 42
-    steps: int = 50
+    steps: int = 80  # más pasos = mejor calidad de muestra (submuestreo de T)
     snapshots: int = 8
 
 

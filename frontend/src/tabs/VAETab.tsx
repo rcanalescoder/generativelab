@@ -10,11 +10,14 @@ import {
   ClustersIcon,
   GridIcon,
   InterpolateIcon,
+  LayersIcon,
   PlayIcon,
   RefreshIcon,
   SearchIcon,
   SparklesIcon,
 } from '../lib/icons'
+import { ArchitectureModal } from '../components/lab/ArchitectureModal'
+import { ARCHITECTURES } from '../content/architectures'
 import {
   cancelVAEGridSearch,
   cancelVAETraining,
@@ -119,6 +122,7 @@ export function VAETab() {
   const [genBusy, setGenBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [gridOpen, setGridOpen] = useState(false)
+  const [archOpen, setArchOpen] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
 
   const lr = LR_VALUES[lrIdx]
@@ -632,6 +636,15 @@ export function VAETab() {
           >
             Buscar mejores parámetros
           </Button>
+
+          <Button
+            full
+            icon={<LayersIcon />}
+            onClick={() => setArchOpen(true)}
+            className="mt-[11px]"
+          >
+            Ver la estructura
+          </Button>
         </Card>
       </div>
 
@@ -655,6 +668,14 @@ export function VAETab() {
           runSearch={gridSearchVAE}
           cancelSearch={cancelVAEGridSearch}
           title="Buscar mejores parámetros (VAE)"
+        />
+      )}
+
+      {archOpen && (
+        <ArchitectureModal
+          arch={ARCHITECTURES.vae}
+          latentDim={latentDim}
+          onClose={() => setArchOpen(false)}
         />
       )}
     </>
