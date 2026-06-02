@@ -15,6 +15,10 @@ Incluye cuatro modelos y un comparador:
 | **Diffusion** | DDPM (UNet pequeña) | Aprende a quitar ruido paso a paso. Muestra el **proceso** de ruido → cara. |
 | **Comparador** | — | Los cuatro lado a lado: tabla de capacidades + galería con la misma semilla. |
 
+> 📄 **Cuaderno PDF**: [`docs/Laboratorio-de-Modelos-Generativos.pdf`](docs/Laboratorio-de-Modelos-Generativos.pdf)
+> — recorrido visual de los cuatro modelos con teoría, parámetros, capturas, resultados y las
+> mejoras encontradas con realimentación agéntica (p. ej. el AE U-Net: PSNR 18→28 dB).
+
 > El fichero que GitHub muestra en la portada del repo es **`README.md`** (este). Si
 > necesitas además una copia en texto plano, es una conversión directa de este documento.
 

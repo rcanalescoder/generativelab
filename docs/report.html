@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Laboratorio de Modelos Generativos</title>
+<style>
+  :root{
+    --ink:#11181f; --slate:#41464f; --muted:#8a909b; --line:#e7e9ef;
+    --blue:#2563eb; --blue-soft:#eff4fe; --violet:#7c3aed; --violet-soft:#f4effe;
+    --pink:#db2777; --pink-soft:#fdeef6; --green:#0c9f6e; --green-soft:#e9fbf4;
+    --amber:#d97706; --amber-soft:#fef3e6; --cyan:#0891b2; --cyan-soft:#e7f7fb;
+  }
+  @page{ size:A4; margin:14mm 0; }
+  @page cover{ margin:0; }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink); font-size:10.5pt; line-height:1.55; -webkit-print-color-adjust:exact; print-color-adjust:exact;
+  }
+  .pad{ padding:0 18mm; }
+  .mono{ font-family:"SFMono-Regular",Menlo,Consolas,monospace; }
+  h1,h2,h3,h4{ margin:0; letter-spacing:-0.3px; }
+  p{ margin:0 0 8px; }
+  small{ color:var(--muted); }
+
+  /* ---------- portada ---------- */
+  .cover{ page:cover; height:297mm; display:flex; flex-direction:column; justify-content:center;
+    color:#fff; padding:0 22mm; position:relative; overflow:hidden;
+    background:linear-gradient(135deg,#2563eb 0%,#7c3aed 45%,#db2777 100%); }
+  .cover .kicker{ font-size:12pt; letter-spacing:3px; text-transform:uppercase; opacity:.85; font-weight:600; }
+  .cover h1{ font-size:46pt; line-height:1.02; margin:14px 0 0; font-weight:700; }
+  .cover .sub{ font-size:15pt; opacity:.92; margin-top:18px; max-width:150mm; font-weight:400; }
+  .cover .chips{ margin-top:34px; display:flex; gap:10px; flex-wrap:wrap; }
+  .cover .chip{ background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.28);
+    padding:8px 16px; border-radius:999px; font-size:11pt; font-weight:600; }
+  .cover .foot{ position:absolute; bottom:20mm; left:22mm; right:22mm; font-size:10pt; opacity:.85;
+    display:flex; justify-content:space-between; border-top:1px solid rgba(255,255,255,.25); padding-top:12px; }
+
+  /* ---------- secciones ---------- */
+  .section{ page-break-before:always; }
+  .band{ color:#fff; padding:16px 18mm; margin-bottom:14px; }
+  .band .n{ font-size:11pt; font-weight:700; opacity:.8; letter-spacing:2px; }
+  .band h2{ font-size:25pt; margin-top:2px; }
+  .band .tag{ font-size:10.5pt; opacity:.92; margin-top:4px; }
+  .b-blue{ background:linear-gradient(120deg,#2563eb,#3b82f6); }
+  .b-violet{ background:linear-gradient(120deg,#7c3aed,#a855f7); }
+  .b-pink{ background:linear-gradient(120deg,#db2777,#ec4899); }
+  .b-cyan{ background:linear-gradient(120deg,#0891b2,#06b6d4); }
+  .b-ink{ background:linear-gradient(120deg,#1f2937,#374151); }
+
+  h3.sub{ font-size:13.5pt; margin:18px 0 6px; color:var(--ink); display:flex; align-items:center; gap:8px; }
+  h3.sub::before{ content:""; width:5px; height:18px; border-radius:3px; background:var(--accent,#2563eb); display:inline-block; }
+
+  .card{ border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin:8px 0; background:#fff; }
+  .tint{ border:none; border-left:4px solid var(--accent,#2563eb); border-radius:10px;
+    padding:12px 16px; margin:10px 0; background:var(--accent-soft,#eff4fe); }
+  .tint .t{ font-weight:700; color:var(--accent,#2563eb); margin-bottom:3px; font-size:11pt; }
+
+  .defs{ display:grid; grid-template-columns:30mm 1fr; gap:6px 14px; margin:6px 0; }
+  .defs dt{ font-weight:700; color:var(--accent,#2563eb); font-family:"SFMono-Regular",Menlo,monospace; font-size:9.5pt; }
+  .defs dd{ margin:0; color:var(--slate); }
+
+  table.params{ width:100%; border-collapse:collapse; margin:8px 0; font-size:9.8pt; }
+  table.params th{ text-align:left; background:#f6f7f9; color:var(--muted); text-transform:uppercase;
+    font-size:8pt; letter-spacing:.4px; padding:7px 10px; border-bottom:1px solid var(--line); }
+  table.params td{ padding:7px 10px; border-bottom:1px solid #f1f2f5; color:var(--slate); vertical-align:top; }
+  table.params td.k{ font-family:"SFMono-Regular",Menlo,monospace; color:var(--ink); font-weight:600; white-space:nowrap; }
+
+  figure{ margin:12px 0; }
+  figure img{ width:100%; border:1px solid var(--line); border-radius:12px; box-shadow:0 10px 26px -14px rgba(17,24,39,.45); display:block; }
+  figcaption{ font-size:9pt; color:var(--muted); margin-top:6px; text-align:center; }
+  .imgrow{ display:flex; gap:10px; }
+  .imgrow figure{ flex:1; margin:12px 0; min-width:0; }
+
+  /* problema -> mejora */
+  .pm{ display:flex; gap:12px; margin:12px 0; }
+  .pm .box{ flex:1; border-radius:12px; padding:13px 15px; }
+  .pm .prob{ background:#fdeef0; border:1px solid #f6d2d8; }
+  .pm .mejo{ background:#e9fbf4; border:1px solid #c7eede; }
+  .pm .h{ font-weight:700; font-size:10.5pt; margin-bottom:5px; display:flex; align-items:center; gap:6px; }
+  .pm .prob .h{ color:#c0344d; } .pm .mejo .h{ color:#0a6b4e; }
+
+  /* barras comparativas */
+  .bars{ margin:10px 0; }
+  .bars .row{ display:grid; grid-template-columns:26mm 1fr 20mm; align-items:center; gap:10px; margin:7px 0; }
+  .bars .name{ font-weight:600; font-size:10pt; }
+  .bars .track{ background:#eef0f4; border-radius:6px; height:18px; overflow:hidden; }
+  .bars .fill{ height:100%; border-radius:6px; }
+  .bars .val{ font-family:"SFMono-Regular",Menlo,monospace; font-size:9.5pt; text-align:right; color:var(--ink); font-weight:600; }
+  .legend{ font-size:8.5pt; color:var(--muted); margin-top:2px; }
+
+  .note{ background:#fff8ec; border:1px solid #f6e2bd; border-radius:10px; padding:10px 14px; font-size:9.8pt; color:#7a5408; margin:10px 0; }
+  .formula{ font-family:"SFMono-Regular",Menlo,monospace; background:#f4f5f8; border:1px solid #eaecf1; border-radius:8px; padding:8px 12px; font-size:10pt; color:var(--ink); margin:8px 0; }
+
+  table.compare{ width:100%; border-collapse:collapse; font-size:9.3pt; margin:8px 0; }
+  table.compare th{ background:#f6f7f9; padding:7px 8px; text-align:left; border-bottom:2px solid var(--line); font-size:8.5pt; }
+  table.compare td{ padding:7px 8px; border-bottom:1px solid #f1f2f5; color:var(--slate); }
+  table.compare td:first-child{ font-weight:600; color:var(--ink); }
+</style>
+</head>
+<body>
+
+<!-- ============ PORTADA ============ -->
+<section class="cover">
+  <div class="kicker">Cuaderno de laboratorio</div>
+  <h1>Laboratorio de<br/>Modelos Generativos</h1>
+  <div class="sub">Aprender, de lo más básico a lo más avanzado, cómo una red neuronal aprende a crear imágenes — y cómo un bucle de mejora agéntica nos lleva de "funciona regular" a "funciona bien".</div>
+  <div class="chips">
+    <span class="chip">Autoencoder</span>
+    <span class="chip">VAE</span>
+    <span class="chip">GAN</span>
+    <span class="chip">Diffusion</span>
+  </div>
+  <div class="foot"><span>Herramienta local · React + FastAPI + PyTorch (Apple Silicon / MPS)</span><span>Dataset: 43.102 caras de anime · 64×64</span></div>
+</section>
+
+<!-- ============ INTRODUCCIÓN ============ -->
+<section class="section">
+  <div class="band b-ink"><div class="n">INTRODUCCIÓN</div><h2>¿Qué queremos aprender?</h2>
+    <div class="tag">Una escalera de cuatro modelos, del más simple al más capaz</div></div>
+  <div class="pad">
+    <p>Este cuaderno acompaña a un <b>laboratorio visual interactivo</b> creado para <i>entender</i> los modelos generativos de imágenes. En lugar de leer fórmulas, se tocan los parámetros, se entrena en vivo y se ve —literalmente— qué aprende cada red. Todo corre en local sobre un conjunto de <b>43.102 caras de anime de 64×64</b>, sin etiquetas.</p>
+    <p>Recorremos cuatro modelos en orden creciente de sofisticación. Cada uno resuelve una limitación del anterior:</p>
+    <div class="defs" style="--accent:#2563eb">
+      <dt>Autoencoder</dt><dd>Comprime una imagen a un código pequeño <span class="mono">z</span> y la reconstruye. Es la base: encoder, decoder y espacio latente.</dd>
+      <dt>VAE</dt><dd>Convierte ese latente en una <i>distribución</i> ordenada; por eso ya puede <b>generar</b> caras nuevas, no solo reconstruir.</dd>
+      <dt>GAN</dt><dd>Enfrenta dos redes (generador y juez). Gana nitidez a cambio de un entrenamiento inestable.</dd>
+      <dt>Diffusion</dt><dd>Aprende a quitar ruido paso a paso. Máxima calidad y diversidad, a cambio de un muestreo lento.</dd>
+    </div>
+    <h3 class="sub" style="--accent:#0c9f6e">El método: realimentación agéntica</h3>
+    <p>Construir el modelo es solo la mitad. La otra mitad es <b>mejorarlo con un bucle de realimentación</b>: agentes auxiliares proponen variantes (arquitecturas, hiperparámetros, técnicas), las <b>entrenan y miden</b> con métricas objetivas (PSNR, SSIM) sobre un conjunto de prueba, y nos quedamos con lo que de verdad mejora. En cada modelo verás el "antes" (la versión básica y sus problemas) y el "después" (la mejora encontrada y verificada).</p>
+    <div class="note">A lo largo del cuaderno, las cifras (PSNR, SSIM, MSE, nº de parámetros) son <b>reales</b>, medidas sobre un conjunto de prueba que el modelo no usa para entrenar, y las capturas provienen directamente de la herramienta.</div>
+  </div>
+</section>
+
+<!-- ============ AUTOENCODER ============ -->
+<section class="section">
+  <div class="band b-blue"><div class="n">MODELO 01</div><h2>Autoencoder</h2>
+    <div class="tag">Comprimir y reconstruir: el cuello de botella y el espacio latente</div></div>
+  <div class="pad" style="--accent:#2563eb;--accent-soft:#eff4fe">
+    <h3 class="sub">Teoría</h3>
+    <p>Un autoencoder tiene forma de reloj de arena. El <b>encoder</b> reduce la imagen (64×64×3 = 12.288 números) a un vector pequeño <span class="mono">z</span> (el <i>código latente</i>); el <b>decoder</b> intenta reconstruir la imagen original solo a partir de <span class="mono">z</span>. Como <span class="mono">z</span> es mucho menor que la imagen, el modelo se ve obligado a quedarse con lo esencial.</p>
+    <div class="formula">x &nbsp;→&nbsp; z = encoder(x) &nbsp;→&nbsp; x̂ = decoder(z) &nbsp;&nbsp;&nbsp; pérdida = ‖x − x̂‖² (MSE)</div>
+    <div class="tint"><div class="t">La clave pedagógica</div>Si <span class="mono">z</span> fuera tan grande como la imagen, el modelo podría limitarse a copiarla. El cuello de botella es lo que lo fuerza a <i>descubrir estructura</i>: que las caras tienen ojos, pelo, una pose… y a resumir todo eso en pocos números.</div>
+
+    <h3 class="sub">Parámetros importantes</h3>
+    <table class="params">
+      <tr><th>Parámetro</th><th>Qué controla</th></tr>
+      <tr><td class="k">latent_dim</td><td>Tamaño de <span class="mono">z</span>. Por defecto 128 (compresión ~96×). Pequeño → más abstracto y borroso; grande → más fiel, menos compresión.</td></tr>
+      <tr><td class="k">arquitectura</td><td>Básico / Grande / U-Net. Define la capacidad y si hay <i>skip connections</i> (ver mejora).</td></tr>
+      <tr><td class="k">loss</td><td>MSE (suaviza) o L1 (bordes algo más definidos).</td></tr>
+      <tr><td class="k">learning_rate · epochs</td><td>Velocidad y duración del entrenamiento (con parada temprana).</td></tr>
+    </table>
+
+    <h3 class="sub">La interfaz</h3>
+    <figure><img src="assets/tab_autoencoder.jpg" /><figcaption>Pestaña Autoencoder: dataset, flujo del modelo (original → encoder → z → decoder → reconstruida → diferencia), mapa latente, y controles de entrenamiento y exploración.</figcaption></figure>
+
+    <h3 class="sub">Resultados del modelo básico</h3>
+    <p>El autoencoder básico (2,43 M de parámetros, <span class="mono">latent_dim</span>=128) reconstruye caras reconocibles pero <b>borrosas</b>:</p>
+    <figure><img src="assets/ae_metrics_basico.jpg" /><figcaption>Métricas de reconstrucción del modelo básico, medidas sobre 256 imágenes de prueba.</figcaption></figure>
+
+    <h3 class="sub">Problema → mejora agéntica</h3>
+    <div class="pm">
+      <div class="box prob"><div class="h">⚠ El problema</div>Con un cuello pequeño y pérdida MSE, la reconstrucción se difumina (la "maldición del promedio": ante la duda, el MSE elige el punto medio borroso). Además la red era pequeña. Resultado: <b>PSNR ~18 dB</b>, una imagen claramente suave.</div>
+      <div class="box mejo"><div class="h">✔ La mejora</div>Agentes auxiliares implementaron y <b>midieron</b> dos variantes: <b>Grande</b> (base 64 + bloques residuales, 10,7 M) y <b>U-Net</b> (skip connections, 5,0 M). Las skips dejan pasar el detalle fino que el cuello tiraba → salto grande en nitidez.</div>
+    </div>
+
+    <h3 class="sub">Comparación de variantes (medida real)</h3>
+    <div class="bars">
+      <div class="legend" style="font-weight:700;color:var(--ink);font-size:10pt;margin-bottom:4px;">PSNR — relación señal/ruido (dB, más alto mejor)</div>
+      <div class="row"><span class="name">Básico</span><div class="track"><div class="fill" style="width:60.9%;background:#2563eb"></div></div><span class="val">18.28</span></div>
+      <div class="row"><span class="name">Grande</span><div class="track"><div class="fill" style="width:61.8%;background:#7c3aed"></div></div><span class="val">18.54</span></div>
+      <div class="row"><span class="name">U-Net ★</span><div class="track"><div class="fill" style="width:95.1%;background:#0c9f6e"></div></div><span class="val">28.54</span></div>
+      <div class="legend">Escala 0–30 dB. Por encima de 30 dB es excelente; ~18 dB es claramente borroso.</div>
+    </div>
+    <div class="bars" style="margin-top:14px">
+      <div class="legend" style="font-weight:700;color:var(--ink);font-size:10pt;margin-bottom:4px;">SSIM — similitud estructural (0–1, más alto mejor)</div>
+      <div class="row"><span class="name">Básico</span><div class="track"><div class="fill" style="width:58.5%;background:#2563eb"></div></div><span class="val">0.585</span></div>
+      <div class="row"><span class="name">Grande</span><div class="track"><div class="fill" style="width:60.7%;background:#7c3aed"></div></div><span class="val">0.607</span></div>
+      <div class="row"><span class="name">U-Net ★</span><div class="track"><div class="fill" style="width:96.3%;background:#0c9f6e"></div></div><span class="val">0.963</span></div>
+    </div>
+    <table class="compare" style="margin-top:12px">
+      <tr><th>Variante</th><th>Parámetros</th><th>PSNR</th><th>SSIM</th><th>Lectura</th></tr>
+      <tr><td>Básico</td><td>2,43 M</td><td>18.28 dB</td><td>0.585</td><td>Cuello puro: borroso</td></tr>
+      <tr><td>Grande</td><td>10,72 M</td><td>18.54 dB</td><td>0.607</td><td>4× más grande… apenas mejora (sigue limitado por el cuello)</td></tr>
+      <tr><td>U-Net</td><td>5,05 M</td><td>28.54 dB</td><td>0.963</td><td>Las <i>skips</i> transforman la calidad con la mitad de parámetros que "Grande"</td></tr>
+    </table>
+    <div class="tint" style="--accent:#0c9f6e;--accent-soft:#e9fbf4"><div class="t">La lección que descubrió el bucle agéntico</div>Hacer la red <b>más grande no resolvió nada</b> (18,3 → 18,5 dB pese a 4× parámetros): el límite era el <i>cuello de botella</i>, no la capacidad. La mejora real fue <b>cambiar la arquitectura</b> a U-Net: +10 dB de PSNR y SSIM de 0,59 a 0,96, además con menos parámetros que la variante "Grande".</div>
+
+    <div class="imgrow">
+      <figure><img src="assets/ae_metrics_grande.jpg" /><figcaption>Variante <b>Grande</b></figcaption></figure>
+      <figure><img src="assets/ae_metrics_unet.jpg" /><figcaption>Variante <b>U-Net</b> (skip connections)</figcaption></figure>
+    </div>
+    <div class="note">Matiz de laboratorio: la U-Net reconstruye mejor porque sus <i>skips</i> evitan el cuello… pero por eso su <span class="mono">z</span> guarda menos información. Mejor reconstrucción no siempre significa mejor espacio latente: es justo el tipo de compromiso que el laboratorio deja ver.</div>
+  </div>
+</section>
+
+<!-- ============ VAE ============ -->
+<section class="section">
+  <div class="band b-violet"><div class="n">MODELO 02</div><h2>VAE · Variational Autoencoder</h2>
+    <div class="tag">De reconstruir a generar: un latente probabilístico y ordenado</div></div>
+  <div class="pad" style="--accent:#7c3aed;--accent-soft:#f4effe">
+    <h3 class="sub">Teoría</h3>
+    <p>El VAE tiene el mismo esqueleto que el autoencoder, pero el encoder no produce un punto: produce una <b>distribución</b> (una media <span class="mono">μ</span> y una varianza <span class="mono">σ²</span>). Se muestrea <span class="mono">z = μ + σ·ε</span> (reparametrización) y se añade un término <b>KL</b> que empuja el latente hacia una gaussiana estándar <span class="mono">N(0, I)</span>. Al ordenar así el espacio, basta con muestrear de esa gaussiana para <b>generar caras nuevas</b>.</p>
+    <div class="formula">pérdida = reconstrucción + β · KL( N(μ,σ²) ‖ N(0,I) )</div>
+
+    <h3 class="sub">Parámetros importantes</h3>
+    <table class="params">
+      <tr><th>Parámetro</th><th>Qué controla</th></tr>
+      <tr><td class="k">β (peso del KL)</td><td>El compromiso clave. β=0 → un AE normal (latente desordenado); β=1 → equilibrio; β alto → latente muy ordenado pero muestras más borrosas.</td></tr>
+      <tr><td class="k">latent_dim</td><td>Dimensión del latente probabilístico.</td></tr>
+      <tr><td class="k">loss · lr · epochs</td><td>Como en el AE.</td></tr>
+    </table>
+
+    <h3 class="sub">La interfaz y los resultados</h3>
+    <figure><img src="assets/tab_vae.jpg" /><figcaption>Pestaña VAE: además del flujo y el mapa latente, un panel de <b>Generación</b> que crea caras nuevas muestreando del prior N(0,I).</figcaption></figure>
+
+    <h3 class="sub">Problema → mejora agéntica</h3>
+    <div class="pm">
+      <div class="box prob"><div class="h">⚠ El problema</div>Hereda el desenfoque del MSE y lo agrava la regularización KL: las caras generadas salen suaves y algo "promediadas".</div>
+      <div class="box mejo"><div class="h">✔ La mejora</div>Se expone <b>β como control interactivo</b> para explorar el compromiso, y el VAE reutiliza el backbone convolucional mejorado del autoencoder. La lección no es eliminar el desenfoque (es intrínseco), sino <i>entender de dónde viene</i> y por qué lo resuelven la GAN y la difusión.</div>
+    </div>
+    <table class="compare">
+      <tr><th>Valor de β</th><th>Efecto en la reconstrucción</th><th>Efecto en el latente / generación</th></tr>
+      <tr><td>β = 0</td><td>Más nítida (es un AE)</td><td>Latente con huecos: muestrear da basura</td></tr>
+      <tr><td>β = 1</td><td>Algo más borrosa</td><td>Equilibrio: se puede generar y interpolar</td></tr>
+      <tr><td>β &gt; 1</td><td>Más borrosa</td><td>Latente muy ordenado y suave</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ============ GAN ============ -->
+<section class="section">
+  <div class="band b-pink"><div class="n">MODELO 03</div><h2>GAN · Generative Adversarial Network</h2>
+    <div class="tag">Dos redes que compiten: nitidez a cambio de estabilidad</div></div>
+  <div class="pad" style="--accent:#db2777;--accent-soft:#fdeef6">
+    <h3 class="sub">Teoría</h3>
+    <p>La GAN tira el encoder y plantea un <b>juego entre dos redes</b>: el <b>generador</b> crea caras a partir de ruido <span class="mono">z</span>; el <b>discriminador</b> intenta distinguir las reales de las falsas. Entrenan en competición. Como el "juez" es otra red (no un error por píxel), la GAN no tiene la presión hacia el promedio y suele dar <b>las caras más nítidas</b>.</p>
+
+    <h3 class="sub">Parámetros importantes</h3>
+    <table class="params">
+      <tr><th>Parámetro</th><th>Qué controla</th></tr>
+      <tr><td class="k">z_dim</td><td>Tamaño del vector de ruido de entrada (100).</td></tr>
+      <tr><td class="k">learning_rate</td><td>Crítico: si es muy alto, el juego se desequilibra y colapsa.</td></tr>
+      <tr><td class="k">epochs</td><td>Iteraciones del juego adversarial.</td></tr>
+    </table>
+
+    <h3 class="sub">La interfaz y los resultados</h3>
+    <figure><img src="assets/tab_gan.jpg" /><figcaption>Pestaña GAN: galería de caras generadas desde ruido (ninguna existe en el dataset), interpolación en el espacio z y curvas de pérdida del generador y el discriminador.</figcaption></figure>
+
+    <h3 class="sub">Problema → mejora agéntica</h3>
+    <div class="pm">
+      <div class="box prob"><div class="h">⚠ El problema</div>El entrenamiento adversarial es inestable: con malas elecciones, el discriminador "gana" y el generador deja de aprender (g_loss se dispara), o aparece <b>colapso de modo</b> (todas las caras iguales).</div>
+      <div class="box mejo"><div class="h">✔ La mejora</div>Se aplicaron las recetas DCGAN verificadas: <span class="mono">BatchNorm</span>, <span class="mono">LeakyReLU</span>, <span class="mono">Adam(0.5, 0.999)</span>, pérdida <i>non-saturating</i>, pesos iniciales N(0, 0.02) y datos en [−1, 1]. Con esto el juego se equilibra y produce caras reconocibles.</div>
+    </div>
+    <div class="note">~6,3 M de parámetros (generador + discriminador). La calidad es modesta a propósito (modelo pequeño, pocos epochs): el objetivo es <i>ver el mecanismo</i> adversarial, no competir con modelos enormes.</div>
+  </div>
+</section>
+
+<!-- ============ DIFFUSION ============ -->
+<section class="section">
+  <div class="band b-cyan"><div class="n">MODELO 04</div><h2>Diffusion · DDPM</h2>
+    <div class="tag">Aprender a quitar ruido paso a paso — y un bug de muestreo revelador</div></div>
+  <div class="pad" style="--accent:#0891b2;--accent-soft:#e7f7fb">
+    <h3 class="sub">Teoría</h3>
+    <p>Un modelo de difusión aprende el proceso inverso de "ensuciar" una imagen. En el proceso <b>forward</b> se añade ruido gaussiano poco a poco hasta dejar ruido puro. En el <b>reverse</b>, una red (una UNet condicionada en el paso <span class="mono">t</span>) aprende a predecir y quitar ese ruido. Para generar, se parte de ruido puro y se limpia paso a paso hasta una cara.</p>
+
+    <h3 class="sub">Parámetros importantes</h3>
+    <table class="params">
+      <tr><th>Parámetro</th><th>Qué controla</th></tr>
+      <tr><td class="k">timesteps (T)</td><td>Longitud del proceso de ruido (200). Es del modelo.</td></tr>
+      <tr><td class="k">pasos de muestreo</td><td>Cuántos pasos se usan al generar. Más pasos = mejor, pero más lento.</td></tr>
+      <tr><td class="k">schedule</td><td>Cómo se reparte el ruido (cosine por defecto, mejor que lineal a baja resolución).</td></tr>
+      <tr><td class="k">learning_rate · epochs</td><td>Entrenamiento del denoising (pérdida MSE sobre el ruido predicho).</td></tr>
+    </table>
+
+    <h3 class="sub">El problema: generaba ruido (y el modelo no tenía la culpa)</h3>
+    <p>La primera versión <b>generaba manchas de color, no caras</b> — incluso al final del proceso. Lo desconcertante: la pérdida bajaba bien (de 0,50 a 0,084), señal de que la red <i>sí</i> estaba aprendiendo a quitar ruido.</p>
+    <div class="pm">
+      <div class="box prob"><div class="h">⚠ La causa (depuración agéntica)</div>El muestreo aplicaba el paso DDPM clásico, que solo avanza de <span class="mono">t</span> a <span class="mono">t−1</span>, pero <b>submuestreando</b> (50 de 200 pasos). Resultado: solo se quitaban 50 pasos de ruido de los 200 necesarios → la salida seguía siendo ruido. <b>El modelo estaba bien; el sampler estaba roto.</b></div>
+      <div class="box mejo"><div class="h">✔ La solución</div>Se reescribió el muestreo a <b>DDIM</b> (determinista), que <i>salta correctamente</i> entre timesteps arbitrarios reusando la predicción de x₀. Más <b>EMA de pesos</b> y <b>schedule cosine</b>. Efecto inmediato: caras reconocibles — <b>y sin reentrenar</b>, porque el problema era solo cómo se muestreaba.</div>
+    </div>
+
+    <h3 class="sub">El resultado: de ruido a cara</h3>
+    <figure><img src="assets/tab_diffusion.jpg" /><figcaption>Pestaña Diffusion tras el arreglo: la galería genera caras reconocibles y el panel "Proceso de difusión" muestra la trayectoria completa de <b>ruido puro → cara</b>.</figcaption></figure>
+    <table class="compare">
+      <tr><th>Aspecto</th><th>Antes</th><th>Después</th></tr>
+      <tr><td>Muestreo</td><td>DDPM de un paso, submuestreado</td><td>DDIM (salta timesteps correctamente)</td></tr>
+      <tr><td>Pesos para muestrear</td><td>Crudos (oscilan con el minibatch)</td><td>EMA (media móvil, estables)</td></tr>
+      <tr><td>Resultado visual</td><td>Ruido de colores</td><td>Caras reconocibles</td></tr>
+      <tr><td>¿Reentrenar?</td><td>—</td><td>No: era solo el sampler</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ============ CIERRE ============ -->
+<section class="section">
+  <div class="band b-ink"><div class="n">SÍNTESIS</div><h2>Los cuatro, lado a lado</h2>
+    <div class="tag">No hay un "mejor": hay compromisos</div></div>
+  <div class="pad">
+    <figure><img src="assets/tab_comparador.jpg" /><figcaption>Pestaña Comparador: tabla de capacidades y galería de los cuatro modelos con la misma semilla.</figcaption></figure>
+    <table class="compare">
+      <tr><th>Propiedad</th><th>Autoencoder</th><th>VAE</th><th>GAN</th><th>Diffusion</th></tr>
+      <tr><td>¿Tiene encoder?</td><td>Sí</td><td>Sí</td><td>No</td><td>No</td></tr>
+      <tr><td>¿Genera caras nuevas?</td><td>No</td><td>Sí</td><td>Sí</td><td>Sí</td></tr>
+      <tr><td>Entrenamiento</td><td>Estable</td><td>Estable</td><td>Inestable</td><td>Estable</td></tr>
+      <tr><td>Muestreo</td><td>1 paso</td><td>1 paso</td><td>1 paso</td><td>Iterativo (lento)</td></tr>
+      <tr><td>Nitidez típica</td><td>Borrosa</td><td>Borrosa</td><td>Nítida</td><td>Buena</td></tr>
+    </table>
+    <h3 class="sub" style="--accent:#0c9f6e">Conclusión</h3>
+    <p>Cada modelo cambia un compromiso por otro: el VAE cede algo de nitidez por un latente ordenado; la GAN cambia estabilidad por nitidez; la difusión cambia velocidad por calidad. Y, en todos, el <b>bucle de realimentación agéntica</b> —proponer, entrenar, medir y quedarnos con lo que mejora— fue lo que convirtió un primer intento mediocre en algo que funciona: las variantes del autoencoder y, sobre todo, el arreglo del muestreo en difusión.</p>
+    <div class="note">Hecho con un laboratorio 100% local. Código y guía de reproducción en el repositorio (licencia MIT).</div>
+  </div>
+</section>
+
+</body>
+</html>
