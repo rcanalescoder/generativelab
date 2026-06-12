@@ -32,3 +32,4 @@
 |---|---|---|---|---|---|---|
 | 20260612-230957-diffusion-v3-nitido-ep28 | v3-nitido-ep28 | 19.4 ± 0.44 | 0.984 | — | — | 20260612-230957-diffusion-v3-nitido-ep28.png |
 | 20260612-220340-diffusion-v2-baseline-agil | v2-baseline-agil | 175.14 ± 1.08 | 1.13 | 30 | 359.0 | 20260612-220340-diffusion-v2-baseline-agil.png |
+| 20260612-231850-diffusion-demo-agil-v2 | demo-agil-v2 | 175.14 ± 1.08 | 1.13 | 30 | 479.0 | 20260612-231850-diffusion-demo-agil-v2.png |
