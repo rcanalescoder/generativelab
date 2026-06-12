@@ -62,3 +62,6 @@ yarn-error.log*
 pnpm-debug.log*
 .logs/
 *.pid
+
+# v3: estados de entrenamiento del ciclo de experimentos (pesados; se regeneran)
+experiments/ckpts/
