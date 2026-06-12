@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Button, Card, CardHeader, SegmentedControl, Skeleton, Slider, StatusLine, Tag } from '../components/ui'
+import { Button, Card, CardHeader, SegmentedControl, Skeleton, Slider, StatusLine, Tag, Hint } from '../components/ui'
 import { TrainingChart } from '../components/lab/TrainingChart'
 import { useInfo } from '../components/info/InfoProvider'
 import { InterpolateIcon, LayersIcon, PlayIcon, RefreshIcon, SparklesIcon } from '../lib/icons'
@@ -21,6 +21,7 @@ import {
 } from '../lib/api-gan'
 
 const C = ganContent as unknown as ModelContent
+const H = (C.hints ?? {}) as NonNullable<ModelContent['hints']>
 
 const LR_VALUES = [0.00005, 0.0001, 0.0002, 0.0005, 0.001]
 const nearestLrIdx = (lr: number) => {
@@ -320,10 +321,10 @@ export function GANTab() {
             </div>
 
             <div className="grid grid-cols-1 gap-[11px] sm:grid-cols-2">
-              <Slider label="nº de muestras" value={nSamples} min={4} max={25} onChange={setNSamples} />
+              <Slider hint={H.gen_n} label="nº de muestras" value={nSamples} min={4} max={25} onChange={setNSamples} />
               <div className="gm-ctrl">
                 <div className="row">
-                  <span className="name">seed</span>
+                  <span className="name">seed <Hint hint={H.gen_seed} /></span>
                   <input
                     type="number"
                     className="gm-val"
@@ -336,10 +337,10 @@ export function GANTab() {
             </div>
 
             <div className="mt-[6px] grid grid-cols-2 gap-[11px]">
-              <Button icon={<SparklesIcon />} onClick={doGenerate} disabled={!trained || busy || training}>
+              <Button icon={<SparklesIcon />} hint={H.generate} onClick={doGenerate} disabled={!trained || busy || training}>
                 Generar
               </Button>
-              <Button icon={<RefreshIcon />} onClick={shuffleGenerate} disabled={!trained || busy || training}>
+              <Button icon={<RefreshIcon />} hint={H.gen_shuffle} onClick={shuffleGenerate} disabled={!trained || busy || training}>
                 Generar nuevas
               </Button>
             </div>
@@ -388,10 +389,10 @@ export function GANTab() {
             </div>
 
             <div className="grid grid-cols-1 gap-[11px] sm:grid-cols-2">
-              <Slider label="pasos" value={interpSteps} min={3} max={12} onChange={setInterpSteps} />
+              <Slider hint={H.interp_steps} label="pasos" value={interpSteps} min={3} max={12} onChange={setInterpSteps} />
               <div className="gm-ctrl">
                 <div className="row">
-                  <span className="name">seed</span>
+                  <span className="name">seed <Hint hint={H.interp_seed} /></span>
                   <input
                     type="number"
                     className="gm-val"
@@ -404,10 +405,10 @@ export function GANTab() {
             </div>
 
             <div className="mt-[6px] grid grid-cols-2 gap-[11px]">
-              <Button icon={<InterpolateIcon />} onClick={doInterpolate} disabled={!trained || busy || training}>
+              <Button icon={<InterpolateIcon />} hint={H.interp_btn} onClick={doInterpolate} disabled={!trained || busy || training}>
                 Interpolar
               </Button>
-              <Button icon={<RefreshIcon />} onClick={shuffleInterpolate} disabled={!trained || busy || training}>
+              <Button icon={<RefreshIcon />} hint={H.interp_shuffle} onClick={shuffleInterpolate} disabled={!trained || busy || training}>
                 Nueva interpolación
               </Button>
             </div>
@@ -424,7 +425,7 @@ export function GANTab() {
           />
           <div className="gm-ctrl">
             <div className="row">
-              <span className="name">arquitectura</span>
+              <span className="name">arquitectura <Hint hint={H.arch} /></span>
             </div>
             <SegmentedControl
               value={arch}
@@ -435,9 +436,10 @@ export function GANTab() {
               ]}
             />
           </div>
-          <Slider label="z_dim" value={zDim} min={16} max={256} step={8} onChange={setZDim} />
+          <Slider hint={H.z_dim} label="z_dim" value={zDim} min={16} max={256} step={8} onChange={setZDim} />
           <Slider
             label="lr_G (generador)"
+            hint={H.lr_g}
             value={lrGIdx}
             min={0}
             max={LR_VALUES.length - 1}
@@ -446,17 +448,18 @@ export function GANTab() {
           />
           <Slider
             label="lr_D (discriminador)"
+            hint={H.lr_d}
             value={lrDIdx}
             min={0}
             max={LR_VALUES.length - 1}
             onChange={setLrDIdx}
             format={() => lrD}
           />
-          <Slider label="epochs" value={epochs} min={1} max={100} onChange={setEpochs} />
+          <Slider hint={H.epochs} label="epochs" value={epochs} min={1} max={100} onChange={setEpochs} />
 
           <div className="gm-ctrl">
             <div className="row">
-              <span className="name">seed</span>
+              <span className="name">seed <Hint hint={H.seed_train} /></span>
               <input
                 type="number"
                 className="gm-val"
@@ -471,7 +474,7 @@ export function GANTab() {
             variant="ghost"
             full
             icon={<RefreshIcon />}
-            onClick={resetDefaults}
+            hint={H.reset} onClick={resetDefaults}
             disabled={training}
             className="mb-[11px]"
           >
@@ -525,6 +528,12 @@ export function GANTab() {
           )}
 
           <div className="mb-[11px]">
+            <div className="row">
+              <span className="name">
+                modo de entrenamiento
+                <Hint hint={H.mode} />
+              </span>
+            </div>
             <SegmentedControl
               value={mode}
               onChange={setMode}
@@ -536,11 +545,11 @@ export function GANTab() {
           </div>
 
           {training ? (
-            <Button variant="primary" full onClick={onCancel}>
+            <Button variant="primary" full hint={H.cancel} onClick={onCancel}>
               Cancelar entrenamiento
             </Button>
           ) : (
-            <Button variant="primary" full icon={<PlayIcon />} onClick={onTrain} disabled={busy}>
+            <Button variant="primary" full icon={<PlayIcon />} hint={H.train} onClick={onTrain} disabled={busy}>
               Entrenar
             </Button>
           )}
@@ -548,7 +557,7 @@ export function GANTab() {
           <Button
             full
             icon={<LayersIcon />}
-            onClick={() => setArchOpen(true)}
+            hint={H.structure} onClick={() => setArchOpen(true)}
             className="mt-[11px]"
           >
             Ver la estructura

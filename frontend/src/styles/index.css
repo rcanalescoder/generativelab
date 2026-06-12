@@ -1780,3 +1780,33 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- Hint: ayuda contextual de controles y botones (⓲ v3.5) ---------- */
+.gm-hint{ position:relative; display:inline-flex; align-items:center; margin-left:6px; vertical-align:middle; }
+.gm-hint-i{
+  width:15px; height:15px; border-radius:999px; border:1px solid var(--line);
+  background:#fff; color:var(--muted); font-size:9.5px; font-weight:800; line-height:1;
+  font-family:"Geist Mono","SFMono-Regular",Menlo,monospace;
+  display:inline-grid; place-items:center; cursor:help; padding:0;
+}
+.gm-hint-i:hover, .gm-hint-i:focus-visible{ color:var(--blue); border-color:#BFD3F8; background:var(--blue-soft,#EAF1FE); }
+.gm-hint-pop{
+  position:absolute; bottom:calc(100% + 9px); left:50%; transform:translateX(-50%);
+  width:max-content; max-width:250px; background:var(--ink,#111827); color:#fff;
+  font-size:11.5px; font-weight:500; line-height:1.5; text-align:left; letter-spacing:0;
+  text-transform:none; white-space:normal; padding:9px 12px; border-radius:10px;
+  box-shadow:0 10px 30px -10px rgba(17,24,39,.5);
+  opacity:0; visibility:hidden; pointer-events:none; transition:opacity .12s ease; z-index:80;
+}
+.gm-hint-pop::after{
+  content:""; position:absolute; top:100%; left:50%; transform:translateX(-50%);
+  border:6px solid transparent; border-top-color:var(--ink,#111827);
+}
+.gm-hint:hover .gm-hint-pop, .gm-hint:focus-within .gm-hint-pop{ opacity:1; visibility:visible; }
+.gm-hint-tag{ display:block; font-size:9px; font-weight:800; letter-spacing:.6px; text-transform:uppercase; margin-bottom:4px; }
+.gm-hint-tag.is-retrain{ color:#FCD34D; }
+.gm-hint-tag.is-live{ color:#6EE7B7; }
+.gm-hint-tag.is-action{ color:#93C5FD; }
+/* tooltip dentro de botones: se ancla al propio botón */
+.gm-btn{ position:relative; }
+.gm-btn:hover > .gm-hint-pop, .gm-btn:focus-visible > .gm-hint-pop{ opacity:1; visibility:visible; }

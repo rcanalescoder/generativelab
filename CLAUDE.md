@@ -102,7 +102,10 @@ Resumen de tokens (déjalos como CSS variables en `styles/tokens.css` y refléja
 `Slider` (track con relleno en color, thumb blanco con anillo, valor mono en una caja),
 `SegmentedControl` (tipo MSE/L1), `Tag`/`Pill` (variantes warn="requiere reentrenar",
 live="interactivo", success), `Tabs` (las lengüetas), `StatusLine` (línea "epoch 12/30 · loss 0.0184"
-con mini-sparkline), `Sparkline`, `Thumb` (miniatura de imagen con borde), `Spinner`/skeletons.
+con mini-sparkline), `Sparkline`, `Thumb` (miniatura de imagen con borde), `Spinner`/skeletons,
+`Hint` (icono ⓘ + tooltip por control/botón: qué hace, si requiere reentrenar o es interactivo,
+y qué efecto esperar; `Slider` y `Button` aceptan `hint` y los textos viven en
+`content/<modelo>.json` → `hints`, como el resto de la teoría).
 
 **Componentes de `components/lab` (compartidos entre tabs):**
 `DatasetCard` (galería de muestras), `LatentMap` (scatter 2D con clusters, leyenda, tooltip,

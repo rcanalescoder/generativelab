@@ -10,9 +10,19 @@
         "accent": "blue",
         "icon": "info",
         "blocks": [
-          { "type": "p", "text": "Es un laboratorio visual para entender un autoencoder: una red neuronal que aprende a comprimir una imagen en unos pocos números y luego a reconstruirla a partir de ellos. Aquí lo entrenas, ves qué reconstruye y exploras qué ha aprendido, todo sobre un dataset de 43.102 caras de anime de 64×64 píxeles." },
-          { "type": "p", "text": "El autoencoder es la pieza base de toda esta serie: entender bien su «cuello de botella» y su espacio latente te da la intuición para el VAE, la GAN y la difusión. Por eso es el módulo de referencia: los demás reutilizan estas mismas ideas y los mismos paneles." },
-          { "type": "note", "tone": "info", "text": "No necesitas saber matemáticas para usarla. Cada tarjeta tiene su propio botón «i» que explica qué estás viendo." }
+          {
+            "type": "p",
+            "text": "Es un laboratorio visual para entender un autoencoder: una red neuronal que aprende a comprimir una imagen en unos pocos números y luego a reconstruirla a partir de ellos. Aquí lo entrenas, ves qué reconstruye y exploras qué ha aprendido, todo sobre un dataset de 43.102 caras de anime de 64×64 píxeles."
+          },
+          {
+            "type": "p",
+            "text": "El autoencoder es la pieza base de toda esta serie: entender bien su «cuello de botella» y su espacio latente te da la intuición para el VAE, la GAN y la difusión. Por eso es el módulo de referencia: los demás reutilizan estas mismas ideas y los mismos paneles."
+          },
+          {
+            "type": "note",
+            "tone": "info",
+            "text": "No necesitas saber matemáticas para usarla. Cada tarjeta tiene su propio botón «i» que explica qué estás viendo."
+          }
         ]
       },
       {
@@ -20,16 +30,43 @@
         "accent": "violet",
         "icon": "flow",
         "blocks": [
-          { "type": "p", "text": "El modelo tiene dos mitades unidas por un «cuello de botella». El encoder reduce la imagen a un vector pequeño llamado z (el código latente); el decoder intenta reconstruir la imagen original solo a partir de z. Como z es mucho más pequeño que la imagen, el modelo se ve obligado a quedarse con lo esencial y a tirar lo accesorio." },
-          { "type": "p", "text": "La clave pedagógica está en esa restricción: si z fuera tan grande como la imagen, el modelo podría limitarse a copiarla y no aprendería nada. El cuello de botella es lo que lo fuerza a descubrir estructura: que las caras tienen ojos, pelo, una pose, un fondo… y a resumir todo eso en pocos números." },
-          { "type": "defs", "items": [
-            { "term": "Encoder", "desc": "Comprime la imagen (64×64×3 = 12.288 números) hasta z. En este modelo son 4 convoluciones que reducen el tamaño a la mitad cada una: 64→32→16→8→4 píxeles, ganando profundidad hasta un mapa 4×4×256." },
-            { "term": "z (latente)", "desc": "El vector comprimido. Su tamaño lo eliges con latent_dim (por defecto 128 números). Con latent_dim=128 pasamos de 12.288 a 128: una compresión de ~96×." },
-            { "term": "Decoder", "desc": "Reconstruye la imagen a partir de z. Es simétrico al encoder: convoluciones transpuestas que duplican el tamaño 4→8→16→32→64 hasta volver a 64×64×3." },
-            { "term": "Reconstrucción", "desc": "La salida del decoder, x̂. Cuanto más se parezca a x, mejor ha aprendido el modelo a comprimir y descomprimir." }
-          ] },
-          { "type": "formula", "text": "x  →  z = encoder(x)  →  x̂ = decoder(z)" },
-          { "type": "p", "text": "Entrenar consiste en ajustar el modelo para que x̂ se parezca lo más posible a x, en miles de imágenes a la vez. No hay etiquetas: el «profesor» es la propia imagen de entrada." }
+          {
+            "type": "p",
+            "text": "El modelo tiene dos mitades unidas por un «cuello de botella». El encoder reduce la imagen a un vector pequeño llamado z (el código latente); el decoder intenta reconstruir la imagen original solo a partir de z. Como z es mucho más pequeño que la imagen, el modelo se ve obligado a quedarse con lo esencial y a tirar lo accesorio."
+          },
+          {
+            "type": "p",
+            "text": "La clave pedagógica está en esa restricción: si z fuera tan grande como la imagen, el modelo podría limitarse a copiarla y no aprendería nada. El cuello de botella es lo que lo fuerza a descubrir estructura: que las caras tienen ojos, pelo, una pose, un fondo… y a resumir todo eso en pocos números."
+          },
+          {
+            "type": "defs",
+            "items": [
+              {
+                "term": "Encoder",
+                "desc": "Comprime la imagen (64×64×3 = 12.288 números) hasta z. En este modelo son 4 convoluciones que reducen el tamaño a la mitad cada una: 64→32→16→8→4 píxeles, ganando profundidad hasta un mapa 4×4×256."
+              },
+              {
+                "term": "z (latente)",
+                "desc": "El vector comprimido. Su tamaño lo eliges con latent_dim (por defecto 128 números). Con latent_dim=128 pasamos de 12.288 a 128: una compresión de ~96×."
+              },
+              {
+                "term": "Decoder",
+                "desc": "Reconstruye la imagen a partir de z. Es simétrico al encoder: convoluciones transpuestas que duplican el tamaño 4→8→16→32→64 hasta volver a 64×64×3."
+              },
+              {
+                "term": "Reconstrucción",
+                "desc": "La salida del decoder, x̂. Cuanto más se parezca a x, mejor ha aprendido el modelo a comprimir y descomprimir."
+              }
+            ]
+          },
+          {
+            "type": "formula",
+            "text": "x  →  z = encoder(x)  →  x̂ = decoder(z)"
+          },
+          {
+            "type": "p",
+            "text": "Entrenar consiste en ajustar el modelo para que x̂ se parezca lo más posible a x, en miles de imágenes a la vez. No hay etiquetas: el «profesor» es la propia imagen de entrada."
+          }
         ]
       },
       {
@@ -37,9 +74,19 @@
         "accent": "amber",
         "icon": "read",
         "blocks": [
-          { "type": "p", "text": "Aunque entrene perfecto, un autoencoder con MSE tiende a sacar caras un poco borrosas. No es un fallo: es una consecuencia matemática de cómo mide el error." },
-          { "type": "p", "text": "El MSE penaliza el cuadrado de la diferencia por píxel. Cuando el modelo duda entre dos detalles igual de plausibles (¿el mechón cae a la izquierda o a la derecha?), la opción que minimiza el error medio es el promedio de ambos: un punto medio difuso. Por eso los bordes y las texturas finas salen suavizados." },
-          { "type": "note", "tone": "info", "text": "Esta misma «maldición del promedio» reaparece en el VAE (de ahí sus muestras suaves) y es justo lo que la GAN evita usando un discriminador en vez de un error por píxel. Tenlo en mente al comparar pestañas." }
+          {
+            "type": "p",
+            "text": "Aunque entrene perfecto, un autoencoder con MSE tiende a sacar caras un poco borrosas. No es un fallo: es una consecuencia matemática de cómo mide el error."
+          },
+          {
+            "type": "p",
+            "text": "El MSE penaliza el cuadrado de la diferencia por píxel. Cuando el modelo duda entre dos detalles igual de plausibles (¿el mechón cae a la izquierda o a la derecha?), la opción que minimiza el error medio es el promedio de ambos: un punto medio difuso. Por eso los bordes y las texturas finas salen suavizados."
+          },
+          {
+            "type": "note",
+            "tone": "info",
+            "text": "Esta misma «maldición del promedio» reaparece en el VAE (de ahí sus muestras suaves) y es justo lo que la GAN evita usando un discriminador en vez de un error por píxel. Tenlo en mente al comparar pestañas."
+          }
         ]
       },
       {
@@ -47,15 +94,18 @@
         "accent": "pink",
         "icon": "sparkles",
         "blocks": [
-          { "type": "list", "items": [
-            "Entrenar el modelo y ver la curva de pérdida bajar en vivo (por SSE, sin recargar).",
-            "Reconstruir una cara y comparar original vs. reconstrucción con su mapa de diferencia.",
-            "Explorar el mapa latente: cada punto es una imagen vista por el modelo.",
-            "Buscar vecinos: las caras más parecidas según el modelo (distancia en z).",
-            "Interpolar entre dos caras y ver cómo una se transforma en la otra.",
-            "Subir tu propia imagen y ver cómo la reconstruye.",
-            "Añadir ruido a z para comprobar cómo de robusto es el código."
-          ] }
+          {
+            "type": "list",
+            "items": [
+              "Entrenar el modelo y ver la curva de pérdida bajar en vivo (por SSE, sin recargar).",
+              "Reconstruir una cara y comparar original vs. reconstrucción con su mapa de diferencia.",
+              "Explorar el mapa latente: cada punto es una imagen vista por el modelo.",
+              "Buscar vecinos: las caras más parecidas según el modelo (distancia en z).",
+              "Interpolar entre dos caras y ver cómo una se transforma en la otra.",
+              "Subir tu propia imagen y ver cómo la reconstruye.",
+              "Añadir ruido a z para comprobar cómo de robusto es el código."
+            ]
+          }
         ]
       },
       {
@@ -63,12 +113,27 @@
         "accent": "green",
         "icon": "read",
         "blocks": [
-          { "type": "defs", "items": [
-            { "term": "Mapa de diferencia", "desc": "|x − x̂|: en rosa, dónde se equivoca la reconstrucción. Suele fallar en bordes, pelo y detalles finos, no en zonas planas." },
-            { "term": "Mapa latente", "desc": "Una «foto 2D» del espacio de z. Puntos cercanos = caras que el modelo considera parecidas." },
-            { "term": "Vecinos", "desc": "Las imágenes con z más cercano a la consulta (la distancia se calcula en todas las dimensiones de z, no en el dibujo 2D)." },
-            { "term": "Interpolación", "desc": "Un paseo en línea recta dentro del espacio latente: si es suave, el modelo ha aprendido un espacio con sentido y no un simple diccionario." }
-          ] }
+          {
+            "type": "defs",
+            "items": [
+              {
+                "term": "Mapa de diferencia",
+                "desc": "|x − x̂|: en rosa, dónde se equivoca la reconstrucción. Suele fallar en bordes, pelo y detalles finos, no en zonas planas."
+              },
+              {
+                "term": "Mapa latente",
+                "desc": "Una «foto 2D» del espacio de z. Puntos cercanos = caras que el modelo considera parecidas."
+              },
+              {
+                "term": "Vecinos",
+                "desc": "Las imágenes con z más cercano a la consulta (la distancia se calcula en todas las dimensiones de z, no en el dibujo 2D)."
+              },
+              {
+                "term": "Interpolación",
+                "desc": "Un paseo en línea recta dentro del espacio latente: si es suave, el modelo ha aprendido un espacio con sentido y no un simple diccionario."
+              }
+            ]
+          }
         ]
       },
       {
@@ -76,14 +141,24 @@
         "accent": "violet",
         "icon": "book",
         "blocks": [
-          { "type": "p", "text": "Las cuatro pestañas son cuatro formas de aprender a crear imágenes, y se entienden mejor en cadena, partiendo de aquí:" },
-          { "type": "list", "items": [
-            "Autoencoder: comprime y reconstruye. Tiene encoder, pero su latente no está pensado para muestrear caras nuevas.",
-            "VAE: el mismo esqueleto, pero su latente es una distribución ordenada; por eso ya puede generar caras desde la nada.",
-            "GAN: tira el encoder y enfrenta dos redes; gana nitidez a cambio de un entrenamiento inestable.",
-            "Difusión: aprende a quitar ruido paso a paso; máxima calidad/diversidad a cambio de un muestreo lento."
-          ] },
-          { "type": "note", "tone": "info", "text": "Si solo vas a entender un modelo a fondo, que sea este: casi todo lo demás es una variación sobre el encoder, el decoder y el espacio latente." }
+          {
+            "type": "p",
+            "text": "Las cuatro pestañas son cuatro formas de aprender a crear imágenes, y se entienden mejor en cadena, partiendo de aquí:"
+          },
+          {
+            "type": "list",
+            "items": [
+              "Autoencoder: comprime y reconstruye. Tiene encoder, pero su latente no está pensado para muestrear caras nuevas.",
+              "VAE: el mismo esqueleto, pero su latente es una distribución ordenada; por eso ya puede generar caras desde la nada.",
+              "GAN: tira el encoder y enfrenta dos redes; gana nitidez a cambio de un entrenamiento inestable.",
+              "Difusión: aprende a quitar ruido paso a paso; máxima calidad/diversidad a cambio de un muestreo lento."
+            ]
+          },
+          {
+            "type": "note",
+            "tone": "info",
+            "text": "Si solo vas a entender un modelo a fondo, que sea este: casi todo lo demás es una variación sobre el encoder, el decoder y el espacio latente."
+          }
         ]
       },
       {
@@ -91,19 +166,40 @@
         "accent": "cyan",
         "icon": "build",
         "blocks": [
-          { "type": "p", "text": "Todo corre en tu máquina. El frontend es React + TypeScript; el backend es FastAPI con PyTorch, que ejecuta el modelo en la GPU de Apple Silicon (MPS) con respaldo a CPU. Nada se envía a la nube." },
-          { "type": "defs", "items": [
-            { "term": "Modelo", "desc": "Autoencoder convolucional, ~2,4 millones de parámetros (con latent_dim=128)." },
-            { "term": "Entrenamiento", "desc": "Adam con learning_rate 1e-3 por defecto; se transmite en vivo por SSE y puedes cancelarlo cuando quieras. Hay parada temprana si la pérdida deja de mejorar." },
-            { "term": "Mapa latente", "desc": "Se codifica una muestra de 1.200 caras y se proyecta de muchas dimensiones a 2D con PCA; los grupos se calculan con k-means." },
-            { "term": "Dataset", "desc": "huggan/anime-faces, cacheado en local (no se descarga en cada uso)." }
-          ] },
-          { "type": "note", "tone": "success", "text": "Al abrir la app ya hay un modelo entrenado (checkpoint demo), así que todo funciona desde el primer segundo. Entrenar en la app NO sobreescribe ese demo: tu modelo vive en memoria durante la sesión y al reiniciar el servidor vuelve el original." }
+          {
+            "type": "p",
+            "text": "Todo corre en tu máquina. El frontend es React + TypeScript; el backend es FastAPI con PyTorch, que ejecuta el modelo en la GPU de Apple Silicon (MPS) con respaldo a CPU. Nada se envía a la nube."
+          },
+          {
+            "type": "defs",
+            "items": [
+              {
+                "term": "Modelo",
+                "desc": "Autoencoder convolucional, ~2,4 millones de parámetros (con latent_dim=128)."
+              },
+              {
+                "term": "Entrenamiento",
+                "desc": "Adam con learning_rate 1e-3 por defecto; se transmite en vivo por SSE y puedes cancelarlo cuando quieras. Hay parada temprana si la pérdida deja de mejorar."
+              },
+              {
+                "term": "Mapa latente",
+                "desc": "Se codifica una muestra de 1.200 caras y se proyecta de muchas dimensiones a 2D con PCA; los grupos se calculan con k-means."
+              },
+              {
+                "term": "Dataset",
+                "desc": "huggan/anime-faces, cacheado en local (no se descarga en cada uso)."
+              }
+            ]
+          },
+          {
+            "type": "note",
+            "tone": "success",
+            "text": "Al abrir la app ya hay un modelo entrenado (checkpoint demo), así que todo funciona desde el primer segundo. Entrenar en la app NO sobreescribe ese demo: tu modelo vive en memoria durante la sesión y al reiniciar el servidor vuelve el original."
+          }
         ]
       }
     ]
   },
-
   "topics": {
     "dataset": {
       "title": "Dataset visual",
@@ -115,12 +211,27 @@
           "accent": "violet",
           "icon": "dataset",
           "blocks": [
-            { "type": "p", "text": "Una muestra del conjunto de datos con el que aprende el modelo: 43.102 caras de anime de 64×64 píxeles en color (RGB), sin etiquetas. El modelo solo ve píxeles; nadie le dice «esto es pelo» o «esto es un ojo»." },
-            { "type": "defs", "items": [
-              { "term": "64×64×3", "desc": "Alto × ancho × 3 canales de color. Son 12.288 números por imagen: ese es el «tamaño real» que el encoder tendrá que comprimir." },
-              { "term": "Sin etiquetas", "desc": "Aprendizaje no supervisado: el objetivo es reconstruir, no clasificar. La señal de entrenamiento es la propia imagen." },
-              { "term": "43.102 imágenes", "desc": "El dataset huggan/anime-faces (CC0). Variado en colores de pelo, poses, expresiones y fondos: justo lo que hace interesante explorar su latente." }
-            ] }
+            {
+              "type": "p",
+              "text": "Una muestra del conjunto de datos con el que aprende el modelo: 43.102 caras de anime de 64×64 píxeles en color (RGB), sin etiquetas. El modelo solo ve píxeles; nadie le dice «esto es pelo» o «esto es un ojo»."
+            },
+            {
+              "type": "defs",
+              "items": [
+                {
+                  "term": "64×64×3",
+                  "desc": "Alto × ancho × 3 canales de color. Son 12.288 números por imagen: ese es el «tamaño real» que el encoder tendrá que comprimir."
+                },
+                {
+                  "term": "Sin etiquetas",
+                  "desc": "Aprendizaje no supervisado: el objetivo es reconstruir, no clasificar. La señal de entrenamiento es la propia imagen."
+                },
+                {
+                  "term": "43.102 imágenes",
+                  "desc": "El dataset huggan/anime-faces (CC0). Variado en colores de pelo, poses, expresiones y fondos: justo lo que hace interesante explorar su latente."
+                }
+              ]
+            }
           ]
         },
         {
@@ -128,8 +239,15 @@
           "accent": "pink",
           "icon": "info",
           "blocks": [
-            { "type": "p", "text": "Un modelo generativo solo puede crear variaciones de lo que ha visto. Todo lo que verás —reconstrucciones, vecinos, interpolaciones— hereda los sesgos y el estilo de este conjunto: caras de anime, encuadre frontal, paleta saturada." },
-            { "type": "note", "tone": "info", "text": "Si subes una foto real, verás que el modelo la «dibuja» como una cara de anime: solo sabe lo que ha visto en el dataset. Es la mejor forma de notar qué ha aprendido y qué no." }
+            {
+              "type": "p",
+              "text": "Un modelo generativo solo puede crear variaciones de lo que ha visto. Todo lo que verás —reconstrucciones, vecinos, interpolaciones— hereda los sesgos y el estilo de este conjunto: caras de anime, encuadre frontal, paleta saturada."
+            },
+            {
+              "type": "note",
+              "tone": "info",
+              "text": "Si subes una foto real, verás que el modelo la «dibuja» como una cara de anime: solo sabe lo que ha visto en el dataset. Es la mejor forma de notar qué ha aprendido y qué no."
+            }
           ]
         },
         {
@@ -137,16 +255,18 @@
           "accent": "blue",
           "icon": "read",
           "blocks": [
-            { "type": "list", "items": [
-              "Haz clic en cualquier miniatura para llevarla al «Flujo del modelo» y reconstruirla.",
-              "«Ver muestras» baraja y trae otras imágenes del dataset.",
-              "«Subir imagen» reconstruye una imagen tuya (se redimensiona a 64×64)."
-            ] }
+            {
+              "type": "list",
+              "items": [
+                "Haz clic en cualquier miniatura para llevarla al «Flujo del modelo» y reconstruirla.",
+                "«Ver muestras» baraja y trae otras imágenes del dataset.",
+                "«Subir imagen» reconstruye una imagen tuya (se redimensiona a 64×64)."
+              ]
+            }
           ]
         }
       ]
     },
-
     "flujo": {
       "title": "Flujo del modelo",
       "badge": "Pipeline",
@@ -157,16 +277,26 @@
           "accent": "blue",
           "icon": "flow",
           "blocks": [
-            { "type": "p", "text": "De izquierda a derecha ves el viaje completo de una cara a través del autoencoder. La parte clave es el estrechamiento del medio: la imagen entra «ancha» (mucha resolución, poca profundidad) y se va volviendo «estrecha y profunda» hasta colapsar en z." },
-            { "type": "steps", "items": [
-              "Original: la imagen de entrada (64×64×3 = 12.288 números).",
-              "Encoder: la comprime con 4 convoluciones, reduciendo tamaño y aumentando «profundidad» hasta 4×4×256.",
-              "z: el cuello de botella, el código latente (su tamaño es latent_dim; 128 por defecto).",
-              "Decoder: expande z de vuelta a una imagen de 64×64×3 con convoluciones transpuestas.",
-              "Reconstruida: la salida del modelo, x̂ (con valores en [0,1] por la sigmoide final).",
-              "Diferencia: |x − x̂|, el mapa de error."
-            ] },
-            { "type": "note", "tone": "info", "text": "Toda la información de la cara tiene que «caber» por z. Si algo no sobrevive a ese estrechamiento, no aparecerá en la reconstrucción: ahí está la lección del cuello de botella." }
+            {
+              "type": "p",
+              "text": "De izquierda a derecha ves el viaje completo de una cara a través del autoencoder. La parte clave es el estrechamiento del medio: la imagen entra «ancha» (mucha resolución, poca profundidad) y se va volviendo «estrecha y profunda» hasta colapsar en z."
+            },
+            {
+              "type": "steps",
+              "items": [
+                "Original: la imagen de entrada (64×64×3 = 12.288 números).",
+                "Encoder: la comprime con 4 convoluciones, reduciendo tamaño y aumentando «profundidad» hasta 4×4×256.",
+                "z: el cuello de botella, el código latente (su tamaño es latent_dim; 128 por defecto).",
+                "Decoder: expande z de vuelta a una imagen de 64×64×3 con convoluciones transpuestas.",
+                "Reconstruida: la salida del modelo, x̂ (con valores en [0,1] por la sigmoide final).",
+                "Diferencia: |x − x̂|, el mapa de error."
+              ]
+            },
+            {
+              "type": "note",
+              "tone": "info",
+              "text": "Toda la información de la cara tiene que «caber» por z. Si algo no sobrevive a ese estrechamiento, no aparecerá en la reconstrucción: ahí está la lección del cuello de botella."
+            }
           ]
         },
         {
@@ -174,15 +304,27 @@
           "accent": "pink",
           "icon": "read",
           "blocks": [
-            { "type": "p", "text": "Resalta en rosa dónde la reconstrucción se aleja del original. Las zonas oscuras son aciertos; las brillantes, errores." },
-            { "type": "formula", "text": "diferencia = |x − x̂|  (por píxel)" },
-            { "type": "p", "text": "Léelo como un «mapa de calor de lo difícil»: te dice qué partes de la cara son caras de comprimir. Suelen ser los bordes, los mechones de pelo, los ojos detallados y los fondos con textura; las mejillas y zonas planas casi no aparecen." },
-            { "type": "note", "tone": "info", "text": "Es normal que falle en detalles finos: hay demasiada información para tan pocos números. Si subes latent_dim, verás que el mapa de diferencia se «apaga» (menos error), a costa de comprimir menos." }
+            {
+              "type": "p",
+              "text": "Resalta en rosa dónde la reconstrucción se aleja del original. Las zonas oscuras son aciertos; las brillantes, errores."
+            },
+            {
+              "type": "formula",
+              "text": "diferencia = |x − x̂|  (por píxel)"
+            },
+            {
+              "type": "p",
+              "text": "Léelo como un «mapa de calor de lo difícil»: te dice qué partes de la cara son caras de comprimir. Suelen ser los bordes, los mechones de pelo, los ojos detallados y los fondos con textura; las mejillas y zonas planas casi no aparecen."
+            },
+            {
+              "type": "note",
+              "tone": "info",
+              "text": "Es normal que falle en detalles finos: hay demasiada información para tan pocos números. Si subes latent_dim, verás que el mapa de diferencia se «apaga» (menos error), a costa de comprimir menos."
+            }
           ]
         }
       ]
     },
-
     "mapa-latente": {
       "title": "Mapa latente",
       "badge": "Espacio latente",
@@ -193,14 +335,35 @@
           "accent": "cyan",
           "icon": "latent",
           "blocks": [
-            { "type": "p", "text": "Cada imagen, una vez codificada, es un punto z en un espacio de muchas dimensiones (tantas como latent_dim; 128 por defecto). No podemos ver 128 dimensiones, así que las proyectamos a 2D para poder mirarlas." },
-            { "type": "p", "text": "La idea profunda: el encoder ha aprendido a ordenar las caras en ese espacio según se parecen. Caras similares acaban cerca; caras muy distintas, lejos. El mapa es una ventana a esa organización interna." },
-            { "type": "defs", "items": [
-              { "term": "Cada punto", "desc": "Una imagen del dataset vista por el encoder. Aquí proyectamos una muestra de 1.200 caras." },
-              { "term": "Cercanía", "desc": "Puntos próximos = caras que el modelo considera parecidas." },
-              { "term": "Colores", "desc": "Grupos (clusters) calculados con k-means sobre z. Solo aparecen tras pulsar «Calcular clusters»." },
-              { "term": "‖z‖ (norma)", "desc": "La «longitud» del vector z de cada punto. Te da una idea de cuán lejos del centro está esa cara en el espacio latente." }
-            ] }
+            {
+              "type": "p",
+              "text": "Cada imagen, una vez codificada, es un punto z en un espacio de muchas dimensiones (tantas como latent_dim; 128 por defecto). No podemos ver 128 dimensiones, así que las proyectamos a 2D para poder mirarlas."
+            },
+            {
+              "type": "p",
+              "text": "La idea profunda: el encoder ha aprendido a ordenar las caras en ese espacio según se parecen. Caras similares acaban cerca; caras muy distintas, lejos. El mapa es una ventana a esa organización interna."
+            },
+            {
+              "type": "defs",
+              "items": [
+                {
+                  "term": "Cada punto",
+                  "desc": "Una imagen del dataset vista por el encoder. Aquí proyectamos una muestra de 1.200 caras."
+                },
+                {
+                  "term": "Cercanía",
+                  "desc": "Puntos próximos = caras que el modelo considera parecidas."
+                },
+                {
+                  "term": "Colores",
+                  "desc": "Grupos (clusters) calculados con k-means sobre z. Solo aparecen tras pulsar «Calcular clusters»."
+                },
+                {
+                  "term": "‖z‖ (norma)",
+                  "desc": "La «longitud» del vector z de cada punto. Te da una idea de cuán lejos del centro está esa cara en el espacio latente."
+                }
+              ]
+            }
           ]
         },
         {
@@ -208,9 +371,19 @@
           "accent": "violet",
           "icon": "read",
           "blocks": [
-            { "type": "p", "text": "PCA y UMAP son dos formas de aplanar el espacio a 2D. PCA conserva las direcciones de mayor variación (es lineal, rápida y la opción por defecto aquí); UMAP intenta preservar la vecindad local y suele separar mejor los grupos, pero deforma las distancias globales." },
-            { "type": "note", "tone": "warn", "text": "Ojo: la cercanía real se mide sobre z (las 128 dimensiones), no sobre la proyección 2D. Aplastar 128D a 2D pierde información, así que dos puntos pueden verse pegados en el dibujo y estar lejos en realidad, o al revés. Por eso los vecinos se calculan en z, no en lo que ves." },
-            { "type": "p", "text": "Pasa el ratón por encima de un punto para ver su miniatura, su ID, su grupo y la magnitud de su z (‖z‖). Es la mejor forma de comprobar que «cerca en el mapa» se corresponde de verdad con «caras parecidas»." }
+            {
+              "type": "p",
+              "text": "PCA y UMAP son dos formas de aplanar el espacio a 2D. PCA conserva las direcciones de mayor variación (es lineal, rápida y la opción por defecto aquí); UMAP intenta preservar la vecindad local y suele separar mejor los grupos, pero deforma las distancias globales."
+            },
+            {
+              "type": "note",
+              "tone": "warn",
+              "text": "Ojo: la cercanía real se mide sobre z (las 128 dimensiones), no sobre la proyección 2D. Aplastar 128D a 2D pierde información, así que dos puntos pueden verse pegados en el dibujo y estar lejos en realidad, o al revés. Por eso los vecinos se calculan en z, no en lo que ves."
+            },
+            {
+              "type": "p",
+              "text": "Pasa el ratón por encima de un punto para ver su miniatura, su ID, su grupo y la magnitud de su z (‖z‖). Es la mejor forma de comprobar que «cerca en el mapa» se corresponde de verdad con «caras parecidas»."
+            }
           ]
         },
         {
@@ -218,13 +391,18 @@
           "accent": "amber",
           "icon": "info",
           "blocks": [
-            { "type": "p", "text": "Un detalle que prepara la pestaña del VAE: el autoencoder no impone ninguna forma a este espacio. Los puntos pueden quedar dispersos, con huecos y zonas vacías entre grupos." },
-            { "type": "p", "text": "Eso está bien para reconstruir, pero significa que si tomaras un z al azar y lo decodificaras, lo más probable es caer en un «vacío» y obtener basura. Por eso el autoencoder no es un buen generador: ver estos huecos en el mapa ayuda a entender qué problema resuelve el VAE con su término KL." }
+            {
+              "type": "p",
+              "text": "Un detalle que prepara la pestaña del VAE: el autoencoder no impone ninguna forma a este espacio. Los puntos pueden quedar dispersos, con huecos y zonas vacías entre grupos."
+            },
+            {
+              "type": "p",
+              "text": "Eso está bien para reconstruir, pero significa que si tomaras un z al azar y lo decodificaras, lo más probable es caer en un «vacío» y obtener basura. Por eso el autoencoder no es un buen generador: ver estos huecos en el mapa ayuda a entender qué problema resuelve el VAE con su término KL."
+            }
           ]
         }
       ]
     },
-
     "resultados": {
       "title": "Resultados del espacio latente",
       "badge": "Vecinos e interpolación",
@@ -235,9 +413,19 @@
           "accent": "pink",
           "icon": "search",
           "blocks": [
-            { "type": "p", "text": "Tomamos la imagen de consulta (recuadro rosa), miramos su z y buscamos las imágenes con z más cercano (distancia euclídea). El número bajo cada cara es esa distancia: cuanto menor, más parecida según el modelo." },
-            { "type": "p", "text": "Es, en esencia, un buscador «por contenido aprendido»: en vez de comparar píxeles uno a uno, compara los resúmenes z. Por eso puede encontrar caras con el mismo aire aunque difieran píxel a píxel." },
-            { "type": "note", "tone": "info", "text": "«Parecido» aquí lo decide el modelo a partir de lo que aprendió, no un humano. A veces agrupa por color de pelo, otras por pose o por fondo: descubrir según qué agrupa es parte de la gracia." }
+            {
+              "type": "p",
+              "text": "Tomamos la imagen de consulta (recuadro rosa), miramos su z y buscamos las imágenes con z más cercano (distancia euclídea). El número bajo cada cara es esa distancia: cuanto menor, más parecida según el modelo."
+            },
+            {
+              "type": "p",
+              "text": "Es, en esencia, un buscador «por contenido aprendido»: en vez de comparar píxeles uno a uno, compara los resúmenes z. Por eso puede encontrar caras con el mismo aire aunque difieran píxel a píxel."
+            },
+            {
+              "type": "note",
+              "tone": "info",
+              "text": "«Parecido» aquí lo decide el modelo a partir de lo que aprendió, no un humano. A veces agrupa por color de pelo, otras por pose o por fondo: descubrir según qué agrupa es parte de la gracia."
+            }
           ]
         },
         {
@@ -245,15 +433,27 @@
           "accent": "violet",
           "icon": "interpolate",
           "blocks": [
-            { "type": "p", "text": "Cogemos los códigos de dos caras (z_A y z_B) y generamos pasos intermedios mezclándolos en línea recta. Cada fotograma es una imagen decodificada desde un punto intermedio del segmento entre A y B." },
-            { "type": "formula", "text": "z_α = (1 − α)·z_A + α·z_B,   con α de 0 a 1" },
-            { "type": "p", "text": "Es la prueba del algodón del espacio latente. Si la transición es suave y las imágenes intermedias parecen caras plausibles, el modelo ha aprendido un espacio «con sentido», donde moverse un poco cambia la cara de forma continua." },
-            { "type": "note", "tone": "warn", "text": "Si en el camino aparecen saltos bruscos, caras rotas o «fantasmas» (dos caras superpuestas), es señal de que el segmento atraviesa un hueco del espacio latente. En el VAE estos saltos suelen suavizarse, justo por su regularización." }
+            {
+              "type": "p",
+              "text": "Cogemos los códigos de dos caras (z_A y z_B) y generamos pasos intermedios mezclándolos en línea recta. Cada fotograma es una imagen decodificada desde un punto intermedio del segmento entre A y B."
+            },
+            {
+              "type": "formula",
+              "text": "z_α = (1 − α)·z_A + α·z_B,   con α de 0 a 1"
+            },
+            {
+              "type": "p",
+              "text": "Es la prueba del algodón del espacio latente. Si la transición es suave y las imágenes intermedias parecen caras plausibles, el modelo ha aprendido un espacio «con sentido», donde moverse un poco cambia la cara de forma continua."
+            },
+            {
+              "type": "note",
+              "tone": "warn",
+              "text": "Si en el camino aparecen saltos bruscos, caras rotas o «fantasmas» (dos caras superpuestas), es señal de que el segmento atraviesa un hueco del espacio latente. En el VAE estos saltos suelen suavizarse, justo por su regularización."
+            }
           ]
         }
       ]
     },
-
     "controles": {
       "title": "Controles",
       "badge": "Panel de control",
@@ -264,12 +464,28 @@
           "accent": "blue",
           "icon": "sliders",
           "blocks": [
-            { "type": "p", "text": "La distinción más importante de toda la app: hay ajustes que cambian el modelo y ajustes que solo cambian cómo lo exploras. Distinguirlos te ahorra confusión." },
-            { "type": "defs", "items": [
-              { "term": "Del modelo (ámbar)", "desc": "Cambian la red o su entrenamiento (latent_dim, learning_rate, epochs, loss). Necesitan reentrenar para tener efecto: hasta entonces, sigues viendo el modelo anterior." },
-              { "term": "De exploración (verde)", "desc": "Son interactivos (ruido en z, k vecinos, n clusters, pasos de interpolación): se aplican al instante al pulsar la acción, sin reentrenar." }
-            ] },
-            { "type": "note", "tone": "info", "text": "¿Te has perdido tocando sliders? Usa «Volver a parámetros por defecto» para dejarlo todo como al abrir la app." }
+            {
+              "type": "p",
+              "text": "La distinción más importante de toda la app: hay ajustes que cambian el modelo y ajustes que solo cambian cómo lo exploras. Distinguirlos te ahorra confusión."
+            },
+            {
+              "type": "defs",
+              "items": [
+                {
+                  "term": "Del modelo (ámbar)",
+                  "desc": "Cambian la red o su entrenamiento (latent_dim, learning_rate, epochs, loss). Necesitan reentrenar para tener efecto: hasta entonces, sigues viendo el modelo anterior."
+                },
+                {
+                  "term": "De exploración (verde)",
+                  "desc": "Son interactivos (ruido en z, k vecinos, n clusters, pasos de interpolación): se aplican al instante al pulsar la acción, sin reentrenar."
+                }
+              ]
+            },
+            {
+              "type": "note",
+              "tone": "info",
+              "text": "¿Te has perdido tocando sliders? Usa «Volver a parámetros por defecto» para dejarlo todo como al abrir la app."
+            }
           ]
         },
         {
@@ -277,18 +493,36 @@
           "accent": "green",
           "icon": "sparkles",
           "blocks": [
-            { "type": "defs", "items": [
-              { "term": "Entrenar", "desc": "Rápido: pocas épocas sobre una muestra de 6.000 caras (segundos), para ver la dinámica. Completo: el dataset entero, las épocas que marques (minutos)." },
-              { "term": "Reconstruir", "desc": "Vuelve a pasar la imagen actual por el modelo (con el ruido en z elegido)." },
-              { "term": "Buscar similares", "desc": "Calcula los k vecinos de la imagen actual, por distancia en z." },
-              { "term": "Interpolar / Calcular clusters", "desc": "Rehacen la interpolación A→B o reagrupan el mapa latente con k-means." }
-            ] },
-            { "type": "note", "tone": "info", "text": "El entrenamiento se transmite en vivo (SSE): verás la pérdida bajar época a época y una vista previa de reconstrucciones. Puedes cancelarlo en cualquier momento." }
+            {
+              "type": "defs",
+              "items": [
+                {
+                  "term": "Entrenar",
+                  "desc": "Rápido: pocas épocas sobre una muestra de 6.000 caras (segundos), para ver la dinámica. Completo: el dataset entero, las épocas que marques (minutos)."
+                },
+                {
+                  "term": "Reconstruir",
+                  "desc": "Vuelve a pasar la imagen actual por el modelo (con el ruido en z elegido)."
+                },
+                {
+                  "term": "Buscar similares",
+                  "desc": "Calcula los k vecinos de la imagen actual, por distancia en z."
+                },
+                {
+                  "term": "Interpolar / Calcular clusters",
+                  "desc": "Rehacen la interpolación A→B o reagrupan el mapa latente con k-means."
+                }
+              ]
+            },
+            {
+              "type": "note",
+              "tone": "info",
+              "text": "El entrenamiento se transmite en vivo (SSE): verás la pérdida bajar época a época y una vista previa de reconstrucciones. Puedes cancelarlo en cualquier momento."
+            }
           ]
         }
       ]
     },
-
     "parametros-modelo": {
       "title": "Parámetros del modelo",
       "badge": "Requiere reentrenar",
@@ -299,12 +533,27 @@
           "accent": "amber",
           "icon": "sliders",
           "blocks": [
-            { "type": "defs", "items": [
-              { "term": "latent_dim", "desc": "Tamaño de z (por defecto 128; rango 8–512). Es el ancho del cuello de botella. Pequeño = más compresión, reconstrucción más borrosa pero más «abstracta»; grande = más nítido, pero comprime menos y el latente se vuelve más difícil de explorar." },
-              { "term": "learning_rate", "desc": "Cuánto ajusta el modelo en cada paso (por defecto 1e-3). Muy alto: inestable, la pérdida da botes; muy bajo: aprende lentísimo. El valor por defecto es un buen punto de partida con Adam." },
-              { "term": "epochs", "desc": "Cuántas veces ve el conjunto de entrenamiento (por defecto 30). Más épocas suelen mejorar, hasta saturar. Hay parada temprana: si la pérdida no mejora en 5 épocas seguidas, el entrenamiento se detiene solo." },
-              { "term": "loss", "desc": "Cómo se mide el error. MSE penaliza más los fallos grandes y tiende a suavizar (caras más borrosas); L1 trata todos los errores por igual y suele dar bordes algo más definidos." }
-            ] }
+            {
+              "type": "defs",
+              "items": [
+                {
+                  "term": "latent_dim",
+                  "desc": "Tamaño de z (por defecto 128; rango 8–512). Es el ancho del cuello de botella. Pequeño = más compresión, reconstrucción más borrosa pero más «abstracta»; grande = más nítido, pero comprime menos y el latente se vuelve más difícil de explorar."
+                },
+                {
+                  "term": "learning_rate",
+                  "desc": "Cuánto ajusta el modelo en cada paso (por defecto 1e-3). Muy alto: inestable, la pérdida da botes; muy bajo: aprende lentísimo. El valor por defecto es un buen punto de partida con Adam."
+                },
+                {
+                  "term": "epochs",
+                  "desc": "Cuántas veces ve el conjunto de entrenamiento (por defecto 30). Más épocas suelen mejorar, hasta saturar. Hay parada temprana: si la pérdida no mejora en 5 épocas seguidas, el entrenamiento se detiene solo."
+                },
+                {
+                  "term": "loss",
+                  "desc": "Cómo se mide el error. MSE penaliza más los fallos grandes y tiende a suavizar (caras más borrosas); L1 trata todos los errores por igual y suele dar bordes algo más definidos."
+                }
+              ]
+            }
           ]
         },
         {
@@ -312,8 +561,15 @@
           "accent": "cyan",
           "icon": "latent",
           "blocks": [
-            { "type": "p", "text": "Piensa en latent_dim como el número de «mandos» que el modelo tiene para describir una cara. Con pocos mandos (p. ej. 8), el modelo solo puede capturar lo más grueso —tono general, pose— y todo sale muy promediado. Con muchos (p. ej. 512), puede afinar detalles, pero apenas comprime y el espacio se vuelve disperso." },
-            { "type": "note", "tone": "info", "text": "El valor por defecto de 128 es un equilibrio: comprime ~96× (de 12.288 a 128) y aún reconstruye caras reconocibles. Subirlo o bajarlo y comparar el mapa de diferencia es uno de los experimentos más instructivos de esta pestaña." }
+            {
+              "type": "p",
+              "text": "Piensa en latent_dim como el número de «mandos» que el modelo tiene para describir una cara. Con pocos mandos (p. ej. 8), el modelo solo puede capturar lo más grueso —tono general, pose— y todo sale muy promediado. Con muchos (p. ej. 512), puede afinar detalles, pero apenas comprime y el espacio se vuelve disperso."
+            },
+            {
+              "type": "note",
+              "tone": "info",
+              "text": "El valor por defecto de 128 es un equilibrio: comprime ~96× (de 12.288 a 128) y aún reconstruye caras reconocibles. Subirlo o bajarlo y comparar el mapa de diferencia es uno de los experimentos más instructivos de esta pestaña."
+            }
           ]
         },
         {
@@ -321,9 +577,19 @@
           "accent": "violet",
           "icon": "read",
           "blocks": [
-            { "type": "p", "text": "MSE eleva el error al cuadrado, así que castiga muchísimo los fallos grandes y casi ignora los pequeños: ante la duda, prefiere un gris medio «seguro» antes que arriesgar un detalle. De ahí su suavizado característico." },
-            { "type": "p", "text": "L1 (error absoluto) trata todos los errores en proporción a su tamaño, sin elevar al cuadrado, así que no premia tanto el promedio y deja pasar bordes algo más marcados. A cambio puede ser menos «suave» visualmente." },
-            { "type": "note", "tone": "warn", "text": "Ninguna de las dos resuelve la borrosidad de raíz: ambas miden error píxel a píxel. Para nitidez de verdad hace falta otro enfoque (la GAN), no otra pérdida por píxel." }
+            {
+              "type": "p",
+              "text": "MSE eleva el error al cuadrado, así que castiga muchísimo los fallos grandes y casi ignora los pequeños: ante la duda, prefiere un gris medio «seguro» antes que arriesgar un detalle. De ahí su suavizado característico."
+            },
+            {
+              "type": "p",
+              "text": "L1 (error absoluto) trata todos los errores en proporción a su tamaño, sin elevar al cuadrado, así que no premia tanto el promedio y deja pasar bordes algo más marcados. A cambio puede ser menos «suave» visualmente."
+            },
+            {
+              "type": "note",
+              "tone": "warn",
+              "text": "Ninguna de las dos resuelve la borrosidad de raíz: ambas miden error píxel a píxel. Para nitidez de verdad hace falta otro enfoque (la GAN), no otra pérdida por píxel."
+            }
           ]
         },
         {
@@ -331,12 +597,14 @@
           "accent": "pink",
           "icon": "info",
           "blocks": [
-            { "type": "p", "text": "Estos valores definen la red o cómo aprende. Cambiarlos no afecta al modelo ya entrenado: hasta que no pulses «Entrenar», sigues viendo los resultados del modelo anterior. Por eso aparece el aviso «cambios sin aplicar» (la pill ámbar)." }
+            {
+              "type": "p",
+              "text": "Estos valores definen la red o cómo aprende. Cambiarlos no afecta al modelo ya entrenado: hasta que no pulses «Entrenar», sigues viendo los resultados del modelo anterior. Por eso aparece el aviso «cambios sin aplicar» (la pill ámbar)."
+            }
           ]
         }
       ]
     },
-
     "parametros-exploracion": {
       "title": "Parámetros de exploración",
       "badge": "Interactivo",
@@ -347,13 +615,32 @@
           "accent": "green",
           "icon": "sliders",
           "blocks": [
-            { "type": "defs", "items": [
-              { "term": "ruido en z", "desc": "Suma azar al código (z + ruido·ε) antes de decodificar. Subiéndolo ves cómo de robusto (o frágil) es z: la cara se deforma poco a poco. Es una forma manual de explorar el «vecindario» de un código." },
-              { "term": "k vecinos", "desc": "Cuántas caras similares mostrar al buscar vecinos (hasta 24)." },
-              { "term": "n clusters", "desc": "En cuántos grupos divide k-means el mapa latente. Es solo una forma de colorear; no cambia el modelo." },
-              { "term": "pasos interpolación", "desc": "Cuántos fotogramas intermedios genera entre A y B (hasta 12). Más pasos = transición más fina de ver." }
-            ] },
-            { "type": "note", "tone": "success", "text": "Son interactivos: cambian el resultado en cuanto pulsas la acción correspondiente, sin reentrenar nada." }
+            {
+              "type": "defs",
+              "items": [
+                {
+                  "term": "ruido en z",
+                  "desc": "Suma azar al código (z + ruido·ε) antes de decodificar. Subiéndolo ves cómo de robusto (o frágil) es z: la cara se deforma poco a poco. Es una forma manual de explorar el «vecindario» de un código."
+                },
+                {
+                  "term": "k vecinos",
+                  "desc": "Cuántas caras similares mostrar al buscar vecinos (hasta 24)."
+                },
+                {
+                  "term": "n clusters",
+                  "desc": "En cuántos grupos divide k-means el mapa latente. Es solo una forma de colorear; no cambia el modelo."
+                },
+                {
+                  "term": "pasos interpolación",
+                  "desc": "Cuántos fotogramas intermedios genera entre A y B (hasta 12). Más pasos = transición más fina de ver."
+                }
+              ]
+            },
+            {
+              "type": "note",
+              "tone": "success",
+              "text": "Son interactivos: cambian el resultado en cuanto pulsas la acción correspondiente, sin reentrenar nada."
+            }
           ]
         },
         {
@@ -361,11 +648,105 @@
           "accent": "cyan",
           "icon": "info",
           "blocks": [
-            { "type": "p", "text": "Añadir ruido a z y decodificar te dice cuánto «aguanta» el código antes de romperse. Con poco ruido, la cara apenas cambia: el modelo es estable en torno a ese punto. Con mucho ruido, aparecen deformaciones o artefactos: estás saliéndote de la zona que el modelo conoce bien." },
-            { "type": "note", "tone": "info", "text": "Esto conecta directamente con el VAE: allí el ruido en z no es un truco de exploración sino parte del modelo (la dispersión σ), y entrenar con él es lo que ordena el espacio latente." }
+            {
+              "type": "p",
+              "text": "Añadir ruido a z y decodificar te dice cuánto «aguanta» el código antes de romperse. Con poco ruido, la cara apenas cambia: el modelo es estable en torno a ese punto. Con mucho ruido, aparecen deformaciones o artefactos: estás saliéndote de la zona que el modelo conoce bien."
+            },
+            {
+              "type": "note",
+              "tone": "info",
+              "text": "Esto conecta directamente con el VAE: allí el ruido en z no es un truco de exploración sino parte del modelo (la dispersión σ), y entrenar con él es lo que ordena el espacio latente."
+            }
           ]
         }
       ]
+    }
+  },
+  "hints": {
+    "noise": {
+      "text": "Suma ruido al código z antes de decodificar al pulsar «Reconstruir»: verás variaciones de la misma cara. En 0, reconstrucción pura.",
+      "kind": "live"
+    },
+    "k": {
+      "text": "Cuántas caras parecidas devuelve «Buscar similares». La distancia se mide en z (lo que el modelo entiende), no en píxeles.",
+      "kind": "live"
+    },
+    "clusters": {
+      "text": "Número de grupos del k-means al pulsar «Calcular clusters»: colorea el mapa latente por familias de caras.",
+      "kind": "live"
+    },
+    "steps_interp": {
+      "text": "Fotogramas intermedios al pulsar «Interpolar»: más pasos, transición más suave entre las dos caras.",
+      "kind": "live"
+    },
+    "reconstruct": {
+      "text": "Pasa una cara por encoder → z → decoder y muestra original, copia y mapa de diferencias |x−x̂|. Inmediato.",
+      "kind": "action"
+    },
+    "neighbors": {
+      "text": "Busca las k caras del dataset con el z más parecido al de la consulta. Inmediato.",
+      "kind": "action"
+    },
+    "interpolate_btn": {
+      "text": "Mezcla los códigos z de dos caras y decodifica los pasos intermedios: cada fotograma es una cara nueva.",
+      "kind": "action"
+    },
+    "clusters_btn": {
+      "text": "Agrupa los z con k-means y colorea el mapa latente. Es exploración: no cambia el modelo.",
+      "kind": "action"
+    },
+    "seed_train": {
+      "text": "Se aplica al próximo entrenamiento: misma semilla + mismos parámetros = mismo resultado (reproducibilidad)."
+    },
+    "early_stop": {
+      "text": "Se aplica al próximo entrenamiento: si la pérdida no mejora durante 5 epochs, para solo y ahorra tiempo."
+    },
+    "cancel": {
+      "text": "Detiene el entrenamiento en curso. El modelo que hubiera antes sigue disponible.",
+      "kind": "action"
+    },
+    "structure": {
+      "text": "Abre el esquema capa a capa de la variante actual. Solo visualiza: no entrena nada.",
+      "kind": "action"
+    },
+    "arch": {
+      "text": "Variante: Básico (la referencia), Grande (más capacidad) o U-Net (atajos encoder→decoder: reconstrucción nítida, pero esos atajos «puentean» el cuello de botella).",
+      "kind": "retrain"
+    },
+    "latent_dim": {
+      "text": "Tamaño del resumen z (cuello de botella). Más dimensiones = copia más fiel pero compresión menor. Tras moverlo, pulsa Entrenar.",
+      "kind": "retrain"
+    },
+    "learning_rate": {
+      "text": "Tamaño de los pasos del optimizador. Muy alto: inestable; muy bajo: lento.",
+      "kind": "retrain"
+    },
+    "epochs": {
+      "text": "Pasadas completas por los datos. Más epochs mejoran hasta estancarse (el early stop corta solo).",
+      "kind": "retrain"
+    },
+    "loss": {
+      "text": "Cómo se mide el error de copia: MSE penaliza más los errores grandes (suaviza); L1 da bordes algo más duros.",
+      "kind": "retrain"
+    },
+    "mode": {
+      "text": "Se aplica al próximo entrenamiento: Rápido usa 6.000 caras (segundos); Completo, las 43.102."
+    },
+    "train": {
+      "text": "Entrena desde cero con los valores de esta tarjeta y muestra la curva en vivo. No toca el checkpoint demo.",
+      "kind": "action"
+    },
+    "reset": {
+      "text": "Restaura los parámetros por defecto del autoencoder.",
+      "kind": "action"
+    },
+    "gridsearch": {
+      "text": "Entrena en corto varias combinaciones de latent_dim/lr/loss y te dice cuál reconstruye mejor. Tarda unos minutos.",
+      "kind": "action"
+    },
+    "metrics": {
+      "text": "Evalúa la reconstrucción sobre 256 caras nunca vistas: MSE, PSNR y SSIM, con ejemplos visuales.",
+      "kind": "action"
     }
   }
 }

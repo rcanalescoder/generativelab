@@ -10,9 +10,19 @@
         "accent": "pink",
         "icon": "info",
         "blocks": [
-          { "type": "p", "text": "Es un laboratorio visual para entender una GAN (Generative Adversarial Network): dos redes neuronales que compiten. Una, el generador, inventa caras a partir de ruido aleatorio; la otra, el discriminador, intenta distinguir las caras inventadas de las reales del dataset. De esa competición sale un generador capaz de sintetizar caras de anime de 64×64 que nunca existieron." },
-          { "type": "p", "text": "Frente a las pestañas anteriores, la GAN cambia las reglas del juego: no comprime ni reconstruye nada, y no mide el error píxel a píxel. En vez de eso, deja que una segunda red —el discriminador— juzgue si una cara «parece real». Ese cambio es justo lo que le permite ganar nitidez donde el autoencoder y el VAE salían borrosos." },
-          { "type": "note", "tone": "info", "text": "Aquí entrenas la GAN, generas caras nuevas y paseas por el espacio de ruido. Cada tarjeta tiene su botón «i» con la teoría de lo que ves." }
+          {
+            "type": "p",
+            "text": "Es un laboratorio visual para entender una GAN (Generative Adversarial Network): dos redes neuronales que compiten. Una, el generador, inventa caras a partir de ruido aleatorio; la otra, el discriminador, intenta distinguir las caras inventadas de las reales del dataset. De esa competición sale un generador capaz de sintetizar caras de anime de 64×64 que nunca existieron."
+          },
+          {
+            "type": "p",
+            "text": "Frente a las pestañas anteriores, la GAN cambia las reglas del juego: no comprime ni reconstruye nada, y no mide el error píxel a píxel. En vez de eso, deja que una segunda red —el discriminador— juzgue si una cara «parece real». Ese cambio es justo lo que le permite ganar nitidez donde el autoencoder y el VAE salían borrosos."
+          },
+          {
+            "type": "note",
+            "tone": "info",
+            "text": "Aquí entrenas la GAN, generas caras nuevas y paseas por el espacio de ruido. Cada tarjeta tiene su botón «i» con la teoría de lo que ves."
+          }
         ]
       },
       {
@@ -20,14 +30,35 @@
         "accent": "violet",
         "icon": "flow",
         "blocks": [
-          { "type": "p", "text": "El entrenamiento es un juego de dos jugadores con objetivos opuestos. El generador quiere engañar al discriminador; el discriminador quiere no dejarse engañar. Al mejorar uno, presiona al otro a mejorar, y así suben los dos. La metáfora clásica: un falsificador de billetes (G) contra un policía (D) que aprenden a la vez." },
-          { "type": "defs", "items": [
-            { "term": "Generador (G)", "desc": "Recibe un vector de ruido z y produce una imagen. Empieza generando manchas y aprende a dibujar caras plausibles. Aquí tiene ~3,6 M de parámetros." },
-            { "term": "Discriminador (D)", "desc": "Recibe una imagen y decide si es real (del dataset) o falsa (del generador). Es el «crítico» que entrena a G; tiene ~2,8 M de parámetros y produce un único número (logit)." },
-            { "term": "Ruido z", "desc": "Un vector aleatorio z ~ N(0,1) de 100 dimensiones. Es la «semilla» de cada cara: cambia z y cambia la cara." }
-          ] },
-          { "type": "formula", "text": "z ~ N(0,1)  →  G(z) = imagen falsa  →  D(imagen) = ¿real o falsa?" },
-          { "type": "p", "text": "Formalmente es un juego minimax: G minimiza lo que D maximiza. En equilibrio, G genera caras tan buenas que D ya no puede distinguirlas (acierta el 50 %, como tirar una moneda). Ese equilibrio es teórico: en la práctica las dos redes oscilan sin parar, y eso está bien." }
+          {
+            "type": "p",
+            "text": "El entrenamiento es un juego de dos jugadores con objetivos opuestos. El generador quiere engañar al discriminador; el discriminador quiere no dejarse engañar. Al mejorar uno, presiona al otro a mejorar, y así suben los dos. La metáfora clásica: un falsificador de billetes (G) contra un policía (D) que aprenden a la vez."
+          },
+          {
+            "type": "defs",
+            "items": [
+              {
+                "term": "Generador (G)",
+                "desc": "Recibe un vector de ruido z y produce una imagen. Empieza generando manchas y aprende a dibujar caras plausibles. Aquí tiene ~3,6 M de parámetros."
+              },
+              {
+                "term": "Discriminador (D)",
+                "desc": "Recibe una imagen y decide si es real (del dataset) o falsa (del generador). Es el «crítico» que entrena a G; tiene ~2,8 M de parámetros y produce un único número (logit)."
+              },
+              {
+                "term": "Ruido z",
+                "desc": "Un vector aleatorio z ~ N(0,1) de 100 dimensiones. Es la «semilla» de cada cara: cambia z y cambia la cara."
+              }
+            ]
+          },
+          {
+            "type": "formula",
+            "text": "z ~ N(0,1)  →  G(z) = imagen falsa  →  D(imagen) = ¿real o falsa?"
+          },
+          {
+            "type": "p",
+            "text": "Formalmente es un juego minimax: G minimiza lo que D maximiza. En equilibrio, G genera caras tan buenas que D ya no puede distinguirlas (acierta el 50 %, como tirar una moneda). Ese equilibrio es teórico: en la práctica las dos redes oscilan sin parar, y eso está bien."
+          }
         ]
       },
       {
@@ -35,9 +66,19 @@
         "accent": "amber",
         "icon": "read",
         "blocks": [
-          { "type": "p", "text": "A diferencia de un autoencoder o un VAE, una GAN no tiene encoder: no existe ninguna red que tome una imagen y la convierta en su código z. Por eso aquí no hay «reconstruir esta cara» ni «buscar vecinos»: no hay forma directa de preguntar «¿qué z corresponde a esta imagen del dataset?»." },
-          { "type": "note", "tone": "warn", "text": "El camino de la GAN es de una sola dirección: de ruido z a imagen. No vuelve de la imagen al ruido. Esa es la diferencia esencial con el autoencoder y el VAE." },
-          { "type": "p", "text": "Lo que sí podemos hacer es generar desde z nuevos e interpolar entre dos z: caminar por el espacio de ruido y ver cómo cambia la cara que produce el generador. El espacio de ruido hace aquí el papel del «espacio latente» de las otras pestañas." }
+          {
+            "type": "p",
+            "text": "A diferencia de un autoencoder o un VAE, una GAN no tiene encoder: no existe ninguna red que tome una imagen y la convierta en su código z. Por eso aquí no hay «reconstruir esta cara» ni «buscar vecinos»: no hay forma directa de preguntar «¿qué z corresponde a esta imagen del dataset?»."
+          },
+          {
+            "type": "note",
+            "tone": "warn",
+            "text": "El camino de la GAN es de una sola dirección: de ruido z a imagen. No vuelve de la imagen al ruido. Esa es la diferencia esencial con el autoencoder y el VAE."
+          },
+          {
+            "type": "p",
+            "text": "Lo que sí podemos hacer es generar desde z nuevos e interpolar entre dos z: caminar por el espacio de ruido y ver cómo cambia la cara que produce el generador. El espacio de ruido hace aquí el papel del «espacio latente» de las otras pestañas."
+          }
         ]
       },
       {
@@ -45,13 +86,16 @@
         "accent": "green",
         "icon": "sparkles",
         "blocks": [
-          { "type": "list", "items": [
-            "Generar una rejilla de caras nuevas desde ruido aleatorio (con su semilla).",
-            "Interpolar en el espacio de ruido z entre dos puntos y ver la transición.",
-            "Entrenar la GAN y ver en vivo las curvas de pérdida de G y de D.",
-            "Observar en el preview cómo el generador mejora epoch a epoch (mismo z fijo).",
-            "Cambiar la semilla para obtener caras distintas de forma reproducible."
-          ] }
+          {
+            "type": "list",
+            "items": [
+              "Generar una rejilla de caras nuevas desde ruido aleatorio (con su semilla).",
+              "Interpolar en el espacio de ruido z entre dos puntos y ver la transición.",
+              "Entrenar la GAN y ver en vivo las curvas de pérdida de G y de D.",
+              "Observar en el preview cómo el generador mejora epoch a epoch (mismo z fijo).",
+              "Cambiar la semilla para obtener caras distintas de forma reproducible."
+            ]
+          }
         ]
       },
       {
@@ -59,12 +103,22 @@
         "accent": "blue",
         "icon": "book",
         "blocks": [
-          { "type": "p", "text": "Si el VAE generaba caras suaves porque mide el error píxel a píxel, la GAN ataca justo ese problema: sustituye esa medida por el juicio de una red entrenada para detectar lo «falso». A cambio, paga un precio en estabilidad." },
-          { "type": "list", "items": [
-            "Frente al VAE: la GAN suele dar caras más nítidas, pero no tiene encoder ni un latente del que partir desde imágenes reales.",
-            "Frente a la difusión: la GAN genera en un solo paso (rapidísimo), mientras que la difusión necesita muchos pasos pero entrena de forma mucho más estable."
-          ] },
-          { "type": "note", "tone": "info", "text": "Regla mental: GAN = nitidez y velocidad a cambio de un entrenamiento delicado." }
+          {
+            "type": "p",
+            "text": "Si el VAE generaba caras suaves porque mide el error píxel a píxel, la GAN ataca justo ese problema: sustituye esa medida por el juicio de una red entrenada para detectar lo «falso». A cambio, paga un precio en estabilidad."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Frente al VAE: la GAN suele dar caras más nítidas, pero no tiene encoder ni un latente del que partir desde imágenes reales.",
+              "Frente a la difusión: la GAN genera en un solo paso (rapidísimo), mientras que la difusión necesita muchos pasos pero entrena de forma mucho más estable."
+            ]
+          },
+          {
+            "type": "note",
+            "tone": "info",
+            "text": "Regla mental: GAN = nitidez y velocidad a cambio de un entrenamiento delicado."
+          }
         ]
       },
       {
@@ -72,19 +126,40 @@
         "accent": "cyan",
         "icon": "build",
         "blocks": [
-          { "type": "p", "text": "Todo corre en tu máquina. El frontend es React + TypeScript; el backend es FastAPI con PyTorch, que ejecuta el modelo en la GPU de Apple Silicon (MPS) con respaldo a CPU." },
-          { "type": "defs", "items": [
-            { "term": "Modelo", "desc": "DCGAN: generador y discriminador convolucionales (sin capas densas), al estilo Radford et al. 2016. En total ~6,3 M de parámetros (G ~3,6 M + D ~2,8 M)." },
-            { "term": "Entrenamiento", "desc": "Adversarial con BCE sobre logits; se transmite en vivo por SSE y puedes cancelarlo. El demo usa un subconjunto de 15.000 caras y 25 épocas para acotar el tiempo." },
-            { "term": "Generación", "desc": "Se muestrea z ~ N(0,1) y el generador lo decodifica a una imagen 64×64 (hasta 64 caras de golpe)." },
-            { "term": "Dataset", "desc": "huggan/anime-faces, cacheado en local (no se descarga en cada uso)." }
-          ] },
-          { "type": "note", "tone": "success", "text": "Al abrir la app ya hay una GAN entrenada (checkpoint demo). Ojo: es un demo educativo y acotado, así que la calidad es tosca a propósito." }
+          {
+            "type": "p",
+            "text": "Todo corre en tu máquina. El frontend es React + TypeScript; el backend es FastAPI con PyTorch, que ejecuta el modelo en la GPU de Apple Silicon (MPS) con respaldo a CPU."
+          },
+          {
+            "type": "defs",
+            "items": [
+              {
+                "term": "Modelo",
+                "desc": "DCGAN: generador y discriminador convolucionales (sin capas densas), al estilo Radford et al. 2016. En total ~6,3 M de parámetros (G ~3,6 M + D ~2,8 M)."
+              },
+              {
+                "term": "Entrenamiento",
+                "desc": "Adversarial con BCE sobre logits; se transmite en vivo por SSE y puedes cancelarlo. El demo usa un subconjunto de 15.000 caras y 25 épocas para acotar el tiempo."
+              },
+              {
+                "term": "Generación",
+                "desc": "Se muestrea z ~ N(0,1) y el generador lo decodifica a una imagen 64×64 (hasta 64 caras de golpe)."
+              },
+              {
+                "term": "Dataset",
+                "desc": "huggan/anime-faces, cacheado en local (no se descarga en cada uso)."
+              }
+            ]
+          },
+          {
+            "type": "note",
+            "tone": "success",
+            "text": "Al abrir la app ya hay una GAN entrenada (checkpoint demo). Ojo: es un demo educativo y acotado, así que la calidad es tosca a propósito."
+          }
         ]
       }
     ]
   },
-
   "topics": {
     "generacion": {
       "title": "Galería generada",
@@ -97,13 +172,31 @@
           "accent": "pink",
           "icon": "sparkles",
           "blocks": [
-            { "type": "p", "text": "Cada imagen de la rejilla es una cara inventada por el generador. Para crearla, muestreamos un vector de ruido z ~ N(0,1) de 100 dimensiones y se lo pasamos al generador, que lo transforma en una imagen de 64×64. Ninguna de estas caras existe en el dataset: son nuevas." },
-            { "type": "formula", "text": "z ~ N(0,1)   →   imagen = G(z)" },
-            { "type": "p", "text": "El generador no «recuerda» caras concretas: ha aprendido una función que convierte cualquier punto de ruido en una cara. Por eso cada z distinto da una cara distinta, y mover z un poco mueve la cara un poco." },
-            { "type": "defs", "items": [
-              { "term": "nº de muestras", "desc": "Cuántas caras generar a la vez (el tamaño de la rejilla, hasta 64)." },
-              { "term": "seed", "desc": "La semilla del muestreo de z. Con la misma semilla salen exactamente las mismas caras (reproducibilidad)." }
-            ] }
+            {
+              "type": "p",
+              "text": "Cada imagen de la rejilla es una cara inventada por el generador. Para crearla, muestreamos un vector de ruido z ~ N(0,1) de 100 dimensiones y se lo pasamos al generador, que lo transforma en una imagen de 64×64. Ninguna de estas caras existe en el dataset: son nuevas."
+            },
+            {
+              "type": "formula",
+              "text": "z ~ N(0,1)   →   imagen = G(z)"
+            },
+            {
+              "type": "p",
+              "text": "El generador no «recuerda» caras concretas: ha aprendido una función que convierte cualquier punto de ruido en una cara. Por eso cada z distinto da una cara distinta, y mover z un poco mueve la cara un poco."
+            },
+            {
+              "type": "defs",
+              "items": [
+                {
+                  "term": "nº de muestras",
+                  "desc": "Cuántas caras generar a la vez (el tamaño de la rejilla, hasta 64)."
+                },
+                {
+                  "term": "seed",
+                  "desc": "La semilla del muestreo de z. Con la misma semilla salen exactamente las mismas caras (reproducibilidad)."
+                }
+              ]
+            }
           ]
         },
         {
@@ -111,17 +204,23 @@
           "accent": "violet",
           "icon": "read",
           "blocks": [
-            { "type": "list", "items": [
-              "«Generar nuevas» cambia la semilla y produce una tanda distinta de caras.",
-              "Si ves muchas caras casi idénticas, puede haber colapso de modo (ver «Entrenamiento»).",
-              "La nitidez y coherencia dependen de cuánto y cómo se haya entrenado la GAN."
-            ] },
-            { "type": "note", "tone": "info", "text": "Como es un demo acotado, espera caras reconocibles pero imperfectas: ojos asimétricos, artefactos, fondos extraños. Es normal y forma parte de la lección: una GAN entrenada poco tiempo en un Mac no compite con las de los papers, pero sí enseña la dinámica." }
+            {
+              "type": "list",
+              "items": [
+                "«Generar nuevas» cambia la semilla y produce una tanda distinta de caras.",
+                "Si ves muchas caras casi idénticas, puede haber colapso de modo (ver «Entrenamiento»).",
+                "La nitidez y coherencia dependen de cuánto y cómo se haya entrenado la GAN."
+              ]
+            },
+            {
+              "type": "note",
+              "tone": "info",
+              "text": "Como es un demo acotado, espera caras reconocibles pero imperfectas: ojos asimétricos, artefactos, fondos extraños. Es normal y forma parte de la lección: una GAN entrenada poco tiempo en un Mac no compite con las de los papers, pero sí enseña la dinámica."
+            }
           ]
         }
       ]
     },
-
     "interpolacion": {
       "title": "Interpolación en z",
       "subtitle": "Un paseo por el espacio de ruido",
@@ -133,9 +232,18 @@
           "accent": "cyan",
           "icon": "interpolate",
           "blocks": [
-            { "type": "p", "text": "Tomamos dos vectores de ruido al azar, z_A y z_B, y generamos los puntos intermedios mezclándolos poco a poco en línea recta. Cada fotograma es la imagen que produce el generador para un punto del camino entre A y B." },
-            { "type": "formula", "text": "z_α = (1 − α)·z_A + α·z_B,   con α de 0 a 1" },
-            { "type": "p", "text": "Es lo análogo a la interpolación del autoencoder y el VAE, pero con una diferencia clave: como la GAN no tiene encoder, A y B no son caras del dataset, sino dos puntos de ruido. Caminamos por el prior, no por códigos de imágenes reales." }
+            {
+              "type": "p",
+              "text": "Tomamos dos vectores de ruido al azar, z_A y z_B, y generamos los puntos intermedios mezclándolos poco a poco en línea recta. Cada fotograma es la imagen que produce el generador para un punto del camino entre A y B."
+            },
+            {
+              "type": "formula",
+              "text": "z_α = (1 − α)·z_A + α·z_B,   con α de 0 a 1"
+            },
+            {
+              "type": "p",
+              "text": "Es lo análogo a la interpolación del autoencoder y el VAE, pero con una diferencia clave: como la GAN no tiene encoder, A y B no son caras del dataset, sino dos puntos de ruido. Caminamos por el prior, no por códigos de imágenes reales."
+            }
           ]
         },
         {
@@ -143,14 +251,23 @@
           "accent": "blue",
           "icon": "read",
           "blocks": [
-            { "type": "p", "text": "Si la transición es suave —la cara A se convierte en la B pasando por caras plausibles— el generador ha aprendido un espacio de ruido «con sentido», donde moverse un poco cambia la imagen de forma continua. Es la evidencia de que el generador no memoriza, sino que cubre un continuo de caras." },
-            { "type": "note", "tone": "warn", "text": "Si en medio aparecen saltos bruscos o caras rotas, el generador no ha cubierto bien esa zona del espacio de ruido. Es una señal visual de la calidad del entrenamiento, y en un demo corto es esperable verlos." },
-            { "type": "p", "text": "«Nueva interpolación» cambia la semilla y elige otros dos extremos z_A y z_B. La interpolación puede tener hasta 16 fotogramas." }
+            {
+              "type": "p",
+              "text": "Si la transición es suave —la cara A se convierte en la B pasando por caras plausibles— el generador ha aprendido un espacio de ruido «con sentido», donde moverse un poco cambia la imagen de forma continua. Es la evidencia de que el generador no memoriza, sino que cubre un continuo de caras."
+            },
+            {
+              "type": "note",
+              "tone": "warn",
+              "text": "Si en medio aparecen saltos bruscos o caras rotas, el generador no ha cubierto bien esa zona del espacio de ruido. Es una señal visual de la calidad del entrenamiento, y en un demo corto es esperable verlos."
+            },
+            {
+              "type": "p",
+              "text": "«Nueva interpolación» cambia la semilla y elige otros dos extremos z_A y z_B. La interpolación puede tener hasta 16 fotogramas."
+            }
           ]
         }
       ]
     },
-
     "entrenamiento": {
       "title": "Entrenamiento adversarial",
       "subtitle": "El tira y afloja entre G y D, leído en las curvas",
@@ -162,14 +279,27 @@
           "accent": "violet",
           "icon": "flow",
           "blocks": [
-            { "type": "p", "text": "En cada paso (por cada lote de imágenes) se hacen dos actualizaciones. Primero el discriminador: ve un lote de caras reales y otro de falsas (de G) y aprende a separarlas. Después el generador: produce falsas e intenta que el discriminador las clasifique como reales." },
-            { "type": "steps", "items": [
-              "Paso de D: subir la nota a las reales (etiqueta 1) y bajársela a las falsas (etiqueta 0). Aprende a distinguir.",
-              "Paso de G: generar falsas y empujarlas para que D las tome por reales (etiqueta 1). Aprende a engañar.",
-              "Se repite por cada lote, miles de veces: cada red obliga a la otra a mejorar."
-            ] },
-            { "type": "formula", "text": "min_G  max_D   E[log D(x)] + E[log(1 − D(G(z)))]" },
-            { "type": "note", "tone": "info", "text": "Detalle de implementación: las falsas se generan una vez por paso y se reutilizan en ambas actualizaciones; al actualizar D se «desconectan» del generador (detach) para que su error no retoque a G." }
+            {
+              "type": "p",
+              "text": "En cada paso (por cada lote de imágenes) se hacen dos actualizaciones. Primero el discriminador: ve un lote de caras reales y otro de falsas (de G) y aprende a separarlas. Después el generador: produce falsas e intenta que el discriminador las clasifique como reales."
+            },
+            {
+              "type": "steps",
+              "items": [
+                "Paso de D: subir la nota a las reales (etiqueta 1) y bajársela a las falsas (etiqueta 0). Aprende a distinguir.",
+                "Paso de G: generar falsas y empujarlas para que D las tome por reales (etiqueta 1). Aprende a engañar.",
+                "Se repite por cada lote, miles de veces: cada red obliga a la otra a mejorar."
+              ]
+            },
+            {
+              "type": "formula",
+              "text": "min_G  max_D   E[log D(x)] + E[log(1 − D(G(z)))]"
+            },
+            {
+              "type": "note",
+              "tone": "info",
+              "text": "Detalle de implementación: las falsas se generan una vez por paso y se reutilizan en ambas actualizaciones; al actualizar D se «desconectan» del generador (detach) para que su error no retoque a G."
+            }
           ]
         },
         {
@@ -177,12 +307,28 @@
           "accent": "pink",
           "icon": "results",
           "blocks": [
-            { "type": "defs", "items": [
-              { "term": "d_loss", "desc": "Lo mal que lo hace el discriminador. Baja = distingue bien reales de falsas; muy baja = está ganando con holgura." },
-              { "term": "g_loss", "desc": "Lo mal que engaña el generador. Baja = D se traga sus falsas; alta = D las pilla." }
-            ] },
-            { "type": "p", "text": "Lo sano es un equilibrio: ninguna de las dos se va a cero ni se dispara. Las curvas suelen oscilar y «pelearse» —cuando una baja, la otra tiende a subir—, y eso es buena señal: el juego sigue vivo." },
-            { "type": "note", "tone": "warn", "text": "Cuidado al leerlas: en una GAN las pérdidas NO miden calidad de imagen como en el autoencoder. Una g_loss baja no significa «caras bonitas», solo «D se dejó engañar en ese momento». Para juzgar la calidad, mira el preview, no las curvas." }
+            {
+              "type": "defs",
+              "items": [
+                {
+                  "term": "d_loss",
+                  "desc": "Lo mal que lo hace el discriminador. Baja = distingue bien reales de falsas; muy baja = está ganando con holgura."
+                },
+                {
+                  "term": "g_loss",
+                  "desc": "Lo mal que engaña el generador. Baja = D se traga sus falsas; alta = D las pilla."
+                }
+              ]
+            },
+            {
+              "type": "p",
+              "text": "Lo sano es un equilibrio: ninguna de las dos se va a cero ni se dispara. Las curvas suelen oscilar y «pelearse» —cuando una baja, la otra tiende a subir—, y eso es buena señal: el juego sigue vivo."
+            },
+            {
+              "type": "note",
+              "tone": "warn",
+              "text": "Cuidado al leerlas: en una GAN las pérdidas NO miden calidad de imagen como en el autoencoder. Una g_loss baja no significa «caras bonitas», solo «D se dejó engañar en ese momento». Para juzgar la calidad, mira el preview, no las curvas."
+            }
           ]
         },
         {
@@ -190,13 +336,23 @@
           "accent": "amber",
           "icon": "info",
           "blocks": [
-            { "type": "p", "text": "A diferencia de minimizar una sola pérdida (como en el AE/VAE/difusión), aquí dos redes persiguen objetivos opuestos a la vez. No hay un «mínimo» tranquilo al que descender: hay un equilibrio móvil, y mantenerlo es delicado." },
-            { "type": "list", "items": [
-              "Si D se vuelve demasiado bueno, sus gradientes hacia G casi se anulan: G deja de recibir pistas útiles y se estanca.",
-              "Si G encuentra un truco que engaña a D, puede explotarlo y dejar de explorar (colapso de modo).",
-              "Pequeños cambios de learning_rate desequilibran el juego: por eso en GAN el lr es más sensible que en los otros modelos."
-            ] },
-            { "type": "note", "tone": "warn", "text": "Si d_loss cae casi a 0 y g_loss se dispara, el discriminador ha aplastado al generador y este deja de aprender. Es la inestabilidad típica de las GAN, y aquí la puedes ver pasar en directo." }
+            {
+              "type": "p",
+              "text": "A diferencia de minimizar una sola pérdida (como en el AE/VAE/difusión), aquí dos redes persiguen objetivos opuestos a la vez. No hay un «mínimo» tranquilo al que descender: hay un equilibrio móvil, y mantenerlo es delicado."
+            },
+            {
+              "type": "list",
+              "items": [
+                "Si D se vuelve demasiado bueno, sus gradientes hacia G casi se anulan: G deja de recibir pistas útiles y se estanca.",
+                "Si G encuentra un truco que engaña a D, puede explotarlo y dejar de explorar (colapso de modo).",
+                "Pequeños cambios de learning_rate desequilibran el juego: por eso en GAN el lr es más sensible que en los otros modelos."
+              ]
+            },
+            {
+              "type": "note",
+              "tone": "warn",
+              "text": "Si d_loss cae casi a 0 y g_loss se dispara, el discriminador ha aplastado al generador y este deja de aprender. Es la inestabilidad típica de las GAN, y aquí la puedes ver pasar en directo."
+            }
           ]
         },
         {
@@ -204,14 +360,23 @@
           "accent": "amber",
           "icon": "image",
           "blocks": [
-            { "type": "p", "text": "El colapso de modo ocurre cuando el generador descubre unas pocas caras que engañan a D y se limita a repetirlas: pierde variedad. Lo detectas porque las muestras se parecen demasiado entre sí, aunque vengan de ruidos z distintos." },
-            { "type": "p", "text": "Durante el entrenamiento, el preview muestra siempre las mismas 6 caras (un z fijo) epoch a epoch. Así ves nacer el detalle: de manchas de color a rasgos reconocibles. Si todas convergen a lo mismo, sospecha colapso." },
-            { "type": "note", "tone": "info", "text": "Modo rápido: pocas epochs sobre un subconjunto de 6.000 caras, para ver la dinámica en segundos. Modo completo: el dataset entero y las épocas que marques (varios minutos)." }
+            {
+              "type": "p",
+              "text": "El colapso de modo ocurre cuando el generador descubre unas pocas caras que engañan a D y se limita a repetirlas: pierde variedad. Lo detectas porque las muestras se parecen demasiado entre sí, aunque vengan de ruidos z distintos."
+            },
+            {
+              "type": "p",
+              "text": "Durante el entrenamiento, el preview muestra siempre las mismas 6 caras (un z fijo) epoch a epoch. Así ves nacer el detalle: de manchas de color a rasgos reconocibles. Si todas convergen a lo mismo, sospecha colapso."
+            },
+            {
+              "type": "note",
+              "tone": "info",
+              "text": "Modo rápido: pocas epochs sobre un subconjunto de 6.000 caras, para ver la dinámica en segundos. Modo completo: el dataset entero y las épocas que marques (varios minutos)."
+            }
           ]
         }
       ]
     },
-
     "parametros": {
       "title": "Parámetros del modelo",
       "subtitle": "Qué controla cada ajuste del entrenamiento",
@@ -223,12 +388,27 @@
           "accent": "amber",
           "icon": "sliders",
           "blocks": [
-            { "type": "defs", "items": [
-              { "term": "z_dim", "desc": "Tamaño del vector de ruido (por defecto 100; rango 16–256). Más dimensiones = más «espacio» para variar las caras, pero más difícil de cubrir bien. Cambiarlo reconstruye el generador desde cero (requiere reentrenar)." },
-              { "term": "learning_rate", "desc": "Cuánto ajustan G y D en cada paso (por defecto 2e-4). En GAN es delicado: muy alto desestabiliza el juego; muy bajo lo vuelve lentísimo. 2e-4 es el valor clásico de DCGAN." },
-              { "term": "epochs", "desc": "Cuántas veces se recorre el conjunto de entrenamiento (por defecto 30). Más epochs suelen mejorar la calidad, hasta que el juego se estanca o se desestabiliza." },
-              { "term": "batch_size", "desc": "Cuántas imágenes por paso (por defecto 128). Lotes más grandes estabilizan algo las estadísticas del BatchNorm, a cambio de más memoria." }
-            ] }
+            {
+              "type": "defs",
+              "items": [
+                {
+                  "term": "z_dim",
+                  "desc": "Tamaño del vector de ruido (por defecto 100; rango 16–256). Más dimensiones = más «espacio» para variar las caras, pero más difícil de cubrir bien. Cambiarlo reconstruye el generador desde cero (requiere reentrenar)."
+                },
+                {
+                  "term": "learning_rate",
+                  "desc": "Cuánto ajustan G y D en cada paso (por defecto 2e-4). En GAN es delicado: muy alto desestabiliza el juego; muy bajo lo vuelve lentísimo. 2e-4 es el valor clásico de DCGAN."
+                },
+                {
+                  "term": "epochs",
+                  "desc": "Cuántas veces se recorre el conjunto de entrenamiento (por defecto 30). Más epochs suelen mejorar la calidad, hasta que el juego se estanca o se desestabiliza."
+                },
+                {
+                  "term": "batch_size",
+                  "desc": "Cuántas imágenes por paso (por defecto 128). Lotes más grandes estabilizan algo las estadísticas del BatchNorm, a cambio de más memoria."
+                }
+              ]
+            }
           ]
         },
         {
@@ -236,8 +416,15 @@
           "accent": "pink",
           "icon": "info",
           "blocks": [
-            { "type": "p", "text": "Estos valores definen la red o cómo aprende. Cambiarlos no afecta al modelo ya entrenado: hasta que no pulses «Entrenar», sigues viendo el generador anterior. Por eso aparece el aviso «cambios sin aplicar»." },
-            { "type": "note", "tone": "info", "text": "La semilla, en cambio, es interactiva para generar e interpolar: cambia las caras al instante sin reentrenar. Solo fija el ruido, no el modelo." }
+            {
+              "type": "p",
+              "text": "Estos valores definen la red o cómo aprende. Cambiarlos no afecta al modelo ya entrenado: hasta que no pulses «Entrenar», sigues viendo el generador anterior. Por eso aparece el aviso «cambios sin aplicar»."
+            },
+            {
+              "type": "note",
+              "tone": "info",
+              "text": "La semilla, en cambio, es interactiva para generar e interpolar: cambia las caras al instante sin reentrenar. Solo fija el ruido, no el modelo."
+            }
           ]
         },
         {
@@ -245,18 +432,107 @@
           "accent": "cyan",
           "icon": "build",
           "blocks": [
-            { "type": "p", "text": "Las GAN son famosas por ser inestables. Este demo ya usa varios trucos estándar de DCGAN para que entrenen razonablemente; no son opciones de la UI, sino parte del modelo." },
-            { "type": "list", "items": [
-              "BatchNorm + ReLU en el generador; Conv stride-2 + LeakyReLU(0,2) en el discriminador, sin capas densas (la receta DCGAN).",
-              "Inicialización de pesos con N(0, 0,02), como en el paper original.",
-              "Optimizador Adam con betas (0,5, 0,999), no las de por defecto: amortiguan las oscilaciones del juego.",
-              "Pérdida «non-saturating» para G: en vez de minimizar log(1 − D(G(z))), maximiza log D(G(z)), que da gradientes más fuertes cuando G aún es malo y D lo pilla fácil.",
-              "Salida del generador en [-1,1] (tanh) y datos normalizados al mismo rango."
-            ] },
-            { "type": "note", "tone": "info", "text": "El discriminador devuelve un «logit» (un número sin acotar) y la pérdida es BCE con logits, más estable numéricamente que aplicar una sigmoide antes." }
+            {
+              "type": "p",
+              "text": "Las GAN son famosas por ser inestables. Este demo ya usa varios trucos estándar de DCGAN para que entrenen razonablemente; no son opciones de la UI, sino parte del modelo."
+            },
+            {
+              "type": "list",
+              "items": [
+                "BatchNorm + ReLU en el generador; Conv stride-2 + LeakyReLU(0,2) en el discriminador, sin capas densas (la receta DCGAN).",
+                "Inicialización de pesos con N(0, 0,02), como en el paper original.",
+                "Optimizador Adam con betas (0,5, 0,999), no las de por defecto: amortiguan las oscilaciones del juego.",
+                "Pérdida «non-saturating» para G: en vez de minimizar log(1 − D(G(z))), maximiza log D(G(z)), que da gradientes más fuertes cuando G aún es malo y D lo pilla fácil.",
+                "Salida del generador en [-1,1] (tanh) y datos normalizados al mismo rango."
+              ]
+            },
+            {
+              "type": "note",
+              "tone": "info",
+              "text": "El discriminador devuelve un «logit» (un número sin acotar) y la pérdida es BCE con logits, más estable numéricamente que aplicar una sigmoide antes."
+            }
           ]
         }
       ]
+    }
+  },
+  "hints": {
+    "seed_train": {
+      "text": "Se aplica al próximo entrenamiento: misma semilla + mismos parámetros = mismo resultado (reproducibilidad)."
+    },
+    "early_stop": {
+      "text": "Se aplica al próximo entrenamiento: si la pérdida no mejora durante 5 epochs, para solo y ahorra tiempo."
+    },
+    "cancel": {
+      "text": "Detiene el entrenamiento en curso. El modelo que hubiera antes sigue disponible.",
+      "kind": "action"
+    },
+    "structure": {
+      "text": "Abre el esquema capa a capa de la variante actual. Solo visualiza: no entrena nada.",
+      "kind": "action"
+    },
+    "arch": {
+      "text": "Variante: Básico (DCGAN clásico, la receta v3) o Grande (más canales y una capa extra de refinado).",
+      "kind": "retrain"
+    },
+    "z_dim": {
+      "text": "Dimensión del ruido de entrada del generador (su «espacio de ideas»). 100 es el clásico de DCGAN.",
+      "kind": "retrain"
+    },
+    "lr_g": {
+      "text": "Velocidad de aprendizaje del generador. El A/B del estudio v3 ganó con lr_G = lr_D = 2e-4.",
+      "kind": "retrain"
+    },
+    "lr_d": {
+      "text": "Velocidad de aprendizaje del discriminador. Sube lr_D por encima de lr_G (TTUR) para ver su efecto en el equilibrio del duelo.",
+      "kind": "retrain"
+    },
+    "epochs": {
+      "text": "La receta v3 usa 60: los estabilizadores (EMA, DiffAugment) rinden en entrenamientos largos, no en sprints.",
+      "kind": "retrain"
+    },
+    "mode": {
+      "text": "Se aplica al próximo entrenamiento: Rápido usa 6.000 caras (~4 min); Completo las 43.102 (~22 min, la receta v3)."
+    },
+    "train": {
+      "text": "Lanza el duelo G contra D con los valores actuales: verás ambas curvas y la vista previa por epoch (muestreada con pesos EMA). No toca el checkpoint demo.",
+      "kind": "action"
+    },
+    "reset": {
+      "text": "Restaura la receta óptima del estudio v3 (lrs iguales 2e-4 · 60 epochs · estabilizadores activos).",
+      "kind": "action"
+    },
+    "gen_n": {
+      "text": "Cuántas caras generar en la galería.",
+      "kind": "live"
+    },
+    "gen_seed": {
+      "text": "Semilla del ruido z: la misma semilla genera exactamente las mismas caras.",
+      "kind": "live"
+    },
+    "generate": {
+      "text": "El generador convierte ruido z en caras nuevas (ninguna existe en el dataset). Inmediato.",
+      "kind": "action"
+    },
+    "gen_shuffle": {
+      "text": "Cambia la semilla al azar y regenera la galería: caras distintas cada vez.",
+      "kind": "action"
+    },
+    "interp_steps": {
+      "text": "Fotogramas del paseo entre dos puntos del espacio de ruido: más pasos, morphing más suave.",
+      "kind": "live"
+    },
+    "interp_seed": {
+      "text": "Semilla que elige los dos extremos del paseo. La misma semilla, el mismo recorrido.",
+      "kind": "live"
+    },
+    "interp_btn": {
+      "text": "Interpola entre dos z al azar y decodifica el camino: morphing entre dos caras inventadas. Inmediato.",
+      "kind": "action"
+    },
+    "interp_shuffle": {
+      "text": "Nueva pareja de extremos al azar para el paseo.",
+      "kind": "action"
     }
   }
 }

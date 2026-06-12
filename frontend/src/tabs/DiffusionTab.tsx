@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Button, Card, CardHeader, SegmentedControl, Skeleton, Slider, StatusLine, Tag } from '../components/ui'
+import { Button, Card, CardHeader, SegmentedControl, Skeleton, Slider, StatusLine, Tag, Hint } from '../components/ui'
 import { TrainingChart } from '../components/lab/TrainingChart'
 import { LayersIcon, PlayIcon, RefreshIcon, SparklesIcon } from '../lib/icons'
 import { ArchitectureModal } from '../components/lab/ArchitectureModal'
@@ -21,6 +21,7 @@ import diffusionContent from '../content/diffusion.json'
 import type { ModelContent } from '../content/types'
 
 const C = diffusionContent as unknown as ModelContent
+const H = (C.hints ?? {}) as NonNullable<ModelContent['hints']>
 
 const LR_VALUES = [0.00005, 0.0001, 0.0002, 0.0005, 0.001]
 const nearestLrIdx = (lr: number) => {
@@ -338,9 +339,10 @@ export function DiffusionTab() {
             )}
 
             <div className="mt-[16px] grid grid-cols-1 gap-x-[18px] gap-y-[2px] sm:grid-cols-3">
-              <Slider label="nº muestras" value={genN} min={1} max={6} onChange={setGenN} />
+              <Slider hint={H.gen_n} label="nº muestras" value={genN} min={1} max={6} onChange={setGenN} />
               <Slider
                 label="pasos de muestreo"
+                hint={H.gen_steps}
                 value={genSteps}
                 min={5}
                 max={status?.timesteps ?? 200}
@@ -349,7 +351,7 @@ export function DiffusionTab() {
               />
               <div className="gm-ctrl">
                 <div className="row">
-                  <span className="name">seed</span>
+                  <span className="name">seed <Hint hint={H.gen_seed} /></span>
                   <input
                     type="number"
                     className="gm-val"
@@ -365,7 +367,7 @@ export function DiffusionTab() {
               variant="primary"
               full
               icon={<SparklesIcon />}
-              onClick={() => doGenerate()}
+              hint={H.generate} onClick={() => doGenerate()}
               disabled={!usable || busy || training}
               className="mt-[10px]"
             >
@@ -374,7 +376,7 @@ export function DiffusionTab() {
             <Button
               full
               icon={<RefreshIcon />}
-              onClick={newGenSeed}
+              hint={H.gen_shuffle} onClick={newGenSeed}
               disabled={!usable || busy || training}
               className="mt-[10px]"
             >
@@ -444,9 +446,10 @@ export function DiffusionTab() {
             )}
 
             <div className="mt-[16px] grid grid-cols-1 gap-x-[18px] gap-y-[2px] sm:grid-cols-3">
-              <Slider label="instantáneas" value={snapshots} min={3} max={12} onChange={setSnapshots} />
+              <Slider hint={H.traj_snapshots} label="instantáneas" value={snapshots} min={3} max={12} onChange={setSnapshots} />
               <Slider
                 label="pasos de muestreo"
+                hint={H.traj_steps}
                 value={trajSteps}
                 min={5}
                 max={status?.timesteps ?? 200}
@@ -455,7 +458,7 @@ export function DiffusionTab() {
               />
               <div className="gm-ctrl">
                 <div className="row">
-                  <span className="name">seed</span>
+                  <span className="name">seed <Hint hint={H.traj_seed} /></span>
                   <input
                     type="number"
                     className="gm-val"
@@ -471,7 +474,7 @@ export function DiffusionTab() {
               variant="primary"
               full
               icon={<PlayIcon />}
-              onClick={() => doTrajectory()}
+              hint={H.trajectory} onClick={() => doTrajectory()}
               disabled={!usable || busy || training}
               className="mt-[10px]"
             >
@@ -480,7 +483,7 @@ export function DiffusionTab() {
             <Button
               full
               icon={<RefreshIcon />}
-              onClick={newTrajSeed}
+              hint={H.traj_shuffle} onClick={newTrajSeed}
               disabled={!usable || busy || training}
               className="mt-[10px]"
             >
@@ -504,7 +507,7 @@ export function DiffusionTab() {
 
           <div className="gm-ctrl">
             <div className="row">
-              <span className="name">arquitectura</span>
+              <span className="name">arquitectura <Hint hint={H.arch} /></span>
             </div>
             <SegmentedControl
               value={arch}
@@ -530,24 +533,25 @@ export function DiffusionTab() {
 
           <Slider
             label="learning_rate"
+            hint={H.learning_rate}
             value={lrIdx}
             min={0}
             max={LR_VALUES.length - 1}
             onChange={setLrIdx}
             format={() => lr}
           />
-          <Slider label="epochs" value={epochs} min={1} max={100} onChange={setEpochs} />
+          <Slider hint={H.epochs} label="epochs" value={epochs} min={1} max={100} onChange={setEpochs} />
 
           <div className="gm-ctrl">
             <div className="row" style={{ marginBottom: 0 }}>
-              <span className="name">timesteps (T)</span>
+              <span className="name">timesteps (T) <Hint hint={H.timesteps} /></span>
               <span className="gm-val">{status?.timesteps ?? '—'}</span>
             </div>
           </div>
 
           <div className="gm-ctrl">
             <div className="row">
-              <span className="name">seed</span>
+              <span className="name">seed <Hint hint={H.seed_train} /></span>
               <input
                 type="number"
                 className="gm-val"
@@ -562,7 +566,7 @@ export function DiffusionTab() {
             variant="ghost"
             full
             icon={<RefreshIcon />}
-            onClick={resetDefaults}
+            hint={H.reset} onClick={resetDefaults}
             disabled={training}
             className="mb-[11px]"
           >
@@ -596,7 +600,7 @@ export function DiffusionTab() {
 
           <div className="gm-ctrl">
             <div className="row" style={{ marginBottom: 0 }}>
-              <span className="name">early stop</span>
+              <span className="name">early stop <Hint hint={H.early_stop} /></span>
               <SegmentedControl
                 value={earlyStop ? 'on' : 'off'}
                 onChange={(v) => setEarlyStop(v === 'on')}
@@ -609,6 +613,12 @@ export function DiffusionTab() {
           </div>
 
           <div className="mb-[11px]">
+            <div className="row">
+              <span className="name">
+                modo de entrenamiento
+                <Hint hint={H.mode} />
+              </span>
+            </div>
             <SegmentedControl
               value={mode}
               onChange={setMode}
@@ -620,11 +630,11 @@ export function DiffusionTab() {
           </div>
 
           {training ? (
-            <Button variant="primary" full onClick={onCancel}>
+            <Button variant="primary" full hint={H.cancel} onClick={onCancel}>
               Cancelar entrenamiento
             </Button>
           ) : (
-            <Button variant="primary" full icon={<PlayIcon />} onClick={onTrain} disabled={busy}>
+            <Button variant="primary" full icon={<PlayIcon />} hint={H.train} onClick={onTrain} disabled={busy}>
               Entrenar
             </Button>
           )}
@@ -632,7 +642,7 @@ export function DiffusionTab() {
           <Button
             full
             icon={<LayersIcon />}
-            onClick={() => setArchOpen(true)}
+            hint={H.structure} onClick={() => setArchOpen(true)}
             className="mt-[11px]"
           >
             Ver la estructura

@@ -10,9 +10,19 @@
         "accent": "violet",
         "icon": "info",
         "blocks": [
-          { "type": "p", "text": "Es un laboratorio visual para entender un modelo de difusión (DDPM). A diferencia de un autoencoder, este modelo no comprime imágenes: aprende a GENERAR. Parte de ruido puro (como una tele sin señal) y lo va «limpiando» paso a paso hasta que aparece una cara. Aquí lo entrenas, generas caras nuevas y, sobre todo, ves el proceso de difusión fotograma a fotograma." },
-          { "type": "p", "text": "Es el cuarto y último enfoque de la serie, y hoy es el que domina la generación de imágenes (de él derivan Stable Diffusion, DALL·E, Imagen…). La versión de aquí es minúscula y educativa, pero la idea es exactamente la misma que en esos sistemas." },
-          { "type": "note", "tone": "info", "text": "No necesitas saber matemáticas para usarla. Cada tarjeta tiene su propio botón «i» que explica qué estás viendo." }
+          {
+            "type": "p",
+            "text": "Es un laboratorio visual para entender un modelo de difusión (DDPM). A diferencia de un autoencoder, este modelo no comprime imágenes: aprende a GENERAR. Parte de ruido puro (como una tele sin señal) y lo va «limpiando» paso a paso hasta que aparece una cara. Aquí lo entrenas, generas caras nuevas y, sobre todo, ves el proceso de difusión fotograma a fotograma."
+          },
+          {
+            "type": "p",
+            "text": "Es el cuarto y último enfoque de la serie, y hoy es el que domina la generación de imágenes (de él derivan Stable Diffusion, DALL·E, Imagen…). La versión de aquí es minúscula y educativa, pero la idea es exactamente la misma que en esos sistemas."
+          },
+          {
+            "type": "note",
+            "tone": "info",
+            "text": "No necesitas saber matemáticas para usarla. Cada tarjeta tiene su propio botón «i» que explica qué estás viendo."
+          }
         ]
       },
       {
@@ -20,13 +30,31 @@
         "accent": "blue",
         "icon": "sparkles",
         "blocks": [
-          { "type": "p", "text": "Si sabes deshacer un poco de ruido, puedes deshacerlo del todo. Entrenamos una red para que, dada una imagen con algo de ruido, prediga ese ruido y lo reste. Repitiendo esa operación muchas veces, una pantalla de ruido se convierte en una cara." },
-          { "type": "p", "text": "La gracia es que predecir «cuánto ruido hay aquí» es una tarea fácil y estable de aprender (es una simple regresión con MSE), mientras que «dibuja una cara de cero» sería dificilísimo. La difusión convierte un problema imposible en muchos problemas fáciles encadenados." },
-          { "type": "defs", "items": [
-            { "term": "Proceso forward", "desc": "Añadir ruido gaussiano a una imagen, poco a poco, hasta que solo queda ruido. No tiene parámetros: es fijo, lo define el schedule." },
-            { "term": "Proceso reverse", "desc": "Lo que aprende la red: quitar ese ruido paso a paso, de ruido puro a imagen." },
-            { "term": "t (el paso)", "desc": "Indica cuánto ruido hay. t alto = casi todo ruido; t bajo = casi imagen limpia. La red recibe t para saber en qué punto del proceso está." }
-          ] }
+          {
+            "type": "p",
+            "text": "Si sabes deshacer un poco de ruido, puedes deshacerlo del todo. Entrenamos una red para que, dada una imagen con algo de ruido, prediga ese ruido y lo reste. Repitiendo esa operación muchas veces, una pantalla de ruido se convierte en una cara."
+          },
+          {
+            "type": "p",
+            "text": "La gracia es que predecir «cuánto ruido hay aquí» es una tarea fácil y estable de aprender (es una simple regresión con MSE), mientras que «dibuja una cara de cero» sería dificilísimo. La difusión convierte un problema imposible en muchos problemas fáciles encadenados."
+          },
+          {
+            "type": "defs",
+            "items": [
+              {
+                "term": "Proceso forward",
+                "desc": "Añadir ruido gaussiano a una imagen, poco a poco, hasta que solo queda ruido. No tiene parámetros: es fijo, lo define el schedule."
+              },
+              {
+                "term": "Proceso reverse",
+                "desc": "Lo que aprende la red: quitar ese ruido paso a paso, de ruido puro a imagen."
+              },
+              {
+                "term": "t (el paso)",
+                "desc": "Indica cuánto ruido hay. t alto = casi todo ruido; t bajo = casi imagen limpia. La red recibe t para saber en qué punto del proceso está."
+              }
+            ]
+          }
         ]
       },
       {
@@ -34,13 +62,16 @@
         "accent": "pink",
         "icon": "sparkles",
         "blocks": [
-          { "type": "list", "items": [
-            "Generar una galería de caras nuevas a partir de ruido aleatorio.",
-            "Ver el «Proceso de difusión»: la tira de instantáneas de ruido puro → cara.",
-            "Cambiar la semilla para obtener caras y trayectorias distintas.",
-            "Ajustar los pasos de muestreo: más pasos = mejor, pero más lento.",
-            "Entrenar el modelo y ver la curva de pérdida (el error de predicción del ruido) bajar en vivo."
-          ] }
+          {
+            "type": "list",
+            "items": [
+              "Generar una galería de caras nuevas a partir de ruido aleatorio.",
+              "Ver el «Proceso de difusión»: la tira de instantáneas de ruido puro → cara.",
+              "Cambiar la semilla para obtener caras y trayectorias distintas.",
+              "Ajustar los pasos de muestreo: más pasos = mejor, pero más lento.",
+              "Entrenar el modelo y ver la curva de pérdida (el error de predicción del ruido) bajar en vivo."
+            ]
+          }
         ]
       },
       {
@@ -48,13 +79,23 @@
         "accent": "green",
         "icon": "book",
         "blocks": [
-          { "type": "p", "text": "La difusión y la GAN son las dos grandes formas de generar imágenes de alta calidad, y resuelven el mismo problema con filosofías opuestas." },
-          { "type": "list", "items": [
-            "Frente a la GAN: la difusión entrena de forma mucho más estable (una sola pérdida que minimizar, sin juego adversarial) y da más diversidad, pero su muestreo es lento (muchos pasos en vez de uno).",
-            "Frente al VAE: comparte la idea de muestrear ruido y decodificarlo, pero en vez de un solo paso de decoder aplica decenas de pasos de limpieza, lo que le da mucha más calidad.",
-            "Frente al autoencoder: no hay compresión ni encoder; el «código» es directamente el ruido inicial."
-          ] },
-          { "type": "note", "tone": "info", "text": "Regla mental: difusión = máxima calidad y diversidad, entrenamiento estable, a cambio de un muestreo lento." }
+          {
+            "type": "p",
+            "text": "La difusión y la GAN son las dos grandes formas de generar imágenes de alta calidad, y resuelven el mismo problema con filosofías opuestas."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Frente a la GAN: la difusión entrena de forma mucho más estable (una sola pérdida que minimizar, sin juego adversarial) y da más diversidad, pero su muestreo es lento (muchos pasos en vez de uno).",
+              "Frente al VAE: comparte la idea de muestrear ruido y decodificarlo, pero en vez de un solo paso de decoder aplica decenas de pasos de limpieza, lo que le da mucha más calidad.",
+              "Frente al autoencoder: no hay compresión ni encoder; el «código» es directamente el ruido inicial."
+            ]
+          },
+          {
+            "type": "note",
+            "tone": "info",
+            "text": "Regla mental: difusión = máxima calidad y diversidad, entrenamiento estable, a cambio de un muestreo lento."
+          }
         ]
       },
       {
@@ -62,20 +103,44 @@
         "accent": "cyan",
         "icon": "build",
         "blocks": [
-          { "type": "p", "text": "Todo corre en tu máquina. El frontend es React + TypeScript; el backend es FastAPI con PyTorch, ejecutando el modelo en la GPU de Apple Silicon (MPS) con respaldo a CPU." },
-          { "type": "defs", "items": [
-            { "term": "Modelo", "desc": "Una UNet pequeña (~3,0 M de parámetros) condicionada en el tiempo t con un embedding sinusoidal, que predice el ruido ε. Usa bloques residuales, GroupNorm y activación SiLU." },
-            { "term": "Resolución", "desc": "El modelo trabaja a 32×32 por velocidad; las imágenes se reescalan a 64×64 para mostrarlas." },
-            { "term": "Schedule y T", "desc": "Proceso de T=200 pasos con schedule cosine por defecto (más suave que el lineal a baja resolución), y EMA de pesos para muestrear: ambos mejoran mucho la calidad." },
-            { "term": "Muestreo", "desc": "Se submuestrean pasos del proceso (p. ej. 50–80 de 200) para que generar sea rápido e interactivo." },
-            { "term": "Dataset", "desc": "huggan/anime-faces, cacheado en local." }
-          ] },
-          { "type": "note", "tone": "warn", "text": "La calidad es modesta a propósito: es un modelo pequeño y educativo, pensado para enseñar la dinámica, no para competir en realismo." }
+          {
+            "type": "p",
+            "text": "Todo corre en tu máquina. El frontend es React + TypeScript; el backend es FastAPI con PyTorch, ejecutando el modelo en la GPU de Apple Silicon (MPS) con respaldo a CPU."
+          },
+          {
+            "type": "defs",
+            "items": [
+              {
+                "term": "Modelo",
+                "desc": "Una UNet pequeña (~3,0 M de parámetros) condicionada en el tiempo t con un embedding sinusoidal, que predice el ruido ε. Usa bloques residuales, GroupNorm y activación SiLU."
+              },
+              {
+                "term": "Resolución",
+                "desc": "El modelo trabaja a 32×32 por velocidad; las imágenes se reescalan a 64×64 para mostrarlas."
+              },
+              {
+                "term": "Schedule y T",
+                "desc": "Proceso de T=200 pasos con schedule cosine por defecto (más suave que el lineal a baja resolución), y EMA de pesos para muestrear: ambos mejoran mucho la calidad."
+              },
+              {
+                "term": "Muestreo",
+                "desc": "Se submuestrean pasos del proceso (p. ej. 50–80 de 200) para que generar sea rápido e interactivo."
+              },
+              {
+                "term": "Dataset",
+                "desc": "huggan/anime-faces, cacheado en local."
+              }
+            ]
+          },
+          {
+            "type": "note",
+            "tone": "warn",
+            "text": "La calidad es modesta a propósito: es un modelo pequeño y educativo, pensado para enseñar la dinámica, no para competir en realismo."
+          }
         ]
       }
     ]
   },
-
   "topics": {
     "generacion": {
       "title": "Galería generada",
@@ -87,13 +152,31 @@
           "accent": "pink",
           "icon": "sparkles",
           "blocks": [
-            { "type": "p", "text": "Cada cara empieza siendo ruido aleatorio puro: una imagen 32×32 donde cada píxel es azar. El modelo aplica su proceso reverse —quitar un poco de ruido, una y otra vez— hasta convertir ese ruido en una cara plausible, que luego se reescala a 64×64 para mostrarla. Ninguna de estas caras existe en el dataset: son nuevas." },
-            { "type": "p", "text": "El muestreo usa los pesos EMA del modelo (una media suavizada de los pesos durante el entrenamiento), que dan caras notablemente mejores que los pesos «crudos»." },
-            { "type": "defs", "items": [
-              { "term": "nº muestras", "desc": "Cuántas caras generar a la vez en la rejilla (hasta 16; cada una requiere todo el bucle de denoising, por eso el tope es bajo)." },
-              { "term": "seed", "desc": "La semilla del ruido inicial. La misma semilla da exactamente las mismas caras: reproducibilidad." },
-              { "term": "pasos de muestreo", "desc": "Cuántos pasos de denoising se dan (por defecto 80, de los 200 del proceso). Más pasos = transición más fina = mejor calidad, pero más lento." }
-            ] }
+            {
+              "type": "p",
+              "text": "Cada cara empieza siendo ruido aleatorio puro: una imagen 32×32 donde cada píxel es azar. El modelo aplica su proceso reverse —quitar un poco de ruido, una y otra vez— hasta convertir ese ruido en una cara plausible, que luego se reescala a 64×64 para mostrarla. Ninguna de estas caras existe en el dataset: son nuevas."
+            },
+            {
+              "type": "p",
+              "text": "El muestreo usa los pesos EMA del modelo (una media suavizada de los pesos durante el entrenamiento), que dan caras notablemente mejores que los pesos «crudos»."
+            },
+            {
+              "type": "defs",
+              "items": [
+                {
+                  "term": "nº muestras",
+                  "desc": "Cuántas caras generar a la vez en la rejilla (hasta 16; cada una requiere todo el bucle de denoising, por eso el tope es bajo)."
+                },
+                {
+                  "term": "seed",
+                  "desc": "La semilla del ruido inicial. La misma semilla da exactamente las mismas caras: reproducibilidad."
+                },
+                {
+                  "term": "pasos de muestreo",
+                  "desc": "Cuántos pasos de denoising se dan (por defecto 80, de los 200 del proceso). Más pasos = transición más fina = mejor calidad, pero más lento."
+                }
+              ]
+            }
           ]
         },
         {
@@ -101,13 +184,19 @@
           "accent": "violet",
           "icon": "read",
           "blocks": [
-            { "type": "note", "tone": "info", "text": "Si subes los pasos de muestreo verás caras algo más limpias; si los bajas, generar es casi instantáneo pero las caras salen más toscas. Es el compromiso central de la difusión: calidad contra tiempo." },
-            { "type": "p", "text": "Pulsa «Generar nuevas» para muestrear otra tanda. Cambiar la semilla cambia por completo el conjunto; mantenerla y subir los pasos te deja comparar la misma cara a distinta calidad, que es un experimento muy revelador." }
+            {
+              "type": "note",
+              "tone": "info",
+              "text": "Si subes los pasos de muestreo verás caras algo más limpias; si los bajas, generar es casi instantáneo pero las caras salen más toscas. Es el compromiso central de la difusión: calidad contra tiempo."
+            },
+            {
+              "type": "p",
+              "text": "Pulsa «Generar nuevas» para muestrear otra tanda. Cambiar la semilla cambia por completo el conjunto; mantenerla y subir los pasos te deja comparar la misma cara a distinta calidad, que es un experimento muy revelador."
+            }
           ]
         }
       ]
     },
-
     "proceso": {
       "title": "Proceso de difusión",
       "badge": "La trayectoria",
@@ -118,14 +207,24 @@
           "accent": "violet",
           "icon": "interpolate",
           "blocks": [
-            { "type": "p", "text": "Esta es la tarjeta estrella. Cada instantánea es la misma imagen en un momento del muestreo, de izquierda (ruido puro, t alto) a derecha (cara limpia, t = 0). Muestra, literalmente, cómo el modelo «esculpe» una cara a partir del ruido." },
-            { "type": "steps", "items": [
-              "Empezamos con ruido gaussiano puro (la primera instantánea).",
-              "En cada paso, la red predice el ruido presente y lo resta un poco.",
-              "Poco a poco emergen formas: primero manchas de color y la silueta, luego los rasgos.",
-              "Tras todos los pasos, queda una cara limpia (la última instantánea)."
-            ] },
-            { "type": "note", "tone": "info", "text": "Léelo de izquierda a derecha como una «película al revés» del proceso forward: donde el forward iría añadiendo ruido a una cara, aquí lo vamos quitando." }
+            {
+              "type": "p",
+              "text": "Esta es la tarjeta estrella. Cada instantánea es la misma imagen en un momento del muestreo, de izquierda (ruido puro, t alto) a derecha (cara limpia, t = 0). Muestra, literalmente, cómo el modelo «esculpe» una cara a partir del ruido."
+            },
+            {
+              "type": "steps",
+              "items": [
+                "Empezamos con ruido gaussiano puro (la primera instantánea).",
+                "En cada paso, la red predice el ruido presente y lo resta un poco.",
+                "Poco a poco emergen formas: primero manchas de color y la silueta, luego los rasgos.",
+                "Tras todos los pasos, queda una cara limpia (la última instantánea)."
+              ]
+            },
+            {
+              "type": "note",
+              "tone": "info",
+              "text": "Léelo de izquierda a derecha como una «película al revés» del proceso forward: donde el forward iría añadiendo ruido a una cara, aquí lo vamos quitando."
+            }
           ]
         },
         {
@@ -133,10 +232,23 @@
           "accent": "amber",
           "icon": "sliders",
           "blocks": [
-            { "type": "p", "text": "t es el reloj del proceso: indica en qué punto entre «todo ruido» y «sin ruido» estamos. El schedule decide cuánto ruido corresponde a cada t. La red recibe t como dato (un embedding sinusoidal del tiempo), así sabe cuánto ruido esperar y cuánto quitar." },
-            { "type": "formula", "text": "x_t = √ᾱ_t · x_0 + √(1 − ᾱ_t) · ε      (cuánto ruido hay en el paso t)" },
-            { "type": "p", "text": "Aquí el schedule por defecto es cosine: destruye el detalle de la imagen más despacio que el lineal, lo que a baja resolución (32×32) y con pocos pasos mejora bastante el resultado. El otro schedule disponible es el lineal clásico de DDPM." },
-            { "type": "note", "tone": "info", "text": "ᾱ_t (alfa barra) va de casi 1 (apenas ruido) a casi 0 (todo ruido) conforme t crece. Es el «schedule» que fija el ritmo al que se añade el ruido." }
+            {
+              "type": "p",
+              "text": "t es el reloj del proceso: indica en qué punto entre «todo ruido» y «sin ruido» estamos. El schedule decide cuánto ruido corresponde a cada t. La red recibe t como dato (un embedding sinusoidal del tiempo), así sabe cuánto ruido esperar y cuánto quitar."
+            },
+            {
+              "type": "formula",
+              "text": "x_t = √ᾱ_t · x_0 + √(1 − ᾱ_t) · ε      (cuánto ruido hay en el paso t)"
+            },
+            {
+              "type": "p",
+              "text": "Aquí el schedule por defecto es cosine: destruye el detalle de la imagen más despacio que el lineal, lo que a baja resolución (32×32) y con pocos pasos mejora bastante el resultado. El otro schedule disponible es el lineal clásico de DDPM."
+            },
+            {
+              "type": "note",
+              "tone": "info",
+              "text": "ᾱ_t (alfa barra) va de casi 1 (apenas ruido) a casi 0 (todo ruido) conforme t crece. Es el «schedule» que fija el ritmo al que se añade el ruido."
+            }
           ]
         },
         {
@@ -144,14 +256,23 @@
           "accent": "green",
           "icon": "read",
           "blocks": [
-            { "type": "p", "text": "Pedirle a la red que pase de ruido puro a cara de un solo golpe sale fatal: es justo el problema imposible que queríamos evitar. Es mucho más fácil dar muchos pasitos pequeños, en cada uno solo hay que quitar un poco de ruido. Por eso el muestreo es iterativo, y por eso la difusión necesita decenas de pasos donde la GAN usa uno." },
-            { "type": "p", "text": "Además, muestreamos con los pesos EMA (la media suavizada de los pesos a lo largo del entrenamiento). Los pesos «crudos» dan tumbos con cada minibatch y producen artefactos; promediarlos es una de las prácticas que más mejora la calidad visual, sin coste extra." },
-            { "type": "note", "tone": "success", "text": "Más pasos = mejor resultado pero más lento; menos pasos = más rápido pero más tosco. Pulsa «Nuevo proceso» para ver otra trayectoria con la semilla actual." }
+            {
+              "type": "p",
+              "text": "Pedirle a la red que pase de ruido puro a cara de un solo golpe sale fatal: es justo el problema imposible que queríamos evitar. Es mucho más fácil dar muchos pasitos pequeños, en cada uno solo hay que quitar un poco de ruido. Por eso el muestreo es iterativo, y por eso la difusión necesita decenas de pasos donde la GAN usa uno."
+            },
+            {
+              "type": "p",
+              "text": "Además, muestreamos con los pesos EMA (la media suavizada de los pesos a lo largo del entrenamiento). Los pesos «crudos» dan tumbos con cada minibatch y producen artefactos; promediarlos es una de las prácticas que más mejora la calidad visual, sin coste extra."
+            },
+            {
+              "type": "note",
+              "tone": "success",
+              "text": "Más pasos = mejor resultado pero más lento; menos pasos = más rápido pero más tosco. Pulsa «Nuevo proceso» para ver otra trayectoria con la semilla actual."
+            }
           ]
         }
       ]
     },
-
     "entrenamiento": {
       "title": "Entrenamiento (denoising)",
       "badge": "Requiere reentrenar",
@@ -162,17 +283,29 @@
           "accent": "blue",
           "icon": "build",
           "blocks": [
-            { "type": "p", "text": "El objetivo de entrenamiento es sorprendentemente simple. Cogemos una imagen real, elegimos un paso t al azar, le añadimos esa cantidad de ruido y le pedimos a la red que adivine el ruido que pusimos. El error se mide comparando el ruido predicho con el real (MSE)." },
-            { "type": "p", "text": "Lo elegante: nunca entrenamos el bucle completo de generación. Entrenamos un solo paso de «adivina el ruido» en instantes t aleatorios, y como ese único paso vale para cualquier nivel de ruido, al final podemos encadenarlo muchas veces para generar. Aprender una pieza nos da el proceso entero." },
-            { "type": "steps", "items": [
-              "Toma una cara real del dataset (a 32×32).",
-              "Elige un paso t aleatorio y genera ruido ε.",
-              "Crea la imagen ruidosa x_t = √ᾱ_t·x_0 + √(1−ᾱ_t)·ε (forward, en un solo cálculo).",
-              "La red predice ε a partir de x_t y t.",
-              "Ajusta la red para que su predicción se parezca a ε (pérdida MSE).",
-              "Tras cada paso, se actualiza la EMA de los pesos."
-            ] },
-            { "type": "formula", "text": "pérdida = || ε − ε_θ(x_t, t) ||²      (predecir el ruido)" }
+            {
+              "type": "p",
+              "text": "El objetivo de entrenamiento es sorprendentemente simple. Cogemos una imagen real, elegimos un paso t al azar, le añadimos esa cantidad de ruido y le pedimos a la red que adivine el ruido que pusimos. El error se mide comparando el ruido predicho con el real (MSE)."
+            },
+            {
+              "type": "p",
+              "text": "Lo elegante: nunca entrenamos el bucle completo de generación. Entrenamos un solo paso de «adivina el ruido» en instantes t aleatorios, y como ese único paso vale para cualquier nivel de ruido, al final podemos encadenarlo muchas veces para generar. Aprender una pieza nos da el proceso entero."
+            },
+            {
+              "type": "steps",
+              "items": [
+                "Toma una cara real del dataset (a 32×32).",
+                "Elige un paso t aleatorio y genera ruido ε.",
+                "Crea la imagen ruidosa x_t = √ᾱ_t·x_0 + √(1−ᾱ_t)·ε (forward, en un solo cálculo).",
+                "La red predice ε a partir de x_t y t.",
+                "Ajusta la red para que su predicción se parezca a ε (pérdida MSE).",
+                "Tras cada paso, se actualiza la EMA de los pesos."
+              ]
+            },
+            {
+              "type": "formula",
+              "text": "pérdida = || ε − ε_θ(x_t, t) ||²      (predecir el ruido)"
+            }
           ]
         },
         {
@@ -180,9 +313,20 @@
           "accent": "green",
           "icon": "read",
           "blocks": [
-            { "type": "p", "text": "La curva muestra el error medio de predicción del ruido por época. Baja rápido al principio y luego se aplana: la red aprende enseguida a estimar el ruido «grueso» y le cuesta más afinar los detalles." },
-            { "type": "note", "tone": "warn", "text": "Importante: esta pérdida (MSE del ruido) NO mide la calidad de las caras. Dos modelos con pérdidas casi iguales pueden generar caras muy distintas. Para juzgar calidad, mira la vista previa, no el número." },
-            { "type": "note", "tone": "info", "text": "Durante el entrenamiento verás una vista previa: un grid de 6 caras generadas (con los pesos EMA, pocos pasos) en cada época. Sirve para ver la calidad mejorar época a época." }
+            {
+              "type": "p",
+              "text": "La curva muestra el error medio de predicción del ruido por época. Baja rápido al principio y luego se aplana: la red aprende enseguida a estimar el ruido «grueso» y le cuesta más afinar los detalles."
+            },
+            {
+              "type": "note",
+              "tone": "warn",
+              "text": "Importante: esta pérdida (MSE del ruido) NO mide la calidad de las caras. Dos modelos con pérdidas casi iguales pueden generar caras muy distintas. Para juzgar calidad, mira la vista previa, no el número."
+            },
+            {
+              "type": "note",
+              "tone": "info",
+              "text": "Durante el entrenamiento verás una vista previa: un grid de 6 caras generadas (con los pesos EMA, pocos pasos) en cada época. Sirve para ver la calidad mejorar época a época."
+            }
           ]
         },
         {
@@ -190,17 +334,33 @@
           "accent": "amber",
           "icon": "sliders",
           "blocks": [
-            { "type": "defs", "items": [
-              { "term": "Rápido", "desc": "Pocas épocas sobre un subconjunto de 4.000 caras. Para ver la dinámica en directo sin esperas." },
-              { "term": "Completo", "desc": "El dataset entero y las épocas que marques. Tarda más, pero la calidad mejora." }
-            ] },
-            { "type": "note", "tone": "info", "text": "Truco interno: con entrenamientos cortos (menos de 15 épocas) se usa un decay de EMA más bajo (0,995 en vez de 0,999) para que la media de pesos «se caliente» a tiempo y no se quede pegada a la inicialización." },
-            { "type": "note", "tone": "warn", "text": "Entrenar aquí no toca el checkpoint demo: el modelo entrenado vive durante esta sesión. Al reiniciar el servidor vuelve el demo original (entrenado con ~20.000 caras y 30 épocas)." }
+            {
+              "type": "defs",
+              "items": [
+                {
+                  "term": "Rápido",
+                  "desc": "Pocas épocas sobre un subconjunto de 4.000 caras. Para ver la dinámica en directo sin esperas."
+                },
+                {
+                  "term": "Completo",
+                  "desc": "El dataset entero y las épocas que marques. Tarda más, pero la calidad mejora."
+                }
+              ]
+            },
+            {
+              "type": "note",
+              "tone": "info",
+              "text": "Truco interno: con entrenamientos cortos (menos de 15 épocas) se usa un decay de EMA más bajo (0,995 en vez de 0,999) para que la media de pesos «se caliente» a tiempo y no se quede pegada a la inicialización."
+            },
+            {
+              "type": "note",
+              "tone": "warn",
+              "text": "Entrenar aquí no toca el checkpoint demo: el modelo entrenado vive durante esta sesión. Al reiniciar el servidor vuelve el demo original (entrenado con ~20.000 caras y 30 épocas)."
+            }
           ]
         }
       ]
     },
-
     "parametros": {
       "title": "Parámetros del modelo",
       "badge": "Requiere reentrenar",
@@ -211,13 +371,31 @@
           "accent": "amber",
           "icon": "sliders",
           "blocks": [
-            { "type": "defs", "items": [
-              { "term": "learning_rate", "desc": "Cuánto ajusta el modelo en cada paso (por defecto 2e-4). Muy alto: inestable; muy bajo: aprende lento." },
-              { "term": "epochs", "desc": "Cuántas veces ve el conjunto de entrenamiento (por defecto 30). Más épocas suelen mejorar, hasta saturar. Hay parada temprana tras 5 épocas sin mejorar la pérdida." },
-              { "term": "timesteps (T)", "desc": "Cuántos pasos tiene el proceso de difusión completo (por defecto 200; rango 50–1000). Más pasos = ruido más gradual y schedule más fino, pero entrenamiento y muestreo más costosos." },
-              { "term": "schedule", "desc": "Cómo se reparte el ruido a lo largo de t: cosine (por defecto, más suave) o linear (el clásico de DDPM). Define la forma de la curva ᾱ_t." },
-              { "term": "seed", "desc": "Semilla de la inicialización y del orden de los datos. Fíjala para reproducir un entrenamiento." }
-            ] }
+            {
+              "type": "defs",
+              "items": [
+                {
+                  "term": "learning_rate",
+                  "desc": "Cuánto ajusta el modelo en cada paso (por defecto 2e-4). Muy alto: inestable; muy bajo: aprende lento."
+                },
+                {
+                  "term": "epochs",
+                  "desc": "Cuántas veces ve el conjunto de entrenamiento (por defecto 30). Más épocas suelen mejorar, hasta saturar. Hay parada temprana tras 5 épocas sin mejorar la pérdida."
+                },
+                {
+                  "term": "timesteps (T)",
+                  "desc": "Cuántos pasos tiene el proceso de difusión completo (por defecto 200; rango 50–1000). Más pasos = ruido más gradual y schedule más fino, pero entrenamiento y muestreo más costosos."
+                },
+                {
+                  "term": "schedule",
+                  "desc": "Cómo se reparte el ruido a lo largo de t: cosine (por defecto, más suave) o linear (el clásico de DDPM). Define la forma de la curva ᾱ_t."
+                },
+                {
+                  "term": "seed",
+                  "desc": "Semilla de la inicialización y del orden de los datos. Fíjala para reproducir un entrenamiento."
+                }
+              ]
+            }
           ]
         },
         {
@@ -225,9 +403,19 @@
           "accent": "violet",
           "icon": "info",
           "blocks": [
-            { "type": "p", "text": "Cuidado con no confundir dos cosas. T (timesteps) es la longitud del proceso con la que se entrena el modelo y requiere reentrenar si cambia. Los «pasos de muestreo» (en la galería y el proceso) son cuántos de esos pasos recorremos al generar: se cambian al vuelo, sin reentrenar." },
-            { "type": "p", "text": "Dicho de otro modo: T define el «mapa» completo del proceso; los pasos de muestreo deciden si recorremos ese mapa parando en cada punto (lento y fino) o dando zancadas (rápido y tosco)." },
-            { "type": "note", "tone": "success", "text": "Regla práctica: T y el schedule son del modelo (ámbar, reentrenan); los pasos de muestreo son de exploración (interactivos)." }
+            {
+              "type": "p",
+              "text": "Cuidado con no confundir dos cosas. T (timesteps) es la longitud del proceso con la que se entrena el modelo y requiere reentrenar si cambia. Los «pasos de muestreo» (en la galería y el proceso) son cuántos de esos pasos recorremos al generar: se cambian al vuelo, sin reentrenar."
+            },
+            {
+              "type": "p",
+              "text": "Dicho de otro modo: T define el «mapa» completo del proceso; los pasos de muestreo deciden si recorremos ese mapa parando en cada punto (lento y fino) o dando zancadas (rápido y tosco)."
+            },
+            {
+              "type": "note",
+              "tone": "success",
+              "text": "Regla práctica: T y el schedule son del modelo (ámbar, reentrenan); los pasos de muestreo son de exploración (interactivos)."
+            }
           ]
         },
         {
@@ -235,15 +423,114 @@
           "accent": "cyan",
           "icon": "build",
           "blocks": [
-            { "type": "p", "text": "Dos decisiones del modelo que no son sliders pero explican buena parte de la calidad a este tamaño tan pequeño:" },
-            { "type": "defs", "items": [
-              { "term": "Schedule cosine", "desc": "Frente al lineal, mantiene más información de la imagen durante más tiempo (destruye el detalle más despacio). A 32×32 y con pocos pasos, eso mejora notablemente las muestras (Nichol & Dhariwal, 2021)." },
-              { "term": "EMA de pesos", "desc": "Una media móvil exponencial de los pesos durante el entrenamiento. Muestrear con ella, en vez de con los pesos del último minibatch, suaviza artefactos y es de lo que más sube la calidad visual sin coste apreciable." }
-            ] },
-            { "type": "note", "tone": "info", "text": "La varianza de cada paso reverse es fija (= β_t), la opción estándar de DDPM: una elección sencilla y estable que evita tener que aprender también la incertidumbre de cada paso." }
+            {
+              "type": "p",
+              "text": "Dos decisiones del modelo que no son sliders pero explican buena parte de la calidad a este tamaño tan pequeño:"
+            },
+            {
+              "type": "defs",
+              "items": [
+                {
+                  "term": "Schedule cosine",
+                  "desc": "Frente al lineal, mantiene más información de la imagen durante más tiempo (destruye el detalle más despacio). A 32×32 y con pocos pasos, eso mejora notablemente las muestras (Nichol & Dhariwal, 2021)."
+                },
+                {
+                  "term": "EMA de pesos",
+                  "desc": "Una media móvil exponencial de los pesos durante el entrenamiento. Muestrear con ella, en vez de con los pesos del último minibatch, suaviza artefactos y es de lo que más sube la calidad visual sin coste apreciable."
+                }
+              ]
+            },
+            {
+              "type": "note",
+              "tone": "info",
+              "text": "La varianza de cada paso reverse es fija (= β_t), la opción estándar de DDPM: una elección sencilla y estable que evita tener que aprender también la incertidumbre de cada paso."
+            }
           ]
         }
       ]
+    }
+  },
+  "hints": {
+    "seed_train": {
+      "text": "Se aplica al próximo entrenamiento: misma semilla + mismos parámetros = mismo resultado (reproducibilidad)."
+    },
+    "early_stop": {
+      "text": "Se aplica al próximo entrenamiento: si la pérdida no mejora durante 5 epochs, para solo y ahorra tiempo."
+    },
+    "cancel": {
+      "text": "Detiene el entrenamiento en curso. El modelo que hubiera antes sigue disponible.",
+      "kind": "action"
+    },
+    "structure": {
+      "text": "Abre el esquema capa a capa de la variante actual. Solo visualiza: no entrena nada.",
+      "kind": "action"
+    },
+    "arch": {
+      "text": "Ágil: trabaja a 32×32 y muestrea en segundos (ideal para trastear). Nítido: 64×64 nativo con atención — la calidad del estudio v3 (KID 19,4), muestreo más lento.",
+      "kind": "retrain"
+    },
+    "learning_rate": {
+      "text": "Tamaño de los pasos del optimizador del denoiser. 2e-4 es el del estudio (con warmup en el script largo).",
+      "kind": "retrain"
+    },
+    "epochs": {
+      "text": "Pasadas por los datos aprendiendo a predecir el ruido ε. La receta v3 de nítido usa 28.",
+      "kind": "retrain"
+    },
+    "timesteps": {
+      "text": "T del proceso: en cuántos pasos se destruye (y reconstruye) la imagen. Más T = proceso más fino; el muestreo puede submuestrearse con DDIM.",
+      "kind": "retrain"
+    },
+    "mode": {
+      "text": "Se aplica al próximo entrenamiento: Rápido usa 4.000 caras (con nítido ~7 min); Completo las 43.102 (~1 h con nítido)."
+    },
+    "train": {
+      "text": "Entrena el denoiser: en cada paso toma una cara, le añade ruido en un instante t al azar y la red aprende a predecir ese ruido. Curva en vivo; no toca el checkpoint demo.",
+      "kind": "action"
+    },
+    "reset": {
+      "text": "Restaura la receta óptima del estudio v3 (nítido · 28 epochs).",
+      "kind": "action"
+    },
+    "gen_n": {
+      "text": "Cuántas caras generar. Cada una recorre el bucle completo de muestreo: con nítido, dale unos segundos por cara.",
+      "kind": "live"
+    },
+    "gen_steps": {
+      "text": "Pasos DDIM del muestreo: menos = más rápido, más = más fino. 50-80 es un buen rango.",
+      "kind": "live"
+    },
+    "gen_seed": {
+      "text": "Semilla del ruido inicial: la misma semilla produce exactamente las mismas caras.",
+      "kind": "live"
+    },
+    "generate": {
+      "text": "Parte de ruido puro y lo limpia paso a paso hasta que aparece una cara nueva. El tiempo depende de los pasos y la variante.",
+      "kind": "action"
+    },
+    "gen_shuffle": {
+      "text": "Nueva semilla al azar y regenera la galería.",
+      "kind": "action"
+    },
+    "traj_snapshots": {
+      "text": "Cuántas instantáneas del recorrido guardar para la tira ruido → cara.",
+      "kind": "live"
+    },
+    "traj_steps": {
+      "text": "Pasos DDIM del proceso mostrado: más pasos, trayectoria más fina (y más lenta).",
+      "kind": "live"
+    },
+    "traj_seed": {
+      "text": "Semilla del ruido inicial de la trayectoria. La misma semilla, el mismo viaje.",
+      "kind": "live"
+    },
+    "trajectory": {
+      "text": "Genera UNA cara guardando el camino completo de denoising: la mejor forma de VER cómo el modelo esculpe el ruido.",
+      "kind": "action"
+    },
+    "traj_shuffle": {
+      "text": "Nueva semilla al azar para un viaje distinto.",
+      "kind": "action"
     }
   }
 }

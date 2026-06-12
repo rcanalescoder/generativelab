@@ -1,9 +1,13 @@
 import type { CSSProperties } from 'react'
 import { cn } from '../../lib/cn'
+import type { ControlHint } from '../../content/types'
+import { Hint } from './Hint'
 
 interface SliderProps {
   /** Etiqueta a la izquierda. Si se omite, no se pinta la fila nombre/valor. */
   label?: string
+  /** Ayuda contextual ⓘ junto a la etiqueta (qué hace, si requiere reentrenar, efecto). */
+  hint?: ControlHint
   value: number
   min: number
   max: number
@@ -18,6 +22,7 @@ interface SliderProps {
 /** Slider con track relleno en azul hasta el valor y caja mono con el valor actual. */
 export function Slider({
   label,
+  hint,
   value,
   min,
   max,
@@ -34,7 +39,10 @@ export function Slider({
     <div className={cn('gm-ctrl', className)}>
       {label !== undefined && (
         <div className="row">
-          <span className="name">{label}</span>
+          <span className="name">
+            {label}
+            <Hint hint={hint} />
+          </span>
           <span className="gm-val">{format(value)}</span>
         </div>
       )}

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Button, Card, CardHeader, SegmentedControl, Skeleton, Slider, StatusLine, Tag } from '../components/ui'
+import { Button, Card, CardHeader, SegmentedControl, Skeleton, Slider, StatusLine, Tag, Hint } from '../components/ui'
 import { DatasetCard } from '../components/lab/DatasetCard'
 import { ModelFlowCard } from '../components/lab/ModelFlowCard'
 import { LatentMap } from '../components/lab/LatentMap'
@@ -47,6 +47,7 @@ import vaeContent from '../content/vae.json'
 import type { ModelContent } from '../content/types'
 
 const C = vaeContent as unknown as ModelContent
+const H = (C.hints ?? {}) as NonNullable<ModelContent['hints']>
 
 const LR_VALUES = [0.0001, 0.0003, 0.001, 0.003, 0.01]
 const nearestLrIdx = (lr: number) => {
@@ -445,27 +446,28 @@ export function VAETab() {
             />
             <Slider
               label="ruido en z"
+              hint={H.noise}
               value={Math.round(noise * 100)}
               min={0}
               max={100}
               onChange={(v) => setNoise(v / 100)}
               format={(v) => (v / 100).toFixed(2)}
             />
-            <Slider label="k vecinos" value={k} min={1} max={24} onChange={setK} />
-            <Slider label="n clusters" value={nClusters} min={2} max={12} onChange={setNClusters} />
-            <Slider label="pasos interpolación" value={steps} min={2} max={12} onChange={setSteps} />
+            <Slider hint={H.k} label="k vecinos" value={k} min={1} max={24} onChange={setK} />
+            <Slider hint={H.clusters} label="n clusters" value={nClusters} min={2} max={12} onChange={setNClusters} />
+            <Slider hint={H.steps_interp} label="pasos interpolación" value={steps} min={2} max={12} onChange={setSteps} />
 
             <div className="mt-[8px] grid grid-cols-2 gap-[11px]">
-              <Button icon={<RefreshIcon />} onClick={doReconstruct} disabled={!trained || busy || training}>
+              <Button icon={<RefreshIcon />} hint={H.reconstruct} onClick={doReconstruct} disabled={!trained || busy || training}>
                 Reconstruir
               </Button>
-              <Button icon={<SearchIcon />} onClick={doNeighbors} disabled={!trained || busy || training}>
+              <Button icon={<SearchIcon />} hint={H.neighbors} onClick={doNeighbors} disabled={!trained || busy || training}>
                 Buscar similares
               </Button>
               <Button
                 className="col-span-2"
                 icon={<InterpolateIcon />}
-                onClick={doInterpolate}
+                hint={H.interpolate_btn} onClick={doInterpolate}
                 disabled={!trained || busy || training}
               >
                 Interpolar
@@ -473,7 +475,7 @@ export function VAETab() {
               <Button
                 className="col-span-2"
                 icon={<ClustersIcon />}
-                onClick={doClusters}
+                hint={H.clusters_btn} onClick={doClusters}
                 disabled={!trained || busy || training}
               >
                 Calcular clusters
@@ -508,10 +510,10 @@ export function VAETab() {
             </div>
 
             <div className="mb-[12px] grid grid-cols-1 gap-x-[16px] sm:grid-cols-2">
-              <Slider label="nº de muestras" value={genN} min={4} max={24} onChange={setGenN} />
+              <Slider hint={H.gen_n} label="nº de muestras" value={genN} min={4} max={24} onChange={setGenN} />
               <div className="gm-ctrl">
                 <div className="row">
-                  <span className="name">semilla</span>
+                  <span className="name">semilla <Hint hint={H.gen_seed} /></span>
                   <input
                     type="number"
                     className="gm-val"
@@ -542,7 +544,7 @@ export function VAETab() {
               variant="primary"
               full
               icon={<SparklesIcon />}
-              onClick={doGenerate}
+              hint={H.generate} onClick={doGenerate}
               disabled={!trained || genBusy || training}
               className="mt-[14px]"
             >
@@ -561,7 +563,7 @@ export function VAETab() {
           />
           <div className="gm-ctrl">
             <div className="row">
-              <span className="name">arquitectura</span>
+              <span className="name">arquitectura <Hint hint={H.arch} /></span>
             </div>
             <SegmentedControl
               value={arch}
@@ -572,12 +574,12 @@ export function VAETab() {
               ]}
             />
           </div>
-          <Slider label="latent_dim" value={latentDim} min={16} max={256} step={8} onChange={setLatentDim} />
-          <Slider label="learning_rate" value={lrIdx} min={0} max={LR_VALUES.length - 1} onChange={setLrIdx} format={() => lr} />
-          <Slider label="epochs" value={epochs} min={1} max={100} onChange={setEpochs} />
+          <Slider hint={H.latent_dim} label="latent_dim" value={latentDim} min={16} max={256} step={8} onChange={setLatentDim} />
+          <Slider hint={H.learning_rate} label="learning_rate" value={lrIdx} min={0} max={LR_VALUES.length - 1} onChange={setLrIdx} format={() => lr} />
+          <Slider hint={H.epochs} label="epochs" value={epochs} min={1} max={100} onChange={setEpochs} />
           <div className="gm-ctrl">
             <div className="row" style={{ marginBottom: 0 }}>
-              <span className="name">loss</span>
+              <span className="name">loss <Hint hint={H.loss} /></span>
               <SegmentedControl
                 value={loss}
                 onChange={setLoss}
@@ -590,6 +592,7 @@ export function VAETab() {
           </div>
           <Slider
             label="β (peso del KL)"
+            hint={H.beta}
             value={sliderFromBeta(beta)}
             min={BETA_MIN}
             max={BETA_MAX}
@@ -600,7 +603,7 @@ export function VAETab() {
 
           <div className="gm-ctrl">
             <div className="row">
-              <span className="name">seed</span>
+              <span className="name">seed <Hint hint={H.seed_train} /></span>
               <input
                 type="number"
                 className="gm-val"
@@ -615,7 +618,7 @@ export function VAETab() {
             variant="ghost"
             full
             icon={<RefreshIcon />}
-            onClick={resetDefaults}
+            hint={H.reset} onClick={resetDefaults}
             disabled={training}
             className="mb-[11px]"
           >
@@ -657,7 +660,7 @@ export function VAETab() {
 
           <div className="gm-ctrl">
             <div className="row" style={{ marginBottom: 0 }}>
-              <span className="name">early stop</span>
+              <span className="name">early stop <Hint hint={H.early_stop} /></span>
               <SegmentedControl
                 value={earlyStop ? 'on' : 'off'}
                 onChange={(v) => setEarlyStop(v === 'on')}
@@ -670,6 +673,12 @@ export function VAETab() {
           </div>
 
           <div className="mb-[11px]">
+            <div className="row">
+              <span className="name">
+                modo de entrenamiento
+                <Hint hint={H.mode} />
+              </span>
+            </div>
             <SegmentedControl
               value={mode}
               onChange={setMode}
@@ -681,11 +690,11 @@ export function VAETab() {
           </div>
 
           {training ? (
-            <Button variant="primary" full onClick={onCancel}>
+            <Button variant="primary" full hint={H.cancel} onClick={onCancel}>
               Cancelar entrenamiento
             </Button>
           ) : (
-            <Button variant="primary" full icon={<PlayIcon />} onClick={onTrain} disabled={busy}>
+            <Button variant="primary" full icon={<PlayIcon />} hint={H.train} onClick={onTrain} disabled={busy}>
               Entrenar
             </Button>
           )}
@@ -693,7 +702,7 @@ export function VAETab() {
           <Button
             full
             icon={<GridIcon />}
-            onClick={() => setGridOpen(true)}
+            hint={H.gridsearch} onClick={() => setGridOpen(true)}
             disabled={busy || training}
             className="mt-[11px]"
           >
@@ -703,7 +712,7 @@ export function VAETab() {
           <Button
             full
             icon={<LayersIcon />}
-            onClick={() => setArchOpen(true)}
+            hint={H.structure} onClick={() => setArchOpen(true)}
             className="mt-[11px]"
           >
             Ver la estructura
@@ -712,7 +721,7 @@ export function VAETab() {
           <Button
             full
             icon={<SparklesIcon />}
-            onClick={() => setMetricsOpen(true)}
+            hint={H.metrics} onClick={() => setMetricsOpen(true)}
             disabled={!trained || busy || training || outdated || archMissing}
             className="mt-[11px]"
           >
