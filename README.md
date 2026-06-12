@@ -15,6 +15,26 @@ Incluye cuatro modelos y un comparador:
 | **Diffusion** | DDPM (UNet pequeña) | Aprende a quitar ruido paso a paso. Muestra el **proceso** de ruido → cara. |
 | **Comparador** | — | Los cuatro lado a lado: tabla de capacidades + galería con la misma semilla. |
 
+## 🆕 Novedades — versión 3: el ciclo de calidad
+
+La v3 convirtió «mejorar las caras» en un **ciclo de experimentos medible** (17 runs registrados):
+una métrica de calidad de generación (**KID**: distancia a las caras reales, menor = mejor),
+un runner que entrena+evalúa+registra, y solo se adoptó lo que mejoraba el marcador.
+
+| Modelo | Qué se cambió | KID×1000 (v2 → v3) |
+|---|---|---|
+| **VAE** | Se arregló el *bug de escala* de la pérdida (KL por píxel), warmup de β y guarda de logσ² | 608 → **121** (−80 %) |
+| **GAN** | EMA del generador, label smoothing, DiffAugment y su presupuesto real (43k imgs × 60 epochs) | 200 → **37,5** (−81 %) |
+| **Diffusion** | Variante nítida 64×64 con dataset completo, warmup de lr y entrenamiento reanudable | 175 → **19,4** (−89 %) |
+
+<p align="center">
+  <img src="docs/assets/v3_antes_despues_readme.jpg" width="860" alt="Antes y después de la v3: VAE, GAN y Diffusion con la misma semilla" />
+</p>
+
+> La historia completa —diagnóstico, cada cambio de algoritmo/parámetro con su porqué y su
+> evidencia run a run— está en **[«Lista de Mejoras.md»](Lista%20de%20Mejoras.md)**, en el
+> [leaderboard](experiments/LEADERBOARD.md) y, contada para humanos, en el **cuaderno PDF v3** ⬇️.
+
 ## 📄 Cuaderno PDF — descárgalo (versión 3)
 
 Un **manual visual de 55 páginas** por los cuatro modelos: qué es cada uno, su estructura, los
@@ -42,6 +62,15 @@ Pensado para entenderse **sin saber de inteligencia artificial**.
 
 > 💡 En GitHub puedes **leerlo online** (clic en la portada) o **descargarlo** desde el botón del
 > visor. Es la mejor forma de entender el proyecto de un vistazo.
+
+## 🎬 El proyecto, en cómic
+
+La historia de la v3 en 8 viñetas — del «¿por qué todas las caras son la misma mancha?» al
+podio final, con las cifras reales:
+
+<p align="center">
+  <img src="docs/assets/comic_v3.png" width="860" alt="Cómic del proyecto: el ciclo de calidad de la v3 en 8 viñetas" />
+</p>
 
 ---
 
@@ -304,11 +333,12 @@ Con el backend levantado, la documentación interactiva está en `http://localho
 
 ## ⚠️ Notas y limitaciones
 
-- **Calidad de GAN y Diffusion**: son demos **educativos** con modelos pequeños y pocos epochs;
-  las caras salen toscas (artefactos, borrosas). El objetivo es *ver el mecanismo*, no competir
-  en calidad con modelos grandes. Más epochs/datos mejoran el resultado.
-- **Diffusion a 32×32**: para que entrenar y muestrear sean viables en local; se reescala a
-  64×64 al mostrar.
+- **Modelos pequeños a propósito** (64×64, entrenables en local): el objetivo es *ver el
+  mecanismo*, no competir con modelos grandes. Desde la v3 la calidad además está **medida**
+  (KID por modelo en el [leaderboard](experiments/LEADERBOARD.md)); los demos v3 generan caras
+  nítidas en GAN/Diffusion y suaves —su firma— en el VAE.
+- **Diffusion tiene dos variantes**: *ágil* (32×32, interactiva, ideal para trastear) y
+  *nítida* (64×64 nativa con atención — el demo de calidad de la v3; muestrear es más lento).
 - **Primer arranque sin checkpoints**: las pestañas funcionan igual, mostrando "sin entrenar";
   entrena desde la UI o genera los demos (paso 3).
 - **Dataset y checkpoints no van al repositorio** (`.gitignore`): se generan/descargan en local.

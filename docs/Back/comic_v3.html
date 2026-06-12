@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<style>
+  :root{
+    --blue:#2563EB; --cyan:#06B6D4; --violet:#8B5CF6; --pink:#EC4899;
+    --green:#10B981; --amber:#F59E0B; --ink:#111827; --slate:#5B6472;
+    --line:#111827; --bg:#F5F6F9;
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  body{ width:1280px; background:var(--bg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; color:var(--ink); }
+  .page{ padding:30px 32px 26px; }
+  .masthead{ border:3px solid var(--ink); border-radius:16px; background:#fff; padding:20px 26px;
+    display:flex; align-items:center; justify-content:space-between; box-shadow:6px 6px 0 #11182722; }
+  .masthead h1{ font-size:34px; letter-spacing:.5px; }
+  .masthead h1 span{ color:var(--blue); }
+  .masthead .ep{ text-align:right; font-size:13px; color:var(--slate); font-weight:700; line-height:1.5; }
+  .masthead .ep b{ display:block; font-size:16px; color:var(--ink); }
+  .grid{ display:grid; grid-template-columns:1fr 1fr; gap:22px; margin-top:22px; }
+  .panel{ border:3px solid var(--ink); border-radius:14px; background:#fff; overflow:hidden;
+    box-shadow:6px 6px 0 #11182722; position:relative; height:470px; }
+  .panel .kick{ position:absolute; top:0; left:0; background:var(--ink); color:#fff; font-size:12px;
+    font-weight:800; letter-spacing:1.2px; padding:6px 14px; border-radius:0 0 12px 0; z-index:5; }
+  .panel .cap{ position:absolute; left:0; right:0; bottom:0; background:#fff; border-top:3px solid var(--ink);
+    padding:9px 14px; font-size:14.5px; line-height:1.35; z-index:5; }
+  .panel .cap b{ color:var(--blue); }
+  .bubble{ position:absolute; background:#fff; border:2.5px solid var(--ink); border-radius:14px;
+    padding:8px 12px; font-size:14.5px; font-weight:700; line-height:1.3; z-index:4; max-width:255px; }
+  .bubble:after{ content:""; position:absolute; bottom:-12px; left:26px; width:0; height:0;
+    border-left:9px solid transparent; border-right:9px solid transparent; border-top:12px solid var(--ink); }
+  .bubble:before{ content:""; position:absolute; bottom:-8px; left:28px; width:0; height:0; z-index:1;
+    border-left:7px solid transparent; border-right:7px solid transparent; border-top:9px solid #fff; }
+  .bubble.flip:after{ left:auto; right:26px; } .bubble.flip:before{ left:auto; right:28px; }
+  .bubble.think{ border-style:dashed; font-style:italic; }
+  .tagchip{ position:absolute; background:var(--ink); color:#fff; font-family:Menlo,monospace;
+    font-size:13.5px; font-weight:700; padding:5px 11px; border-radius:999px; z-index:4; }
+  .tagchip.good{ background:#0a6b4e; } .tagchip.bad{ background:#a41d54; }
+  .shot{ position:absolute; border:2.5px solid var(--ink); border-radius:10px; object-fit:cover; z-index:2; }
+  .footer{ margin-top:22px; border:3px solid var(--ink); border-radius:14px; background:#fff;
+    box-shadow:6px 6px 0 #11182722; padding:14px 22px; display:flex; justify-content:space-between;
+    align-items:center; font-size:13.5px; color:var(--slate); }
+  .footer b{ color:var(--ink); }
+  svg{ position:absolute; inset:0; z-index:1; }
+  svg text{ font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="masthead">
+    <h1>EL LABORATORIO <span>GENERATIVO</span> — la historia de la v3</h1>
+    <div class="ep"><b>Un cómic en 8 viñetas</b>43.102 caras anime · 4 modelos · 17 experimentos · cifras reales</div>
+  </div>
+
+  <div class="grid">
+
+    <!-- P1: el laboratorio -->
+    <div class="panel">
+      <div class="kick">1 · EL LABORATORIO</div>
+      <svg viewBox="0 0 600 470">
+        <rect x="0" y="330" width="600" height="80" fill="#EDEFF4"/>
+        <rect x="40" y="330" width="520" height="10" fill="#111827"/>
+        <!-- AE -->
+        <g>
+          <rect x="55" y="240" width="92" height="92" rx="14" fill="#EAF1FE" stroke="#111827" stroke-width="3"/>
+          <rect x="80" y="266" width="42" height="30" rx="4" fill="#2563EB"/>
+          <rect x="92" y="258" width="18" height="10" rx="3" fill="#2563EB"/>
+          <circle cx="88" cy="312" r="4.5" fill="#111827"/><circle cx="114" cy="312" r="4.5" fill="#111827"/>
+          <text x="101" y="365" text-anchor="middle" font-size="15" font-weight="800" fill="#111827">AE</text>
+          <text x="101" y="383" text-anchor="middle" font-size="11.5" fill="#5B6472">comprime</text>
+        </g>
+        <!-- VAE -->
+        <g>
+          <ellipse cx="226" cy="288" rx="56" ry="44" fill="#F1ECFC" stroke="#111827" stroke-width="3"/>
+          <ellipse cx="196" cy="272" rx="20" ry="16" fill="#F1ECFC"/>
+          <circle cx="210" cy="284" r="4.5" fill="#111827"/><circle cx="240" cy="284" r="4.5" fill="#111827"/>
+          <path d="M214 304 Q226 312 238 304" fill="none" stroke="#111827" stroke-width="3" stroke-linecap="round"/>
+          <text x="226" y="365" text-anchor="middle" font-size="15" font-weight="800" fill="#111827">VAE</text>
+          <text x="226" y="383" text-anchor="middle" font-size="11.5" fill="#5B6472">sueña caras</text>
+        </g>
+        <!-- GAN dúo -->
+        <g>
+          <rect x="318" y="252" width="64" height="80" rx="12" fill="#FCE9F2" stroke="#111827" stroke-width="3"/>
+          <rect x="318" y="238" width="50" height="18" rx="8" fill="#EC4899"/>
+          <circle cx="338" cy="284" r="4.5" fill="#111827"/><circle cx="362" cy="284" r="4.5" fill="#111827"/>
+          <rect x="392" y="252" width="64" height="80" rx="12" fill="#E7EAF1" stroke="#111827" stroke-width="3"/>
+          <circle cx="412" cy="284" r="9" fill="none" stroke="#111827" stroke-width="3"/>
+          <line x1="419" y1="291" x2="430" y2="302" stroke="#111827" stroke-width="3"/>
+          <circle cx="440" cy="284" r="4.5" fill="#111827"/>
+          <text x="387" y="365" text-anchor="middle" font-size="15" font-weight="800" fill="#111827">GAN</text>
+          <text x="387" y="383" text-anchor="middle" font-size="11.5" fill="#5B6472">falsifica · detecta</text>
+        </g>
+        <!-- Diffusion -->
+        <g>
+          <rect x="486" y="240" width="92" height="92" rx="14" fill="#E0F7FB" stroke="#111827" stroke-width="3"/>
+          <g fill="#06B6D4">
+            <circle cx="504" cy="258" r="3.5"/><circle cx="522" cy="252" r="3"/><circle cx="540" cy="260" r="3.5"/>
+            <circle cx="558" cy="254" r="3"/><circle cx="512" cy="274" r="3"/><circle cx="548" cy="276" r="3"/>
+          </g>
+          <circle cx="516" cy="300" r="4.5" fill="#111827"/><circle cx="548" cy="300" r="4.5" fill="#111827"/>
+          <path d="M520 316 Q532 322 544 316" fill="none" stroke="#111827" stroke-width="3" stroke-linecap="round"/>
+          <text x="532" y="365" text-anchor="middle" font-size="15" font-weight="800" fill="#111827">DIFFUSION</text>
+          <text x="532" y="383" text-anchor="middle" font-size="11.5" fill="#5B6472">esculpe el ruido</text>
+        </g>
+      </svg>
+      <div class="bubble" style="top:46px; left:24px;">Cuatro maneras de aprender a <b>crear</b> caras.</div>
+      <div class="bubble flip" style="top:110px; right:24px;">Todo local, en un portátil. 🛠️ Sin nube.</div>
+      <div class="cap">Un laboratorio visual para <b>entender</b> modelos generativos: Autoencoder, VAE, GAN y Diffusion, entrenados sobre 43.102 caritas anime de 64×64.</div>
+    </div>
+
+    <!-- P2: el problema -->
+    <div class="panel">
+      <div class="kick">2 · EL PROBLEMA</div>
+      <svg viewBox="0 0 600 470">
+        <rect x="0" y="350" width="600" height="120" fill="#EDEFF4"/>
+        <!-- monitor -->
+        <rect x="120" y="60" width="290" height="250" rx="14" fill="#fff" stroke="#111827" stroke-width="3"/>
+        <rect x="235" y="310" width="60" height="26" fill="#111827"/>
+        <rect x="195" y="336" width="140" height="10" rx="5" fill="#111827"/>
+        <!-- usuario -->
+        <circle cx="495" cy="250" r="34" fill="#FCEFD7" stroke="#111827" stroke-width="3"/>
+        <rect x="462" y="288" width="66" height="80" rx="16" fill="#F59E0B" stroke="#111827" stroke-width="3"/>
+        <circle cx="484" cy="244" r="4.5" fill="#111827"/><circle cx="508" cy="244" r="4.5" fill="#111827"/>
+        <ellipse cx="496" cy="266" rx="8" ry="11" fill="#111827"/>
+        <line x1="462" y1="310" x2="424" y2="282" stroke="#111827" stroke-width="6" stroke-linecap="round"/>
+      </svg>
+      <img class="shot" src="../assets/v3_vae_antes.jpg" style="left:134px; top:74px; width:262px; height:222px;">
+      <div class="bubble flip" style="top:42px; right:18px; max-width:240px;">¡¿Por qué <b>todas</b> las caras son la misma mancha marrón?!</div>
+      <div class="tagchip bad" style="left:140px; top:268px;">VAE · KID 608 · div 0,15</div>
+      <div class="cap">2026. La app funciona, la teoría es correcta… y el panel «Generación» del VAE escupe 64 veces <b>la misma mancha</b>. La GAN sale tosca. Difusión, blanda.</div>
+    </div>
+
+    <!-- P3: el diagnóstico -->
+    <div class="panel">
+      <div class="kick">3 · EL DIAGNÓSTICO</div>
+      <svg viewBox="0 0 600 470">
+        <!-- balanza -->
+        <rect x="284" y="120" width="14" height="190" fill="#111827"/>
+        <rect x="200" y="306" width="182" height="14" rx="7" fill="#111827"/>
+        <line x1="291" y1="128" x2="130" y2="180" stroke="#111827" stroke-width="8" stroke-linecap="round"/>
+        <line x1="291" y1="128" x2="470" y2="236" stroke="#111827" stroke-width="8" stroke-linecap="round"/>
+        <!-- platillo izq: recon, arriba -->
+        <line x1="130" y1="180" x2="112" y2="216" stroke="#111827" stroke-width="3"/>
+        <line x1="130" y1="180" x2="148" y2="216" stroke="#111827" stroke-width="3"/>
+        <rect x="86" y="216" width="88" height="12" rx="6" fill="#111827"/>
+        <rect x="100" y="178" width="60" height="34" rx="8" fill="#EAF1FE" stroke="#111827" stroke-width="3"/>
+        <text x="130" y="201" text-anchor="middle" font-size="14" font-weight="800" fill="#2563EB">recon</text>
+        <!-- platillo dcha: pesa KL gigante, abajo -->
+        <line x1="470" y1="236" x2="446" y2="272" stroke="#111827" stroke-width="3"/>
+        <line x1="470" y1="236" x2="494" y2="272" stroke="#111827" stroke-width="3"/>
+        <rect x="420" y="272" width="100" height="12" rx="6" fill="#111827"/>
+        <path d="M432 272 h76 l-10 -88 a28 28 0 0 0 -56 0 z" fill="#F1ECFC" stroke="#111827" stroke-width="3"/>
+        <rect x="455" y="170" width="30" height="14" rx="6" fill="none" stroke="#111827" stroke-width="3"/>
+        <text x="470" y="238" text-anchor="middle" font-size="17" font-weight="800" fill="#8B5CF6">β·KL</text>
+        <text x="470" y="258" text-anchor="middle" font-size="11.5" fill="#5B6472">×12.000</text>
+        <!-- z aplastada -->
+        <ellipse cx="470" cy="296" rx="26" ry="9" fill="#E7EAF1" stroke="#111827" stroke-width="2.5"/>
+        <text x="470" y="300" text-anchor="middle" font-size="11" font-family="Menlo,monospace" font-weight="700" fill="#5B6472">z</text>
+        <!-- lupa -->
+        <circle cx="208" cy="372" r="34" fill="#fff" stroke="#111827" stroke-width="5"/>
+        <line x1="232" y1="396" x2="268" y2="424" stroke="#111827" stroke-width="9" stroke-linecap="round"/>
+        <text x="208" y="380" text-anchor="middle" font-size="19" font-family="Menlo,monospace" font-weight="800" fill="#A41D54">/12288</text>
+      </svg>
+      <div class="bubble" style="top:40px; left:22px; max-width:300px;">La pérdida sumaba <b>peras con píxeles</b>: el error iba «por píxel» y la KL «por dimensión».</div>
+      <div class="bubble think flip" style="top:330px; right:20px; max-width:250px;">Con β=1 de verdad… el latente se rinde y z deja de informar.</div>
+      <div class="cap"><b>El bug del VAE:</b> la regularización pesaba miles de veces de más, aplastaba la KL a 0 y el decoder solo sabía pintar la «cara promedio». El arreglo: <b>dividir la KL entre 12.288</b> (+ warmup de β + clamp de logσ²).</div>
+    </div>
+
+    <!-- P4: el ciclo -->
+    <div class="panel">
+      <div class="kick">4 · EL CICLO AGÉNTICO</div>
+      <svg viewBox="0 0 600 470">
+        <g stroke="#111827" stroke-width="3" fill="#fff">
+          <rect x="60" y="84" width="140" height="64" rx="12"/>
+          <rect x="394" y="84" width="146" height="64" rx="12"/>
+          <rect x="394" y="262" width="146" height="64" rx="12"/>
+          <rect x="60" y="262" width="140" height="64" rx="12"/>
+        </g>
+        <text x="130" y="111" text-anchor="middle" font-size="16" font-weight="800" fill="#2563EB">1 · PROPONER</text>
+        <text x="130" y="132" text-anchor="middle" font-size="12" fill="#5B6472">una hipótesis concreta</text>
+        <text x="467" y="111" text-anchor="middle" font-size="16" font-weight="800" fill="#8B5CF6">2 · ENTRENAR</text>
+        <text x="467" y="132" text-anchor="middle" font-size="12" fill="#5B6472">run acotado, semilla fija</text>
+        <text x="467" y="289" text-anchor="middle" font-size="16" font-weight="800" fill="#10B981">3 · MEDIR</text>
+        <text x="467" y="310" text-anchor="middle" font-size="12" fill="#5B6472">KID + diversidad + rejilla</text>
+        <text x="130" y="289" text-anchor="middle" font-size="16" font-weight="800" fill="#F59E0B">4 · DECIDIR</text>
+        <text x="130" y="310" text-anchor="middle" font-size="12" fill="#5B6472">solo queda lo que mejora</text>
+        <g stroke="#111827" stroke-width="4" fill="none" marker-end="url(#arr)">
+          <path d="M206 116 H 386"/>
+          <path d="M467 154 V 254"/>
+          <path d="M388 294 H 208"/>
+          <path d="M130 256 V 156"/>
+        </g>
+        <defs><marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#111827"/></marker></defs>
+        <!-- robot en el centro -->
+        <rect x="262" y="180" width="76" height="62" rx="14" fill="#EAF1FE" stroke="#111827" stroke-width="3"/>
+        <line x1="300" y1="180" x2="300" y2="162" stroke="#111827" stroke-width="3"/>
+        <circle cx="300" cy="156" r="7" fill="#2563EB"/>
+        <circle cx="283" cy="206" r="5.5" fill="#111827"/><circle cx="317" cy="206" r="5.5" fill="#111827"/>
+        <rect x="284" y="222" width="32" height="6" rx="3" fill="#111827"/>
+        <text x="300" y="266" text-anchor="middle" font-size="12.5" font-weight="700" fill="#5B6472">el agente</text>
+        <text x="300" y="420" text-anchor="middle" font-size="15" font-weight="800" fill="#111827">17 experimentos · una tarde · todo al ledger</text>
+      </svg>
+      <div class="cap">La v3 no «afina a ojo»: monta un <b>arnés de experimentos</b>. La métrica nueva (KID: distancia a las caras reales, <b>menor = mejor</b>) convierte «me parece mejor» en un número.</div>
+    </div>
+
+    <!-- P5: VAE arreglado -->
+    <div class="panel">
+      <div class="kick">5 · EL VAE, ARREGLADO</div>
+      <svg viewBox="0 0 600 470">
+        <path d="M268 200 H 332" stroke="#111827" stroke-width="6" marker-end="url(#arr2)" fill="none"/>
+        <defs><marker id="arr2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#111827"/></marker></defs>
+      </svg>
+      <img class="shot" src="../assets/v3_vae_antes.jpg" style="left:36px; top:90px; width:220px; height:220px;">
+      <img class="shot" src="../assets/v3_vae_despues.jpg" style="right:36px; top:90px; width:220px; height:220px;">
+      <div class="tagchip bad" style="left:40px; top:318px;">v2 · KID 608</div>
+      <div class="tagchip good" style="right:40px; top:318px;">v3 · KID 121</div>
+      <div class="bubble" style="top:26px; left:120px; max-width:360px;">Misma red, mismos datos: solo cambió <b>la pérdida</b>… y aparecieron 64 caras distintas.</div>
+      <div class="cap"><b>−80 % de KID</b> y diversidad 0,15 → 0,98. Suaves —es la firma del VAE— pero caras de verdad. β=0,5 elegido con barrido medido; 40 epochs; variante grande.</div>
+    </div>
+
+    <!-- P6: la GAN al gimnasio -->
+    <div class="panel">
+      <div class="kick">6 · LA GAN, AL GIMNASIO</div>
+      <svg viewBox="0 0 600 470">
+        <rect x="0" y="350" width="600" height="120" fill="#EDEFF4"/>
+        <!-- G levantando pesa EMA -->
+        <rect x="92" y="216" width="68" height="96" rx="14" fill="#FCE9F2" stroke="#111827" stroke-width="3"/>
+        <rect x="92" y="202" width="54" height="18" rx="8" fill="#EC4899"/>
+        <circle cx="113" cy="252" r="5" fill="#111827"/><circle cx="139" cy="252" r="5" fill="#111827"/>
+        <path d="M109 278 Q126 288 143 278" fill="none" stroke="#111827" stroke-width="3" stroke-linecap="round"/>
+        <line x1="66" y1="180" x2="186" y2="180" stroke="#111827" stroke-width="7" stroke-linecap="round"/>
+        <rect x="48" y="160" width="26" height="40" rx="6" fill="#8B5CF6" stroke="#111827" stroke-width="3"/>
+        <rect x="178" y="160" width="26" height="40" rx="6" fill="#8B5CF6" stroke="#111827" stroke-width="3"/>
+        <text x="126" y="172" text-anchor="middle" font-size="14" font-weight="800" fill="#111827">EMA</text>
+        <line x1="98" y1="216" x2="80" y2="184" stroke="#111827" stroke-width="5" stroke-linecap="round"/>
+        <line x1="154" y1="216" x2="172" y2="184" stroke="#111827" stroke-width="5" stroke-linecap="round"/>
+        <text x="126" y="338" text-anchor="middle" font-size="13" font-weight="700" fill="#5B6472">G · pesos promediados</text>
+        <!-- D con venda 0.9 y gafas diffaug -->
+        <rect x="380" y="216" width="68" height="96" rx="14" fill="#E7EAF1" stroke="#111827" stroke-width="3"/>
+        <rect x="372" y="240" width="84" height="20" rx="6" fill="#F59E0B" stroke="#111827" stroke-width="2.5"/>
+        <text x="414" y="255" text-anchor="middle" font-size="13" font-weight="800" fill="#111827">real = 0,9</text>
+        <circle cx="400" cy="286" r="11" fill="#fff" stroke="#111827" stroke-width="3"/>
+        <circle cx="428" cy="286" r="11" fill="#fff" stroke="#111827" stroke-width="3"/>
+        <line x1="411" y1="286" x2="417" y2="286" stroke="#111827" stroke-width="3"/>
+        <text x="414" y="338" text-anchor="middle" font-size="13" font-weight="700" fill="#5B6472">D · gafas DiffAugment</text>
+        <!-- marcador -->
+        <rect x="236" y="92" width="130" height="58" rx="12" fill="#fff" stroke="#111827" stroke-width="3"/>
+        <text x="301" y="116" text-anchor="middle" font-size="13" font-weight="800" fill="#5B6472">KID</text>
+        <text x="301" y="138" text-anchor="middle" font-size="19" font-family="Menlo,monospace" font-weight="800"><tspan fill="#A41D54">200</tspan><tspan fill="#111827"> → </tspan><tspan fill="#0a6b4e">37,5</tspan></text>
+      </svg>
+      <div class="bubble" style="top:30px; left:20px; max-width:230px;">En <b>sprints</b> estos trucos pierden…</div>
+      <div class="bubble flip" style="top:30px; right:20px; max-width:250px;">…en <b>maratones</b>, arrasan. Medidlo donde va a vivir.</div>
+      <div class="cap">Cuatro estabilizadores (EMA, etiquetas 0,9, DiffAugment, lr_G/lr_D) + su <b>presupuesto real</b>: dataset completo y 60 epochs. La ablación honesta descartó TTUR.</div>
+    </div>
+
+    <!-- P7: diffusion de noche -->
+    <div class="panel">
+      <div class="kick">7 · DIFFUSION, DE NOCHE</div>
+      <svg viewBox="0 0 600 470">
+        <rect x="0" y="0" width="600" height="470" fill="#1E2433"/>
+        <circle cx="508" cy="84" r="34" fill="#FCEFD7"/>
+        <circle cx="494" cy="74" r="30" fill="#1E2433"/>
+        <g fill="#fff" opacity=".9">
+          <circle cx="80" cy="60" r="2.5"/><circle cx="160" cy="100" r="2"/><circle cx="260" cy="52" r="2.5"/>
+          <circle cx="350" cy="92" r="2"/><circle cx="430" cy="48" r="2.5"/><circle cx="120" cy="150" r="2"/>
+        </g>
+        <!-- portátil -->
+        <rect x="150" y="190" width="300" height="160" rx="12" fill="#0F1420" stroke="#06B6D4" stroke-width="3"/>
+        <rect x="120" y="350" width="360" height="16" rx="8" fill="#0F1420" stroke="#06B6D4" stroke-width="3"/>
+        <text x="300" y="232" text-anchor="middle" font-size="15" font-family="Menlo,monospace" fill="#9FE8F5">train_diffusion_v3 --epochs 28</text>
+        <rect x="186" y="252" width="228" height="16" rx="8" fill="#13314a"/>
+        <rect x="186" y="252" width="196" height="16" rx="8" fill="#06B6D4"/>
+        <text x="300" y="296" text-anchor="middle" font-size="13.5" font-family="Menlo,monospace" fill="#9FE8F5">epoch 24/28 · loss 0.062 ↘</text>
+        <text x="300" y="324" text-anchor="middle" font-size="13.5" font-family="Menlo,monospace" fill="#7BD3A8">checkpoint guardado · --resume listo</text>
+        <text x="300" y="430" text-anchor="middle" font-size="14.5" font-weight="700" fill="#C9D2E3">la receta ya era buena: solo necesitaba su presupuesto</text>
+      </svg>
+      <div class="bubble think" style="top:30px; left:22px; max-width:265px;">Zzz… cada epoch son 2 minutos. Y si me corto, <b>reanudo</b>.</div>
+      <div class="tagchip good" style="right:26px; top:368px;">175 → 19,4 · el mejor del lab</div>
+      <div class="cap">A difusión no se le tocó el algoritmo: dataset completo, warmup de lr y entrenamiento <b>reanudable</b>. KID 19,4 — el mejor del laboratorio, como predice la teoría.</div>
+    </div>
+
+    <!-- P8: moraleja -->
+    <div class="panel">
+      <div class="kick">8 · MORALEJA</div>
+      <svg viewBox="0 0 600 470">
+        <!-- podio -->
+        <rect x="226" y="208" width="148" height="150" fill="#EAF1FE" stroke="#111827" stroke-width="3"/>
+        <rect x="84" y="252" width="142" height="106" fill="#F5F6F9" stroke="#111827" stroke-width="3"/>
+        <rect x="374" y="286" width="142" height="72" fill="#F5F6F9" stroke="#111827" stroke-width="3"/>
+        <text x="300" y="246" text-anchor="middle" font-size="22" font-weight="800" fill="#2563EB">1º</text>
+        <text x="155" y="290" text-anchor="middle" font-size="19" font-weight="800" fill="#5B6472">2º</text>
+        <text x="445" y="322" text-anchor="middle" font-size="19" font-weight="800" fill="#5B6472">3º</text>
+        <!-- diffusion 1º -->
+        <rect x="266" y="138" width="68" height="68" rx="12" fill="#E0F7FB" stroke="#111827" stroke-width="3"/>
+        <circle cx="288" cy="166" r="4.5" fill="#111827"/><circle cx="312" cy="166" r="4.5" fill="#111827"/>
+        <path d="M290 184 Q300 190 310 184" fill="none" stroke="#111827" stroke-width="3" stroke-linecap="round"/>
+        <text x="300" y="128" text-anchor="middle" font-size="13.5" font-weight="800" fill="#0e7490">19,4</text>
+        <!-- gan 2º -->
+        <rect x="122" y="186" width="64" height="64" rx="12" fill="#FCE9F2" stroke="#111827" stroke-width="3"/>
+        <circle cx="142" cy="212" r="4.5" fill="#111827"/><circle cx="166" cy="212" r="4.5" fill="#111827"/>
+        <path d="M144 230 Q154 236 164 230" fill="none" stroke="#111827" stroke-width="3" stroke-linecap="round"/>
+        <text x="155" y="176" text-anchor="middle" font-size="13.5" font-weight="800" fill="#a41d54">37,5</text>
+        <!-- vae 3º -->
+        <ellipse cx="445" cy="252" rx="36" ry="30" fill="#F1ECFC" stroke="#111827" stroke-width="3"/>
+        <circle cx="433" cy="248" r="4.5" fill="#111827"/><circle cx="457" cy="248" r="4.5" fill="#111827"/>
+        <path d="M435 264 Q445 270 455 264" fill="none" stroke="#111827" stroke-width="3" stroke-linecap="round"/>
+        <text x="445" y="210" text-anchor="middle" font-size="13.5" font-weight="800" fill="#5b21b6">121</text>
+        <!-- árbitro KID -->
+        <rect x="32" y="120" width="14" height="70" fill="#111827" transform="rotate(-18 39 155)"/>
+        <circle cx="60" cy="96" r="26" fill="#E5F6F0" stroke="#111827" stroke-width="3"/>
+        <circle cx="52" cy="92" r="4" fill="#111827"/><circle cx="68" cy="92" r="4" fill="#111827"/>
+        <rect x="44" y="128" width="56" height="40" rx="8" fill="#10B981" stroke="#111827" stroke-width="3"/>
+        <text x="72" y="154" text-anchor="middle" font-size="13" font-weight="800" fill="#fff">KID</text>
+        <!-- banda final -->
+        <rect x="60" y="392" width="480" height="50" rx="12" fill="#111827"/>
+        <text x="300" y="423" text-anchor="middle" font-size="19" font-weight="800" fill="#fff">«Mide lo que importa. Lo demás es opinión.»</text>
+      </svg>
+      <div class="bubble" style="top:26px; left:140px; max-width:330px;">El ranking que predice la teoría… ahora <b>está medido</b>.</div>
+      <div class="cap">Misma vara para todos (KID ×1000, menor = mejor). Todo reproducible: <b>experiments/ledger.jsonl</b> + «Lista de Mejoras.md» + el manual v3 en PDF.</div>
+    </div>
+
+  </div>
+
+  <div class="footer">
+    <div><b>Laboratorio de Modelos Generativos · v3</b> — basado en 17 experimentos reales (junio 2026)</div>
+    <div>Roberto Canales Mora · con Claude Code &nbsp;·&nbsp; MIT &nbsp;·&nbsp; github.com/rcanalescoder/generativelab</div>
+  </div>
+
+</div>
+</body>
+</html>

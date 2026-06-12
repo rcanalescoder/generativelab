@@ -65,3 +65,6 @@ pnpm-debug.log*
 
 # v3: estados de entrenamiento del ciclo de experimentos (pesados; se regeneran)
 experiments/ckpts/
+
+# Notas personales de metodología (no forman parte del proyecto público)
+instrucciones generación de libros.md

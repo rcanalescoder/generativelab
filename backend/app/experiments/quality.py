@@ -183,5 +183,9 @@ def evaluate_generation(
     }
     if grid_path is not None:
         save_grid(fake01[:grid_n], grid_path)
-        out["grid"] = str(grid_path)
+        # ruta RELATIVA a la raíz del repo: el ledger es público y no debe filtrar rutas locales
+        try:
+            out["grid"] = str(grid_path.resolve().relative_to(EXP_DIR.parent))
+        except ValueError:
+            out["grid"] = grid_path.name
     return out
