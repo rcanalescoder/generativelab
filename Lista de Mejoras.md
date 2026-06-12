@@ -119,19 +119,111 @@ ELBO real → el optimizador la aplastaba a 0 → colapso del posterior → «ca
 reconstrucción (suma sobre píxeles) y la KL (suma sobre dims). Si se promedia uno y se suma el
 otro, β deja de medir lo que el usuario cree que mide. Reescalar restituye el equilibrio teórico.
 
-**Efecto medido** *(pendiente: screens en curso — mismo presupuesto que el baseline, 12 epochs full)*
+**Efecto medido** — mismo presupuesto exacto que el baseline (12 epochs, dataset completo),
+solo cambia la pérdida:
+
+| Run | β | KID×1000 ↓ | Diversidad (ratio) | PSNR recon (dB) |
+|---|---|---|---|---|
+| v2 baseline | 1,0 (sin reescalar) | 608,5 | 0,145 (colapso) | 12,10 |
+| v3 M1 | 1,0 | 255,1 | 1,078 | 17,30 |
+| v3 M1 | **0,5** | **241,5** | 1,097 | **17,90** |
+| v3 M1 | 2,0 | 292,2 | 1,062 | 16,55 |
+
+El mismo modelo, los mismos datos y el mismo tiempo de entrenamiento pasan de 64 manchas
+idénticas a 64 caras anime distintas (suaves, como corresponde a un VAE). KID −60 %,
+diversidad ×7,5 y +5,8 dB de reconstrucción **gratis**: solo era la escala de la pérdida.
+
+### M-VAE-2 · Calibrado de β (β-VAE con el slider ya en su sitio)
+
+Con la KL ya por píxel, β vuelve a ser interpretable y el barrido muestra el trade-off de
+libro: β bajo → más nitidez y mejor KID a este presupuesto; β alto → latente más regular pero
+muestras más borrosas. β=0,5 queda como valor de calidad; β=1,0 como valor pedagógico (ELBO).
+
+A igual presupuesto corto (12 epochs), la variante «grande» (base 64 + resblocks) **no** supera
+a la básica (KID 254 vs 255) y cuesta 5,6× más tiempo: a presupuestos cortos la capacidad no es
+el cuello de botella. Se reevalúa con entrenamiento largo.
+
+### M-VAE-3 · Estabilidad numérica del posterior (clamp de logσ²)
+
+Hallazgo del propio ciclo: al lanzar el entrenamiento largo de la variante grande, la KL explotó
+en la epoch 1 (≈4·10¹⁷). Causa: con el warmup, β es aún pequeño al principio y nada ancla
+`logσ²`; en la arquitectura grande (más profunda, con BatchNorm) la cabeza `fc_logvar` puede
+producir valores enormes y `exp(logσ²)` se desborda, envenenando el estado del optimizador.
+Arreglo estándar: `logσ².clamp(-8, 8)` en `encode()` (`models/vae.py`) — inocuo en el rango de
+trabajo normal (±6) y elimina la inestabilidad de raíz. Lección de libro: *el warmup de KL
+necesita una guarda numérica en la varianza*.
+
+**Entrenamiento final (40 epochs, dataset completo, β=0,5):**
+
+| Run | Arch | KID×1000 ↓ | Diversidad | PSNR (dB) | Tiempo |
+|---|---|---|---|---|---|
+| v3-final-basico | basico | 195,1 | 1,086 | 18,45 | 107 s |
+| v3-final-grande | grande | **121,3** | 0,976 | **19,09** | 598 s |
+
+Dos lecciones: (a) el VAE básico final (KID 195) ya supera al **GAN** del baseline v2 (KID 200);
+(b) la capacidad extra de la variante grande no aporta con 12 epochs pero **sí con 40**
+(254→121): primero arregla la pérdida, luego escala el cómputo. Caras con ojos definidos,
+brillos y peinados variados — suaves al estilo VAE, pero indiscutiblemente caras.
+
+**Resultado V3.1: KID 608 → 121 (−80 %), diversidad 0,145 → 0,98.** Checkpoints adoptados como
+demos de la app: `vae_basico_demo.pt` (rápido) y `vae_grande_demo.pt` (calidad).
 
 ---
 
 ## 4. Mejoras del GAN (V3.2)
 
-*(pendiente)*
+El DCGAN de la v2 era correcto pero «desnudo» (receta original de 2016). La v3 añade los
+cuatro estabilizadores estándar que más mejoran un DCGAN, todos como hiperparámetros nuevos de
+`GANHyperParams` (activados por defecto, desactivables):
+
+### M-GAN-1 · EMA del generador (`ema: true`)
+Se muestrea con la **media móvil exponencial** de los pesos de G (decay 0,999), no con los pesos
+«crudos» que oscilan con cada minibatch. El generador EMA promedia las últimas miles de
+versiones de G → caras más limpias y coherentes gratis. (Se reutiliza la clase `EMA` que ya
+existía en `models/diffusion.py` — la práctica que más mejora DDPM, aplicada también al GAN.)
+
+### M-GAN-2 · TTUR: lrs separadas (`lr_g: 1e-4`, `lr_d: 2e-4`)
+*Two Time-scale Update Rule*: el discriminador aprende algo más rápido que el generador. Un D
+ligeramente «por delante» da gradientes más informativos y el juego oscila menos. (Además
+alinea la implementación con la spec §4.3, que pedía `lr_G`/`lr_D`.)
+
+### M-GAN-3 · Label smoothing unilateral (`label_smooth: 0.9`)
+Al entrenar D, las imágenes reales valen 0,9 en vez de 1,0. Evita que D se vuelva sobreconfiado
+y deje a G sin gradiente útil (un D «perfecto» mata el aprendizaje de G).
+
+### M-GAN-4 · DiffAugment (`diffaug: true`)
+Augmentación **diferenciable** (color + traslación + cutout, Zhao et al. 2020) aplicada a TODO
+lo que ve D — reales y falsas, también en el paso de G. Como ambas se transforman igual, el
+equilibrio del juego no cambia, pero D ya no puede memorizar imágenes concretas del dataset →
+menos sobreajuste de D, entrenamiento estable y mejor calidad con datasets de decenas de miles
+de imágenes. Implementada en `models/gan.py` (`diff_augment`).
+
+**Efecto medido** *(pendiente: ablación a igual presupuesto que el baseline + final full-dataset)*
 
 ---
 
 ## 5. Mejoras de Diffusion (V3.3)
 
-*(pendiente)*
+La base técnica de la v2 ya era buena (EMA ✓, schedule cosine ✓, muestreo DDIM ✓, atención en
+la variante «nitido» ✓): aquí el cuello de botella no era un bug sino el **presupuesto de
+entrenamiento** (60 epochs × 18k imágenes en el último run real) y que no había ningún
+checkpoint versionado/regenerable de calidad.
+
+### M-DIFF-1 · Entrenador largo y reanudable (`app/experiments/train_diffusion_v3.py`)
+- **Dataset completo** (43.102 imágenes) en vez de 18k.
+- **Warmup de lr** (500 pasos): estabiliza el arranque de la UNet.
+- **Guardado doble periódico**: cada N epochs escribe (a) el checkpoint demo con pesos EMA
+  que carga la app y (b) el estado completo (modelo crudo + optimizador + EMA + epoch) en
+  `experiments/ckpts/` para **reanudar** con `--resume` sin perder progreso. Entrenar mucho
+  tiempo deja de ser arriesgado: se puede cortar y seguir otra noche.
+- Rejilla de progreso por guardado (`experiments/grids/diffusion-nitido-v3-progress-*.png`).
+
+### M-DIFF-2 · Evaluación honesta del muestreo
+La pérdida de denoising (MSE de ε) **no mide calidad de muestra**; ahora cada checkpoint se
+evalúa con el mismo KID del resto de modelos (512 muestras, DDIM 80 pasos — generar con
+difusión es caro, así que diffusion se compara siempre contra diffusion con el mismo n).
+
+**Efecto medido** *(pendiente: baseline agil v2 + checkpoints nitido v3 por tramos)*
 
 ---
 

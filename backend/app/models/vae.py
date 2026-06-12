@@ -116,9 +116,14 @@ class ConvVAE(nn.Module):
         )
 
     def encode(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        """x → (μ, logσ²) del posterior aproximado q(z|x)."""
+        """x → (μ, logσ²) del posterior aproximado q(z|x).
+
+        logσ² se recorta a [-8, 8] (σ² ∈ [3e-4, 3e3]): guarda numérica estándar. Sin ella,
+        al inicio del entrenamiento (β aún pequeño por el warmup) nada ancla la varianza y
+        exp(logσ²) puede desbordarse — se observó en la variante grande (v3, M-VAE-3).
+        """
         h = self.encoder(x).flatten(1)
-        return self.fc_mu(h), self.fc_logvar(h)
+        return self.fc_mu(h), self.fc_logvar(h).clamp(-8.0, 8.0)
 
     def reparameterize(self, mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
         """Truco de reparametrización: z = μ + σ·ε, con ε~N(0,I) y σ = exp(½·logσ²)."""
@@ -199,9 +204,14 @@ class BigConvVAE(nn.Module):
         )
 
     def encode(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        """x → (μ, logσ²) del posterior aproximado q(z|x)."""
+        """x → (μ, logσ²) del posterior aproximado q(z|x).
+
+        logσ² se recorta a [-8, 8] (σ² ∈ [3e-4, 3e3]): guarda numérica estándar. Sin ella,
+        al inicio del entrenamiento (β aún pequeño por el warmup) nada ancla la varianza y
+        exp(logσ²) puede desbordarse — se observó en la variante grande (v3, M-VAE-3).
+        """
         h = self.encoder(x).flatten(1)
-        return self.fc_mu(h), self.fc_logvar(h)
+        return self.fc_mu(h), self.fc_logvar(h).clamp(-8.0, 8.0)
 
     def reparameterize(self, mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
         """Truco de reparametrización: z = μ + σ·ε, con ε~N(0,I) y σ = exp(½·logσ²)."""

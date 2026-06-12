@@ -40,12 +40,23 @@ EMBED_SAMPLE = 1200     # nº de z muestreados para el mapa latente / vecinos / 
 METRICS_N = 256         # tamaño del held-out fijo para PSNR/SSIM/MSE
 METRICS_SEED = 1234     # semilla fija del held-out de métricas (independiente del entrenamiento)
 
+# --- escala de la pérdida (mejora v3, ver «Lista de Mejoras.md» §3) -------------------
+# La reconstrucción (MSELoss/L1Loss) se PROMEDIA sobre los 12.288 valores de la imagen,
+# pero la KL se SUMA sobre las dimensiones del latente. Sin reescalar, con β=1 la KL pesa
+# miles de veces más que en el ELBO real → colapso del posterior (z deja de informar y el
+# decoder pinta siempre la "cara media"). v3: la KL se divide por el nº de píxeles, de modo
+# que β=1 ≈ ELBO bien equilibrado y el slider de β recupera su significado de β-VAE.
+PIXELS = 3 * 64 * 64    # 12.288 valores por imagen
+KL_WARMUP_FRAC = 0.3    # fracción inicial de epochs en la que β sube linealmente 0→β
+                        # (deja que el decoder aprenda a reconstruir antes de regularizar)
+
 
 def _kl_divergence(mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
-    """KL(q(z|x) ‖ N(0,I)) promediada por muestra del lote.
+    """KL(q(z|x) ‖ N(0,I)) en nats por muestra (suma sobre dims, media sobre el lote).
 
     KL = -½ · mean( sum_j (1 + logσ²_j − μ_j² − exp(logσ²_j)) ).
-    Mide cuánto se aleja el posterior del prior gaussiano estándar.
+    Mide cuánto se aleja el posterior del prior gaussiano estándar. Para usarla en la
+    pérdida se divide por PIXELS (misma escala que el MSE medio por píxel).
     """
     return -0.5 * torch.mean(torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1))
 
@@ -186,7 +197,12 @@ class VAEService:
             yield {"type": "start", "epochs": epochs, "n": int(n_use), "mode": mode,
                    "hyperparams": asdict(hp), "seed": seed}
 
+            # Warmup de β (v3): durante el primer KL_WARMUP_FRAC de epochs, β sube linealmente
+            # de 0 a su valor. Así el decoder aprende primero a reconstruir y la regularización
+            # entra después (evita que la KL gane la carrera al principio y colapse el posterior).
+            warmup_epochs = max(1.0, round(KL_WARMUP_FRAC * epochs))
             for epoch in range(1, epochs + 1):
+                beta_t = hp.beta * min(1.0, epoch / warmup_epochs)
                 rng.shuffle(indices)
                 run_total = torch.zeros((), device=self.device)
                 run_recon = torch.zeros((), device=self.device)
@@ -196,8 +212,9 @@ class VAEService:
                     opt.zero_grad(set_to_none=True)
                     recon, mu, logvar, _ = model(batch)
                     recon_loss = recon_crit(recon, batch)
-                    kl_loss = _kl_divergence(mu, logvar)
-                    loss = recon_loss + hp.beta * kl_loss
+                    # KL por píxel (v3): misma escala que el MSE medio → β=1 ≈ ELBO equilibrado.
+                    kl_loss = _kl_divergence(mu, logvar) / PIXELS
+                    loss = recon_loss + beta_t * kl_loss
                     loss.backward()
                     opt.step()
                     run_total += loss.detach()
@@ -221,7 +238,7 @@ class VAEService:
                                 "recon": epoch_recon, "kl": epoch_kl})
                 yield {"type": "epoch", "epoch": epoch, "epochs": epochs, "step": global_step,
                        "loss": epoch_loss, "recon_loss": epoch_recon, "kl_loss": epoch_kl,
-                       "preview": self._preview(model)}
+                       "beta_t": round(beta_t, 4), "preview": self._preview(model)}
                 if early_stop:
                     if epoch_loss < best - EARLY_STOP_MIN_DELTA:
                         best = epoch_loss
@@ -337,7 +354,8 @@ class VAEService:
                     for batch in self._iter_batches(ids, 256):
                         opt.zero_grad(set_to_none=True)
                         recon, mu, logvar, _ = model(batch)
-                        loss = recon_crit(recon, batch) + beta * _kl_divergence(mu, logvar)
+                        # misma escala v3 que en iter_train: KL por píxel
+                        loss = recon_crit(recon, batch) + beta * _kl_divergence(mu, logvar) / PIXELS
                         loss.backward()
                         opt.step()
                         if self._cancel:
