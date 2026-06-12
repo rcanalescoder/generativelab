@@ -15,27 +15,28 @@ Incluye cuatro modelos y un comparador:
 | **Diffusion** | DDPM (UNet pequeña) | Aprende a quitar ruido paso a paso. Muestra el **proceso** de ruido → cara. |
 | **Comparador** | — | Los cuatro lado a lado: tabla de capacidades + galería con la misma semilla. |
 
-## 📄 Cuaderno PDF — descárgalo
+## 📄 Cuaderno PDF — descárgalo (versión 3)
 
-Un **recorrido visual de 32 páginas** por los cuatro modelos: qué es cada uno y para qué sirve,
-su estructura, los parámetros explicados en lenguaje llano, **resultados reales**, el **código
-clave** de cada modelo y las mejoras encontradas con realimentación agéntica (p. ej. el AE
-U-Net: PSNR 18→28 dB). Pensado para entenderse **sin saber de inteligencia artificial**.
+Un **manual visual de 55 páginas** por los cuatro modelos: qué es cada uno, su estructura, los
+parámetros en lenguaje llano, **resultados reales** y el código clave. La **versión 3** añade el
+capítulo del **ciclo de calidad**: el diagnóstico, los cambios exactos de algoritmos y parámetros,
+y el antes/después medido de cada modelo (VAE KID 608→121 · GAN 200→37,5 · Diffusion 175→19,4).
+Pensado para entenderse **sin saber de inteligencia artificial**.
 
 <p align="center">
-  <a href="docs/Laboratorio-de-Modelos-Generativos.pdf">
-    <img src="docs/assets/pdf_cover.jpg" width="340" alt="Portada del cuaderno PDF" />
+  <a href="docs/Laboratorio-de-Modelos-Generativos-v3.pdf">
+    <img src="docs/assets/pdf_cover.jpg" width="340" alt="Portada del cuaderno PDF v3" />
   </a>
 </p>
 
 <p align="center">
-  <a href="docs/Laboratorio-de-Modelos-Generativos.pdf"><b>⬇️&nbsp;&nbsp;Descargar el PDF</b></a>
-  &nbsp;&nbsp;·&nbsp;&nbsp;32 páginas&nbsp;&nbsp;·&nbsp;&nbsp;~3,4 MB&nbsp;&nbsp;·&nbsp;&nbsp;español
+  <a href="docs/Laboratorio-de-Modelos-Generativos-v3.pdf"><b>⬇️&nbsp;&nbsp;Descargar el PDF</b></a>
+  &nbsp;&nbsp;·&nbsp;&nbsp;55 páginas&nbsp;&nbsp;·&nbsp;&nbsp;~5,8 MB&nbsp;&nbsp;·&nbsp;&nbsp;español
 </p>
 
 <p align="center">
-  <a href="docs/Laboratorio-de-Modelos-Generativos.pdf">
-    <img src="docs/assets/pdf_preview.jpg" width="820" alt="Páginas de muestra del cuaderno PDF" />
+  <a href="docs/Laboratorio-de-Modelos-Generativos-v3.pdf">
+    <img src="docs/assets/pdf_preview.jpg" width="820" alt="Páginas de muestra del cuaderno PDF v3: ciclo de calidad, antes/después del VAE y la GAN, veredicto" />
   </a>
 </p>
 
