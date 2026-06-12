@@ -198,7 +198,50 @@ equilibrio del juego no cambia, pero D ya no puede memorizar imágenes concretas
 menos sobreajuste de D, entrenamiento estable y mejor calidad con datasets de decenas de miles
 de imágenes. Implementada en `models/gan.py` (`diff_augment`).
 
-**Efecto medido** *(pendiente: ablación a igual presupuesto que el baseline + final full-dataset)*
+**Efecto medido — primera sorpresa del ciclo (y una lección de libro).** A presupuesto corto
+(25 epochs × 15k = 2.950 pasos, idéntico al baseline), los estabilizadores **pierden**:
+
+| Run (mismo presupuesto que el baseline) | KID×1000 ↓ |
+|---|---|
+| v2 baseline (sin estabilizadores) | **199,5** |
+| v3 stack completo (EMA+TTUR+smooth+aug) | 223,7 |
+| v3 solo EMA | 351,1 |
+| v3 EMA+TTUR+smooth (sin aug) | 414,2 |
+
+¿Por qué? Los estabilizadores son **apuestas a largo plazo**: la EMA con decay 0,999 promedia
+~1.000 pasos (un tercio de todo el run corto → llega «con retraso»); TTUR baja la lr de G a la
+mitad (G avanza menos en el mismo tiempo); DiffAugment le pone el trabajo más difícil a D. Todos
+frenan la convergencia temprana a cambio de estabilidad tardía. Conclusión metodológica para el
+PDF: **un screen corto no sirve para evaluar mejoras de estabilidad — hay que medirlas al
+presupuesto real.**
+
+**A presupuesto completo (40 epochs × dataset completo = 13.500 pasos) la foto se invierte:**
+
+| Run (40 epochs, 43.102 imgs) | KID×1000 ↓ | Diversidad |
+|---|---|---|
+| Receta v2 (control) | 70,9 | 0,923 |
+| Stack v3 con TTUR (lr_G 1e-4 / lr_D 2e-4) | 56,5 | 0,889 |
+| **Stack v3 sin TTUR (lr 2e-4 / 2e-4)** | **52,2** | 0,895 |
+
+Lecturas: (a) solo dar al GAN su presupuesto real (dataset completo + 40 epochs) ya baja el KID
+de 199→71; (b) el stack v3 añade un **−26 % adicional** (71→52); (c) TTUR no compensa aquí — la
+lr reducida de G sigue frenando incluso a 13.500 pasos, así que el default v3 queda en lrs
+iguales (2e-4) y TTUR como opción explorable en la UI (sliders `lr_G`/`lr_D` nuevos, spec §4.3).
+Visualmente: caras nítidas con ojos definidos y gran variedad de estilos; artefactos puntuales.
+
+**Final adoptado (60 epochs, receta ganadora):**
+
+| Run | KID×1000 ↓ | Diversidad | Tiempo |
+|---|---|---|---|
+| full60-v3-sinttur (EMA+smooth+DiffAugment, lr 2e-4/2e-4) | **37,5** | 0,907 | 21,5 min |
+
+**Resultado V3.2: KID 199,5 → 37,5 (−81 %).** Caras nítidas y coloridas con ojos detallados;
+artefactos solo puntuales. Checkpoint adoptado como demo: `gan_basico_demo.pt`. Defaults de la
+app actualizados a la receta ganadora (lrs iguales 2e-4; EMA, smoothing y DiffAugment activos;
+TTUR disponible vía los nuevos sliders `lr_G`/`lr_D`).
+
+Trayectoria completa del GAN: 199,5 (v2) → 70,9 (su presupuesto real) → 52,2 (stack v3, 40 ep)
+→ **37,5** (stack v3, 60 ep).
 
 ---
 

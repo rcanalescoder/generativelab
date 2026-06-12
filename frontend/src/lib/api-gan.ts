@@ -17,6 +17,12 @@ export interface GANHyperParams {
   epochs: number
   batch_size: number
   arch: GANArch
+  // v3: TTUR (lrs separadas para G y D; null → se usa learning_rate) + estabilizadores
+  lr_g: number | null
+  lr_d: number | null
+  label_smooth: number
+  ema: boolean
+  diffaug: boolean
 }
 
 /** Punto de la curva doble: una pérdida para el generador y otra para el discriminador. */

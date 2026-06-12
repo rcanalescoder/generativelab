@@ -233,3 +233,78 @@ def to_image_range(x: torch.Tensor) -> torch.Tensor:
 
 def count_params(model: nn.Module) -> int:
     return sum(p.numel() for p in model.parameters())
+
+
+# ---------------------------------------------------------------------------
+# DiffAugment (Zhao et al., 2020) — mejora v3, ver «Lista de Mejoras.md» §4
+# ---------------------------------------------------------------------------
+# Augmentación DIFERENCIABLE aplicada a TODO lo que ve el discriminador (reales y falsas,
+# también en el paso del generador). Como real y falso se transforman igual, el equilibrio
+# del juego no cambia, pero el discriminador ya no puede memorizar imágenes concretas →
+# menos sobreajuste de D y entrenamiento mucho más estable con datasets de decenas de miles
+# de imágenes. Es diferenciable, así que el gradiente fluye hasta G sin trucos extra.
+
+def _rand_brightness(x: torch.Tensor) -> torch.Tensor:
+    return x + (torch.rand(x.size(0), 1, 1, 1, dtype=x.dtype, device=x.device) - 0.5)
+
+
+def _rand_saturation(x: torch.Tensor) -> torch.Tensor:
+    x_mean = x.mean(dim=1, keepdim=True)
+    return (x - x_mean) * (torch.rand(x.size(0), 1, 1, 1, dtype=x.dtype, device=x.device) * 2) + x_mean
+
+
+def _rand_contrast(x: torch.Tensor) -> torch.Tensor:
+    x_mean = x.mean(dim=[1, 2, 3], keepdim=True)
+    return (x - x_mean) * (torch.rand(x.size(0), 1, 1, 1, dtype=x.dtype, device=x.device) + 0.5) + x_mean
+
+
+def _rand_translation(x: torch.Tensor, ratio: float = 0.125) -> torch.Tensor:
+    """Desplaza cada imagen hasta ±ratio·tamaño (rellena con 0), por muestra del lote."""
+    shift_x = int(x.size(2) * ratio + 0.5)
+    shift_y = int(x.size(3) * ratio + 0.5)
+    translation_x = torch.randint(-shift_x, shift_x + 1, size=[x.size(0), 1, 1], device=x.device)
+    translation_y = torch.randint(-shift_y, shift_y + 1, size=[x.size(0), 1, 1], device=x.device)
+    grid_batch, grid_x, grid_y = torch.meshgrid(
+        torch.arange(x.size(0), device=x.device),
+        torch.arange(x.size(2), device=x.device),
+        torch.arange(x.size(3), device=x.device),
+        indexing="ij",
+    )
+    grid_x = torch.clamp(grid_x + translation_x + 1, 0, x.size(2) + 1)
+    grid_y = torch.clamp(grid_y + translation_y + 1, 0, x.size(3) + 1)
+    x_pad = nn.functional.pad(x, [1, 1, 1, 1, 0, 0, 0, 0])
+    return x_pad.permute(0, 2, 3, 1).contiguous()[grid_batch, grid_x, grid_y].permute(0, 3, 1, 2).contiguous()
+
+
+def _rand_cutout(x: torch.Tensor, ratio: float = 0.5) -> torch.Tensor:
+    """Tapa un cuadrado aleatorio (½ del tamaño) por muestra: D no puede fijarse en una zona."""
+    cut_h = int(x.size(2) * ratio + 0.5)
+    cut_w = int(x.size(3) * ratio + 0.5)
+    offset_x = torch.randint(0, x.size(2) + (1 - cut_h % 2), size=[x.size(0), 1, 1], device=x.device)
+    offset_y = torch.randint(0, x.size(3) + (1 - cut_w % 2), size=[x.size(0), 1, 1], device=x.device)
+    grid_batch, grid_x, grid_y = torch.meshgrid(
+        torch.arange(x.size(0), device=x.device),
+        torch.arange(cut_h, device=x.device),
+        torch.arange(cut_w, device=x.device),
+        indexing="ij",
+    )
+    grid_x = torch.clamp(grid_x + offset_x - cut_h // 2, min=0, max=x.size(2) - 1)
+    grid_y = torch.clamp(grid_y + offset_y - cut_w // 2, min=0, max=x.size(3) - 1)
+    mask = torch.ones(x.size(0), x.size(2), x.size(3), dtype=x.dtype, device=x.device)
+    mask[grid_batch, grid_x, grid_y] = 0
+    return x * mask.unsqueeze(1)
+
+
+_DIFFAUG_FNS = {
+    "color": (_rand_brightness, _rand_saturation, _rand_contrast),
+    "translation": (_rand_translation,),
+    "cutout": (_rand_cutout,),
+}
+
+
+def diff_augment(x: torch.Tensor, policy: str = "color,translation,cutout") -> torch.Tensor:
+    """Aplica la política DiffAugment a un lote en [-1,1]. Diferenciable (sin .detach())."""
+    for name in policy.split(","):
+        for fn in _DIFFAUG_FNS[name.strip()]:
+            x = fn(x)
+    return x.contiguous()

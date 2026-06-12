@@ -25,10 +25,12 @@ from torch import nn
 from .. import imaging
 from ..data import dataset
 from ..device import get_device
+from ..models.diffusion import EMA
 from ..models.gan import (
     GAN_ARCHS,
     build_gan,
     count_params,
+    diff_augment,
     init_weights,
     to_image_range,
 )
@@ -59,6 +61,18 @@ class GANHyperParams:
     epochs: int = 30
     batch_size: int = 128
     arch: str = "basico"  # "basico" | "grande"
+    # --- estabilizadores v3 (ver «Lista de Mejoras.md» §4) ---
+    # lr_g/lr_d: lrs separadas para G y D. None → se usa learning_rate para ambas.
+    # El A/B a presupuesto completo ganó con lrs IGUALES (2e-4); TTUR (lr_g<lr_d) queda
+    # como opción explorable desde la UI.
+    lr_g: float | None = 2e-4
+    lr_d: float | None = 2e-4
+    label_smooth: float = 0.9  # etiqueta de "real" para D (suaviza su confianza)
+    ema: bool = True           # media móvil de los pesos de G (se muestrea con ella)
+    diffaug: bool = True       # DiffAugment sobre TODO lo que ve D (reales y falsas)
+
+    def _clamp_lr(self, v: float | None) -> float | None:
+        return None if v is None else float(max(1e-5, min(1e-2, v)))
 
     def sanitized(self) -> "GANHyperParams":
         return GANHyperParams(
@@ -67,6 +81,11 @@ class GANHyperParams:
             epochs=int(max(1, min(200, self.epochs))),
             batch_size=int(max(16, min(256, self.batch_size))),
             arch=self.arch if self.arch in GAN_ARCHS else "basico",
+            lr_g=self._clamp_lr(self.lr_g),
+            lr_d=self._clamp_lr(self.lr_d),
+            label_smooth=float(max(0.5, min(1.0, self.label_smooth))),
+            ema=bool(self.ema),
+            diffaug=bool(self.diffaug),
         )
 
 
@@ -178,9 +197,23 @@ class GANService:
             discriminator.train()
 
             betas = (0.5, 0.999)  # betas Adam recomendadas para DCGAN
-            opt_g = torch.optim.Adam(generator.parameters(), lr=hp.learning_rate, betas=betas)
-            opt_d = torch.optim.Adam(discriminator.parameters(), lr=hp.learning_rate, betas=betas)
+            # TTUR (v3): lrs separadas — D algo más rápido que G suele estabilizar el juego.
+            lr_g = hp.lr_g if hp.lr_g is not None else hp.learning_rate
+            lr_d = hp.lr_d if hp.lr_d is not None else hp.learning_rate
+            opt_g = torch.optim.Adam(generator.parameters(), lr=lr_g, betas=betas)
+            opt_d = torch.optim.Adam(discriminator.parameters(), lr=lr_d, betas=betas)
             criterion = nn.BCEWithLogitsLoss()
+
+            # EMA del generador (v3): se muestrea con la media móvil de los pesos, no con los
+            # pesos "crudos" que oscilan con cada minibatch. Decay corto si el run es breve.
+            ema = EMA(generator, decay=0.999 if hp.epochs >= 15 else 0.995) if hp.ema else None
+            ema_g: nn.Module | None = None
+            if ema is not None:
+                ema_g = build_gan(hp.z_dim, hp.arch)[0].to(self.device)
+                ema_g.eval()
+
+            # DiffAugment (v3): D nunca ve imágenes sin aumentar (reales y falsas por igual).
+            aug = (lambda t: diff_augment(t)) if hp.diffaug else (lambda t: t)
 
             # z fijo para la vista previa: misma "semilla visual" en todas las epochs,
             # así se ve cómo evolucionan exactamente las mismas caras.
@@ -205,16 +238,19 @@ class GANService:
                 nb = 0
                 for real in self._iter_batches(indices, hp.batch_size):
                     bs = real.size(0)
-                    real_labels = torch.ones(bs, device=self.device)
+                    # label smoothing (v3): a D se le pide ~0.9 para las reales, no 1.0 —
+                    # evita que se vuelva sobreconfiado y deje a G sin gradiente útil.
+                    real_labels = torch.full((bs,), hp.label_smooth, device=self.device)
                     fake_labels = torch.zeros(bs, device=self.device)
+                    ones = torch.ones(bs, device=self.device)
 
                     # ----- (1) paso del discriminador -----
                     opt_d.zero_grad(set_to_none=True)
-                    out_real = discriminator(real)
+                    out_real = discriminator(aug(real))
                     loss_real = criterion(out_real, real_labels)
                     z = torch.randn(bs, hp.z_dim, device=self.device)
                     fake = generator(z)
-                    out_fake = discriminator(fake.detach())  # detach: no propaga a G
+                    out_fake = discriminator(aug(fake.detach()))  # detach: no propaga a G
                     loss_fake = criterion(out_fake, fake_labels)
                     loss_d = loss_real + loss_fake
                     loss_d.backward()
@@ -222,10 +258,12 @@ class GANService:
 
                     # ----- (2) paso del generador -----
                     opt_g.zero_grad(set_to_none=True)
-                    out_fake_g = discriminator(fake)  # reusar las falsas, ahora SÍ propaga a G
-                    loss_g = criterion(out_fake_g, real_labels)  # non-saturating
+                    out_fake_g = discriminator(aug(fake))  # reusar las falsas, ahora SÍ propaga a G
+                    loss_g = criterion(out_fake_g, ones)  # non-saturating (target 1.0, sin smooth)
                     loss_g.backward()
                     opt_g.step()
+                    if ema is not None:
+                        ema.update(generator)
 
                     run_g += loss_g.detach()
                     run_d += loss_d.detach()
@@ -242,11 +280,20 @@ class GANService:
                 g_loss = float((run_g / max(nb, 1)).item())
                 d_loss = float((run_d / max(nb, 1)).item())
                 history.append({"epoch": epoch, "g_loss": g_loss, "d_loss": d_loss})
+                # vista previa con los pesos EMA si están activos (lo que se verá al muestrear)
+                if ema is not None and ema_g is not None:
+                    ema.copy_to(ema_g)
+                    preview_model = ema_g
+                else:
+                    preview_model = generator
                 yield {"type": "epoch", "epoch": epoch, "epochs": epochs, "step": global_step,
                        "g_loss": g_loss, "d_loss": d_loss,
-                       "preview": self._preview(generator, fixed_z)}
+                       "preview": self._preview(preview_model, fixed_z)}
 
-            # finalizar: adoptar el modelo entrenado (en memoria; NO toca el checkpoint demo)
+            # finalizar: adoptar el modelo entrenado (en memoria; NO toca el checkpoint demo).
+            # Con EMA activa, el generador final lleva los pesos SUAVIZADOS (mejor muestreo).
+            if ema is not None:
+                ema.copy_to(generator)
             generator.eval()
             discriminator.eval()
             self.generator = generator

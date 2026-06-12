@@ -17,4 +17,11 @@
 
 | Run | Tag | KID×1000 | Diversidad (ratio) | Epochs | Train (s) | Grid |
 |---|---|---|---|---|---|---|
+| 20260612-214059-gan-full60-v3-sinttur | full60-v3-sinttur | 37.49 ± 1.26 | 0.907 | 60 | 1291.6 | 20260612-214059-gan-full60-v3-sinttur.png |
+| 20260612-212553-gan-full-v3-sinttur | full-v3-sinttur | 52.17 ± 1.44 | 0.895 | 40 | 860.1 | 20260612-212553-gan-full-v3-sinttur.png |
+| 20260612-211130-gan-full-v3-ttur | full-v3-ttur | 56.48 ± 1.3 | 0.889 | 40 | 859.3 | 20260612-211130-gan-full-v3-ttur.png |
+| 20260612-210107-gan-full-v2-control | full-v2-control | 70.88 ± 1.27 | 0.923 | 40 | 619.2 | 20260612-210107-gan-full-v2-control.png |
 | 20260612-202801-gan-v2-baseline-basico | v2-baseline-basico | 199.53 ± 1.28 | 1.054 | 25 | 139.9 | 20260612-202801-gan-v2-baseline-basico.png |
+| 20260612-205227-gan-v3-stack-completo | v3-stack-completo | 223.71 ± 1.0 | 0.911 | 25 | 188.5 | 20260612-205227-gan-v3-stack-completo.png |
+| 20260612-205759-gan-v3-solo-ema | v3-solo-ema | 351.13 ± 1.84 | 1.056 | 25 | 135.9 | 20260612-205759-gan-v3-solo-ema.png |
+| 20260612-205539-gan-v3-sin-diffaug | v3-sin-diffaug | 414.16 ± 2.18 | 1.087 | 25 | 135.9 | 20260612-205539-gan-v3-sin-diffaug.png |

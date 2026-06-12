@@ -36,7 +36,8 @@ const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e))
 const DEFAULTS = {
   arch: 'basico' as const,
   zDim: 100,
-  lrIdx: 2, // 0.0002
+  lrGIdx: 2, // 0.0002 — el A/B v3 a presupuesto completo ganó con lrs iguales;
+  lrDIdx: 2, // 0.0002 — TTUR (lr_G < lr_D) queda como opción explorable
   epochs: 25,
   nSamples: 16,
   genSeed: 42,
@@ -63,7 +64,8 @@ export function GANTab() {
   // hiperparámetros del modelo (requieren reentrenar)
   const [arch, setArch] = useState<GANArch>(DEFAULTS.arch)
   const [zDim, setZDim] = useState(DEFAULTS.zDim)
-  const [lrIdx, setLrIdx] = useState(DEFAULTS.lrIdx)
+  const [lrGIdx, setLrGIdx] = useState(DEFAULTS.lrGIdx)
+  const [lrDIdx, setLrDIdx] = useState(DEFAULTS.lrDIdx)
   const [epochs, setEpochs] = useState(DEFAULTS.epochs)
   const [trainSeed, setTrainSeed] = useState(DEFAULTS.trainSeed)
   const [mode, setMode] = useState<'quick' | 'full'>(DEFAULTS.mode)
@@ -81,7 +83,8 @@ export function GANTab() {
   const [archOpen, setArchOpen] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
 
-  const lr = LR_VALUES[lrIdx]
+  const lrG = LR_VALUES[lrGIdx]
+  const lrD = LR_VALUES[lrDIdx]
   const trained = !!status?.trained
   const outdated =
     trained &&
@@ -91,7 +94,8 @@ export function GANTab() {
       // …o el usuario tocó un parámetro del modelo respecto al checkpoint cargado.
       arch !== status.arch ||
       zDim !== status.hyperparams.z_dim ||
-      lr !== status.hyperparams.learning_rate ||
+      lrG !== (status.hyperparams.lr_g ?? status.hyperparams.learning_rate) ||
+      lrD !== (status.hyperparams.lr_d ?? status.hyperparams.learning_rate) ||
       epochs !== status.hyperparams.epochs)
 
   const run = useCallback(async (fn: () => Promise<void>) => {
@@ -115,7 +119,8 @@ export function GANTab() {
         setArch(st.arch)
         setZDim(st.hyperparams.z_dim)
         setEpochs(st.hyperparams.epochs)
-        setLrIdx(nearestLrIdx(st.hyperparams.learning_rate))
+        setLrGIdx(nearestLrIdx(st.hyperparams.lr_g ?? st.hyperparams.learning_rate))
+        setLrDIdx(nearestLrIdx(st.hyperparams.lr_d ?? st.hyperparams.learning_rate))
         setTrainSeed(st.seed)
         if (st.trained) {
           setGallery(await generateGAN(DEFAULTS.nSamples, DEFAULTS.genSeed))
@@ -182,7 +187,7 @@ export function GANTab() {
     const ctrl = new AbortController()
     abortRef.current = ctrl
     trainGAN(
-      { mode, seed: trainSeed, hyperparams: { arch, z_dim: zDim, learning_rate: lr, epochs } },
+      { mode, seed: trainSeed, hyperparams: { arch, z_dim: zDim, lr_g: lrG, lr_d: lrD, epochs } },
       (ev) => {
         if (ev.type === 'epoch') {
           setLiveLoss((prev) => [...prev, { epoch: ev.epoch, g_loss: ev.g_loss, d_loss: ev.d_loss }])
@@ -223,7 +228,8 @@ export function GANTab() {
   const resetDefaults = () => {
     if (arch !== DEFAULTS.arch) changeArch(DEFAULTS.arch)
     setZDim(DEFAULTS.zDim)
-    setLrIdx(DEFAULTS.lrIdx)
+    setLrGIdx(DEFAULTS.lrGIdx)
+    setLrDIdx(DEFAULTS.lrDIdx)
     setEpochs(DEFAULTS.epochs)
     setTrainSeed(DEFAULTS.trainSeed)
     setMode(DEFAULTS.mode)
@@ -430,12 +436,20 @@ export function GANTab() {
           </div>
           <Slider label="z_dim" value={zDim} min={16} max={256} step={8} onChange={setZDim} />
           <Slider
-            label="learning_rate"
-            value={lrIdx}
+            label="lr_G (generador)"
+            value={lrGIdx}
             min={0}
             max={LR_VALUES.length - 1}
-            onChange={setLrIdx}
-            format={() => lr}
+            onChange={setLrGIdx}
+            format={() => lrG}
+          />
+          <Slider
+            label="lr_D (discriminador)"
+            value={lrDIdx}
+            min={0}
+            max={LR_VALUES.length - 1}
+            onChange={setLrDIdx}
+            format={() => lrD}
           />
           <Slider label="epochs" value={epochs} min={1} max={100} onChange={setEpochs} />
 
