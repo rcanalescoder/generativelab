@@ -286,6 +286,16 @@ Define los tipos en el backend (Pydantic) y mantenlos en sync con el front. Esqu
 - **Fase 5 — Diffusion.** DDPM pequeño, forward/reverse filmstrips, schedule, sampler DDPM/DDIM.
 - **Fase 6 — Comparador + pulido.** Comparativa lado a lado, métricas, radar; estados, persistencia, README final.
 
+**V3 — Ciclo de calidad (2026-06; ver `Lista de Mejoras.md`, la fuente para el PDF v3).**
+Ejecutado como ciclo agéntico de experimentos con protocolo fijo de evaluación de GENERACIÓN
+(KID sobre InceptionV3 + diversidad + grids con semilla fija; `backend/app/experiments/`:
+`quality.py`, `runner.py`, `train_diffusion_v3.py`; artefactos en `experiments/`).
+- **V3.0** arnés + baselines v2 medidos (VAE KID 608 colapsado · GAN 200).
+- **V3.1 VAE**: KL por píxel (β=1 ≈ ELBO) + warmup de β + clamp de logσ² → KID 121.
+- **V3.2 GAN**: EMA del generador + label smoothing + DiffAugment + `lr_G`/`lr_D` en UI → KID 37,5.
+- **V3.3 Diffusion**: entrenamiento largo reanudable de «nitido» (dataset completo, warmup lr).
+- Los checkpoints demo NO se versionan: se regeneran con el runner (comandos en `Lista de Mejoras.md` §6).
+
 Cada fase termina con **commit + PARAR + esperar revisión**.
 
 ---

@@ -5,21 +5,34 @@
 > rehacer el PDF del proyecto. Cada experimento queda además registrado, máquina-legible, en
 > `experiments/ledger.jsonl`, con su rejilla de muestras en `experiments/grids/`.
 
-**Estado:** 🟡 en curso (sesión del 2026-06-12).
+**Estado:** ✅ ciclo completado (sesión del 2026-06-12, ~2,5 h de cómputo MPS, 17 runs registrados).
 
 ---
 
-## 0. Resumen ejecutivo (se completa al cerrar el ciclo)
+## 0. Resumen ejecutivo
 
-| Modelo | KID×1000 v2 (antes) | KID×1000 v3 (después) | Veredicto visual |
-|---|---|---|---|
-| VAE | — | — | — |
-| GAN | — | — | — |
-| Diffusion | — | — | — |
+| Modelo | KID×1000 v2 (antes) | KID×1000 v3 (después) | Mejora | Veredicto visual |
+|---|---|---|---|---|
+| VAE | 608,5 | **121,3** | **−80 %** | de 64 manchas marrones idénticas a caras suaves, variadas y reconocibles |
+| GAN | 199,5 | **37,5** | **−81 %** | caras nítidas y coloridas, ojos detallados; artefactos solo puntuales |
+| Diffusion | 175,1 | **19,4** | **−89 %** | el mejor del laboratorio: detalle fino, alto contraste, máxima variedad |
 
 *KID (Kernel Inception Distance): distancia entre la distribución de caras generadas y la de
 caras reales, medida sobre features de InceptionV3. **Menor = mejor.** 0 sería indistinguible
-del dataset real.*
+del dataset real. La diversidad pasó de 0,145 (VAE colapsado) a ≈1,0 en los tres modelos.*
+
+**Montaje antes/después listo para el PDF:** `experiments/grids/v3-antes-despues.png`
+(y los 6 grids individuales 8×8, con semilla fija, en `experiments/grids/`).
+
+Las tres palancas que explican el salto, en una línea cada una:
+1. **VAE:** un bug de escala (KL sumada vs reconstrucción promediada) colapsaba el posterior — se
+   reescaló la KL por píxel, con warmup de β y una guarda numérica en logσ².
+2. **GAN:** le faltaban los estabilizadores modernos (EMA del generador, label smoothing,
+   DiffAugment) y su presupuesto real de datos/epochs.
+3. **Diffusion:** la base ya era buena; solo necesitaba entrenamiento largo (dataset completo,
+   warmup de lr) con guardado reanudable para poder dárselo.
+4. *(transversal)* Nada de esto era optimizable sin **medir la generación**: el KID + los grids
+   de semilla fija convirtieron «mejorar las caras» en un experimento con números.
 
 ---
 
@@ -87,7 +100,7 @@ el protocolo nuevo. El entorno es un Mac Apple Silicon (MPS), torch 2.12.
 |---|---|---|---|---|
 | `vae-v2-baseline-basico` | full · 12 epochs · β=1 (sin reescalar) | **608,5** | **0,145** | 64 manchas marrones casi idénticas (la «cara media») |
 | `gan-v2-baseline-basico` | 25 epochs · 15k imgs · lr única 2e-4 | **199,5** | 1,054 | caras anime reconocibles pero toscas: manchas, deformaciones, zonas lavadas |
-| `diffusion-v2-baseline-agil` | *(pendiente de medir)* | — | — | — |
+| `diffusion-v2-baseline-agil` | agil 32×32 · 30 epochs · 20k imgs | **175,1** | 1,130 | caras correctas pero blandas (la resolución de trabajo 32×32 reescalada a 64 emborrona) |
 
 Dos lecturas importantes del baseline VAE:
 
@@ -266,16 +279,62 @@ La pérdida de denoising (MSE de ε) **no mide calidad de muestra**; ahora cada 
 evalúa con el mismo KID del resto de modelos (512 muestras, DDIM 80 pasos — generar con
 difusión es caro, así que diffusion se compara siempre contra diffusion con el mismo n).
 
-**Efecto medido** *(pendiente: baseline agil v2 + checkpoints nitido v3 por tramos)*
+**Efecto medido** (eval con 512 muestras y DDIM 80 pasos en ambos):
+
+| Run | Config | KID×1000 ↓ | Diversidad |
+|---|---|---|---|
+| v2 baseline (agil) | 32×32 · 30 epochs · 20k imgs | 175,1 | 1,130 |
+| **v3 nitido (28 epochs)** | 64×64 nativo · atención · 43.102 imgs · EMA · warmup | **19,4** | 0,984 |
+
+**Resultado V3.3: KID 175 → 19,4 (−89 %), el mejor modelo del laboratorio** — como cabía esperar
+de un DDPM bien entrenado. 28 epochs × 128 s ≈ 60 min de entrenamiento en MPS; la pérdida seguía
+bajando al cortar (0,0616 y descendiendo), así que hay margen extra con más noches
+(`--resume` continúa donde se quedó). Checkpoint demo: `diffusion_nitido_demo.pt`.
 
 ---
 
 ## 6. Checkpoints adoptados y reproducción
 
-*(pendiente)*
+Los checkpoints **no se versionan** en git (pesan decenas/cientos de MB y se regeneran en
+minutos); lo que se versiona es el código + este documento + el ledger. Comandos exactos
+(desde `backend/`, venv activado, `export PYTORCH_ENABLE_MPS_FALLBACK=1`):
+
+| Demo | Comando | Tiempo (M-series) |
+|---|---|---|
+| `vae_basico_demo.pt` (KID 195) | `python -m app.experiments.runner --model vae --tag demo --mode full --hp '{"epochs":40,"beta":0.5,"arch":"basico"}' --save-ckpt app/checkpoints/vae_basico_demo.pt` | ~2 min |
+| `vae_grande_demo.pt` (KID 121) | ídem con `"arch":"grande"` y `--save-ckpt app/checkpoints/vae_grande_demo.pt` | ~10 min |
+| `gan_basico_demo.pt` (KID 37,5) | `python -m app.experiments.runner --model gan --tag demo --mode full --hp '{"epochs":60}' --save-ckpt app/checkpoints/gan_basico_demo.pt` | ~22 min |
+| `diffusion_nitido_demo.pt` | `python -m app.experiments.train_diffusion_v3 --epochs 28` (reanudable con `--resume`) | ~1-2 h |
+
+Cualquier checkpoint se evalúa con el protocolo oficial sin reentrenar:
+`python -m app.experiments.runner --model <m> --load-demo <arch> --tag eval --eval-n 2048`
+(diffusion: `--eval-n 512 --steps 80`). Los resultados van solos al ledger y al leaderboard.
 
 ---
 
-## 7. Cronología de experimentos
+## 7. Cronología de experimentos (2026-06-12, generada desde `experiments/ledger.jsonl`)
 
-*(pendiente: tabla generada desde `experiments/ledger.jsonl` al cierre)*
+| # | Hora | Modelo | Run | KID×1000 ↓ | Div. | Train (s) |
+|---|---|---|---|---|---|---|
+| 1 | 20:27 | vae | v2-baseline-basico | 608,54 | 0,145 | 34 |
+| 2 | 20:30 | gan | v2-baseline-basico | 199,53 | 1,054 | 140 |
+| 3 | 20:32 | vae | v3-kl-beta1-basico | 255,06 | 1,078 | 33 |
+| 4 | 20:32 | vae | v3-kl-beta05-basico | 241,47 | 1,097 | 33 |
+| 5 | 20:33 | vae | v3-kl-beta2-basico | 292,18 | 1,062 | 33 |
+| 6 | 20:36 | vae | v3-kl-beta1-grande | 254,22 | 1,023 | 183 |
+| 7 | 20:39 | vae | v3-final-basico | 195,14 | 1,086 | 107 |
+| 8 | 20:51 | vae | **v3-final-grande** | **121,30** | 0,976 | 598 |
+| 9 | 20:55 | gan | v3-stack-completo (screen) | 223,71 | 0,911 | 189 |
+| 10 | 20:57 | gan | v3-sin-diffaug (screen) | 414,16 | 1,087 | 136 |
+| 11 | 21:00 | gan | v3-solo-ema (screen) | 351,13 | 1,056 | 136 |
+| 12 | 21:11 | gan | full-v2-control | 70,88 | 0,923 | 619 |
+| 13 | 21:25 | gan | full-v3-ttur | 56,48 | 0,889 | 859 |
+| 14 | 21:40 | gan | full-v3-sinttur | 52,17 | 0,895 | 860 |
+| 15 | 22:02 | gan | **full60-v3-sinttur** | **37,49** | 0,907 | 1292 |
+| 16 | 22:09 | diffusion | v2-baseline-agil | 175,14 | 1,130 | 359 |
+| 17 | 23:10 | diffusion | **v3-nitido-ep28** | **19,40** | 0,984 | ~3600 |
+
+Además quedó en el ledger la historia completa de cada run (config, semillas, métricas y ruta de
+su grid). Incidencias dignas de mención: (a) la explosión numérica de la variante grande del VAE
+(→ M-VAE-3); (b) los screens cortos del GAN dando el veredicto **opuesto** al presupuesto real
+(→ lección metodológica de §4).

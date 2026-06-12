@@ -96,16 +96,36 @@ python -m app.data.dataset
 
 ### 3. Generar los checkpoints demo (opcional pero recomendado)
 
-Para que las pestañas estén listas al instante, entrena los modelos demo. Cada comando guarda
-su checkpoint en `backend/app/checkpoints/<modelo>_demo.pt`:
+Para que las pestañas estén listas al instante, entrena los modelos demo. Desde la **v3**
+(ver `Lista de Mejoras.md`: el ciclo de calidad que llevó el VAE de KID 608→121 y el GAN de
+200→37) los demos de calidad se generan con el *runner* de experimentos. Cada comando guarda su
+checkpoint en `backend/app/checkpoints/<modelo>_demo.pt` (tiempos medidos en un M-series con MPS):
 
 ```bash
-# desde backend/ con el venv activado (export PYTORCH_ENABLE_MPS_FALLBACK=1 si vas por CPU)
-python -m app.services.ae_service          # Autoencoder   (~3 min en MPS)
-python -m app.services.vae_service         # VAE           (~3-4 min)
-python -m app.services.gan_service         # GAN           (~10-15 min, calidad tosca a propósito)
-python -m app.services.diffusion_service   # Diffusion     (~15-25 min, resolución 32×32)
+# desde backend/ con el venv activado
+export PYTORCH_ENABLE_MPS_FALLBACK=1
+
+# VAE v3 (KL por píxel + warmup; ~2 min basico · ~10 min grande)
+python -m app.experiments.runner --model vae --tag demo --mode full \
+    --hp '{"epochs":40,"beta":0.5,"arch":"basico"}' --save-ckpt app/checkpoints/vae_basico_demo.pt
+python -m app.experiments.runner --model vae --tag demo-grande --mode full \
+    --hp '{"epochs":40,"beta":0.5,"arch":"grande"}' --save-ckpt app/checkpoints/vae_grande_demo.pt
+
+# GAN v3 (EMA + label smoothing + DiffAugment; ~22 min)
+python -m app.experiments.runner --model gan --tag demo --mode full \
+    --hp '{"epochs":60}' --save-ckpt app/checkpoints/gan_basico_demo.pt
+
+# Diffusion «nitido» v3 (largo y REANUDABLE: puedes cortar y seguir con --resume; ~1-2 h)
+python -m app.experiments.train_diffusion_v3 --epochs 28
+
+# AE y diffusion «agil» (demos clásicos de la v2)
+python -m app.services.ae_service          # Autoencoder   (~3 min)
+python -m app.services.diffusion_service   # Diffusion     (agil 32×32 + nitido corto)
 ```
+
+Cada run del runner queda registrado en `experiments/ledger.jsonl` con sus métricas (KID,
+diversidad) y su rejilla de muestras en `experiments/grids/` — el leaderboard vivo está en
+`experiments/LEADERBOARD.md`.
 
 Si no quieres esperar, **puedes saltarte este paso**: cada pestaña muestra un estado "sin
 entrenar" y puedes pulsar **Entrenar** (modo *Rápido*) en la propia UI para obtener un modelo

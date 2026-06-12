@@ -25,3 +25,10 @@
 | 20260612-205227-gan-v3-stack-completo | v3-stack-completo | 223.71 ± 1.0 | 0.911 | 25 | 188.5 | 20260612-205227-gan-v3-stack-completo.png |
 | 20260612-205759-gan-v3-solo-ema | v3-solo-ema | 351.13 ± 1.84 | 1.056 | 25 | 135.9 | 20260612-205759-gan-v3-solo-ema.png |
 | 20260612-205539-gan-v3-sin-diffaug | v3-sin-diffaug | 414.16 ± 2.18 | 1.087 | 25 | 135.9 | 20260612-205539-gan-v3-sin-diffaug.png |
+
+## DIFFUSION
+
+| Run | Tag | KID×1000 | Diversidad (ratio) | Epochs | Train (s) | Grid |
+|---|---|---|---|---|---|---|
+| 20260612-230957-diffusion-v3-nitido-ep28 | v3-nitido-ep28 | 19.4 ± 0.44 | 0.984 | — | — | 20260612-230957-diffusion-v3-nitido-ep28.png |
+| 20260612-220340-diffusion-v2-baseline-agil | v2-baseline-agil | 175.14 ± 1.08 | 1.13 | 30 | 359.0 | 20260612-220340-diffusion-v2-baseline-agil.png |

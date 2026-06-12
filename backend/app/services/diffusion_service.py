@@ -464,14 +464,16 @@ class DiffusionService:
         `diffusion_demo.pt` (se trata como "agil").
 
         Al arrancar el servidor se llama sin argumentos: intenta la variante actual y, si no
-        hay, cae a "agil" (que cubre el legacy) para que la app siempre tenga un demo.
+        hay, prueba el resto de variantes (v3): si solo existe el demo de "nitido", la app
+        arranca con él en vez de quedarse "sin entrenar".
         """
         if arch is not None:
             return self.load_demo(arch)
         if self.load_demo(self.hp.arch):
             return True
-        if self.hp.arch != "agil":
-            return self.load_demo("agil")
+        for other in DIFF_ARCHS:
+            if other != self.hp.arch and self.load_demo(other):
+                return True
         return False
 
 
