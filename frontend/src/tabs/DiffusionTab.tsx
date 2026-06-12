@@ -32,11 +32,13 @@ const nearestLrIdx = (lr: number) => {
 }
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
-/** Valores por defecto (los que ves al abrir la app, = checkpoint demo). */
+/** Valores por defecto (= la receta ÓPTIMA del estudio v3 y su checkpoint demo: KID 19,4).
+ *  «nitido» muestrea más lento que «agil» (calidad ↔ interactividad): cambiar de variante
+ *  es un clic. «Volver a parámetros por defecto» restaura esta receta. */
 const DEFAULTS = {
-  arch: 'agil' as const,
+  arch: 'nitido' as const,
   lrIdx: 2, // 0.0002
-  epochs: 18,
+  epochs: 28,
   seed: 42,
   mode: 'quick' as const,
   earlyStop: true,

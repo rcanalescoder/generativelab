@@ -32,13 +32,14 @@ const nearestLrIdx = (lr: number) => {
 }
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
-/** Valores por defecto (los que ves al abrir la app, ≈ checkpoint demo). */
+/** Valores por defecto (= la receta ÓPTIMA del estudio v3 y su checkpoint demo: KID 37,5).
+ *  «Volver a parámetros por defecto» restaura esta receta, no la antigua de la v2. */
 const DEFAULTS = {
   arch: 'basico' as const,
   zDim: 100,
   lrGIdx: 2, // 0.0002 — el A/B v3 a presupuesto completo ganó con lrs iguales;
   lrDIdx: 2, // 0.0002 — TTUR (lr_G < lr_D) queda como opción explorable
-  epochs: 25,
+  epochs: 60,
   nSamples: 16,
   genSeed: 42,
   interpSteps: 8,

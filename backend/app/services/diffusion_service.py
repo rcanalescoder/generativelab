@@ -105,12 +105,16 @@ def _remap_legacy_agil_state(sd: dict) -> dict:
 
 @dataclass
 class DiffusionHyperParams:
+    """Defaults = la receta ÓPTIMA del estudio v3 (KID 19,4, «Lista de Mejoras.md» §5):
+    variante nitido (64×64 con atención) y 28 epochs. «agil» queda a un clic para
+    interactividad máxima (muestrea mucho más rápido)."""
+
     learning_rate: float = 2e-4
-    epochs: int = 30
+    epochs: int = 28
     batch_size: int = 128
     timesteps: int = TIMESTEPS
     schedule: str = DEFAULT_SCHEDULE  # "cosine" (def.) | "linear"
-    arch: str = "agil"               # "agil" | "nitido"
+    arch: str = "nitido"             # "agil" | "nitido"
 
     def sanitized(self) -> "DiffusionHyperParams":
         return DiffusionHyperParams(

@@ -310,6 +310,15 @@ Cualquier checkpoint se evalúa con el protocolo oficial sin reentrenar:
 `python -m app.experiments.runner --model <m> --load-demo <arch> --tag eval --eval-n 2048`
 (diffusion: `--eval-n 512 --steps 80`). Los resultados van solos al ledger y al leaderboard.
 
+**Las recetas óptimas son ahora los defaults de la app** (cierre del ciclo, 2026-06-13): los
+dataclasses del backend y los `DEFAULTS` de cada pestaña llevan los valores ganadores del
+estudio — VAE: grande · β=0,5 · 40 epochs; GAN: EMA+smooth+DiffAugment · lrs 2e-4 · 60 epochs;
+Diffusion: nitido · 28 epochs. Al arrancar, cada pestaña carga su mejor checkpoint
+(grande / basico-v3 / nitido) y muestra esos parámetros; **«Volver a parámetros por defecto»
+restaura la receta v3**, no la antigua; y darle a «Entrenar» con lo que hay en pantalla
+reproduce el resultado del estudio. La variante rápida («basico»/«agil») queda a un clic
+para demos interactivas.
+
 ---
 
 ## 7. Cronología de experimentos (2026-06-12, generada desde `experiments/ledger.jsonl`)

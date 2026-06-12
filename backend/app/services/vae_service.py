@@ -32,7 +32,7 @@ def demo_path(arch: str) -> Path:
 
 
 QUICK_N = 6000          # subconjunto para el modo "quick" (solo cambia el tamaño de datos)
-DEMO_EPOCHS = 12        # checkpoint demo (modo full)
+DEMO_EPOCHS = 40        # checkpoint demo (modo full) — presupuesto de la receta v3
 LOG_EVERY = 25          # steps entre eventos de progreso
 EARLY_STOP_MIN_DELTA = 1e-4  # mejora mínima de pérdida por epoch para resetear la paciencia
 PREVIEW_IDS = [12, 800, 4096, 20000]  # caras fijas para la vista previa
@@ -63,13 +63,17 @@ def _kl_divergence(mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
 
 @dataclass
 class VAEHyperParams:
+    """Defaults = la receta ÓPTIMA del estudio v3 (KID 121, «Lista de Mejoras.md» §3):
+    arch grande + β=0,5 + 40 epochs. Es lo que ve la UI al arrancar y lo que restaura
+    «Volver a parámetros por defecto» — entrenar con esto produce resultados en condiciones."""
+
     latent_dim: int = 128
     learning_rate: float = 1e-3
-    epochs: int = 30
+    epochs: int = 40
     loss: str = "mse"  # "mse" | "l1"  (término de reconstrucción)
-    beta: float = 1.0  # peso del término KL (β-VAE)
+    beta: float = 0.5  # peso del término KL (β-VAE); 0,5 ganó el barrido medido {0,5 · 1 · 2}
     batch_size: int = 256
-    arch: str = "basico"  # "basico" | "grande"
+    arch: str = "grande"  # "basico" | "grande"
 
     def sanitized(self) -> "VAEHyperParams":
         return VAEHyperParams(
@@ -700,13 +704,13 @@ vae_service = VAEService()
 
 if __name__ == "__main__":
     # Genera el checkpoint demo de LAS DOS variantes:  python -m app.services.vae_service
-    # Cada una entrena en modo full acotado (DEMO_EPOCHS, β=1.0) y se guarda en vae_<arch>_demo.pt.
+    # Cada una entrena la receta v3 (full, DEMO_EPOCHS, β=0.5) y se guarda en vae_<arch>_demo.pt.
     summary: list[dict] = []
     for arch in VAE_ARCHS:
         svc = VAEService()
-        print(f"[vae] === variante '{arch}' · full {DEMO_EPOCHS} epochs (β=1.0) en {svc.device.type} ===",
+        print(f"[vae] === variante '{arch}' · full {DEMO_EPOCHS} epochs (β=0.5) en {svc.device.type} ===",
               flush=True)
-        hp = VAEHyperParams(epochs=DEMO_EPOCHS, beta=1.0, batch_size=256, arch=arch)
+        hp = VAEHyperParams(epochs=DEMO_EPOCHS, beta=0.5, batch_size=256, arch=arch)
         for ev in svc.iter_train("full", hp, seed=42):
             if ev["type"] == "epoch":
                 print(

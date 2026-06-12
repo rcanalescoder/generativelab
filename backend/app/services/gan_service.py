@@ -56,9 +56,12 @@ DEMO_BATCH = 128
 
 @dataclass
 class GANHyperParams:
+    """Defaults = la receta ÓPTIMA del estudio v3 (KID 37,5, «Lista de Mejoras.md» §4):
+    EMA + label smoothing + DiffAugment, lrs iguales 2e-4 y 60 epochs."""
+
     z_dim: int = 100
     learning_rate: float = 2e-4
-    epochs: int = 30
+    epochs: int = 60
     batch_size: int = 128
     arch: str = "basico"  # "basico" | "grande"
     # --- estabilizadores v3 (ver «Lista de Mejoras.md» §4) ---

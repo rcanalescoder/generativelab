@@ -58,14 +58,15 @@ const nearestLrIdx = (lr: number) => {
 }
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
-/** Valores por defecto (los que ves al abrir la app, = checkpoint demo). */
+/** Valores por defecto (= la receta ÓPTIMA del estudio v3 y su checkpoint demo: KID 121).
+ *  «Volver a parámetros por defecto» restaura esta receta, no la antigua de la v2. */
 const DEFAULTS = {
-  arch: 'basico' as const,
+  arch: 'grande' as const,
   latentDim: 128,
   lrIdx: 2,
-  epochs: 12,
+  epochs: 40,
   loss: 'mse' as const,
-  beta: 1,
+  beta: 0.5,
   noise: 0,
   k: 8,
   nClusters: 5,
