@@ -16,7 +16,7 @@ from torch import nn
 
 from .. import imaging, metrics as metrics_mod
 from ..data import dataset
-from ..device import get_device
+from ..device import device_guard, get_device
 from ..models.ae import ARCHS, build_autoencoder, count_params
 from ..seeding import set_seed
 
@@ -111,7 +111,9 @@ class AEService:
             idx = indices[i : i + batch_size]
             chunk = np.asarray(arr[idx])  # (B,64,64,3) uint8
             t = torch.from_numpy(chunk).float().div_(255).permute(0, 3, 1, 2).contiguous()
-            yield t.to(self.device)
+            with device_guard():  # el traslado a la GPU también es Metal: serialízalo
+                t = t.to(self.device)
+            yield t
 
     def _preview(self, model: nn.Module) -> list[str]:
         was_training = model.training
@@ -119,7 +121,7 @@ class AEService:
         arr = dataset.load_array()
         n = dataset.count()
         ids = [i for i in PREVIEW_IDS if i < n][:4]
-        with torch.no_grad():
+        with device_guard(), torch.no_grad():
             xs = torch.stack([imaging.uint8_to_tensor(np.asarray(arr[i])) for i in ids]).to(self.device)
             xh, _ = model(xs)
         if was_training:
@@ -173,11 +175,13 @@ class AEService:
                 running = torch.zeros((), device=self.device)
                 nb = 0
                 for batch in self._iter_batches(indices, hp.batch_size):
-                    opt.zero_grad(set_to_none=True)
-                    recon, _ = model(batch)
-                    loss = crit(recon, batch)
-                    loss.backward()
-                    opt.step()
+                    # Serializa el paso frente a la inferencia (MPS no es thread-safe; ver device.py).
+                    with device_guard():
+                        opt.zero_grad(set_to_none=True)
+                        recon, _ = model(batch)
+                        loss = crit(recon, batch)
+                        loss.backward()
+                        opt.step()
                     running += loss.detach()
                     nb += 1
                     global_step += 1
@@ -253,7 +257,7 @@ class AEService:
         model.eval()
         tot = 0.0
         cnt = 0
-        with torch.no_grad():
+        with device_guard(), torch.no_grad():
             for batch in self._iter_batches(ids, 256):
                 recon, _ = model(batch)
                 tot += torch.mean((recon - batch) ** 2, dim=[1, 2, 3]).sum().item()
@@ -302,11 +306,12 @@ class AEService:
                 for ep in range(epochs):
                     np.random.default_rng(seed + ep + 1).shuffle(ids)
                     for batch in self._iter_batches(ids, 256):
-                        opt.zero_grad(set_to_none=True)
-                        recon, _ = model(batch)
-                        loss = crit(recon, batch)
-                        loss.backward()
-                        opt.step()
+                        with device_guard():
+                            opt.zero_grad(set_to_none=True)
+                            recon, _ = model(batch)
+                            loss = crit(recon, batch)
+                            loss.backward()
+                            opt.step()
                         if self._cancel:
                             yield {"type": "cancelled"}
                             return
@@ -423,7 +428,7 @@ class AEService:
         n = dataset.count()
         out: list[dict] = []
         self.model.eval()
-        with torch.no_grad():
+        with device_guard(), torch.no_grad():
             for i in ids:
                 if i < 0 or i >= n:
                     continue
@@ -460,7 +465,7 @@ class AEService:
         if self.model is None:
             raise RuntimeError("modelo no entrenado")
         self.model.eval()
-        with torch.no_grad():
+        with device_guard(), torch.no_grad():
             recon = self.model(x.unsqueeze(0).to(self.device))[0][0]
         return {
             "original": imaging.tensor_to_b64(x),
@@ -492,7 +497,7 @@ class AEService:
         cnt = 0
         examples: list[dict] = []
         ex_ids = set(ids[:n_examples].tolist())
-        with torch.no_grad():
+        with device_guard(), torch.no_grad():
             for i in range(0, len(ids), 128):
                 idx = ids[i : i + 128]
                 x = (
@@ -546,7 +551,7 @@ class AEService:
         arr = dataset.load_array()
         self.model.eval()
         chunks: list[np.ndarray] = []
-        with torch.no_grad():
+        with device_guard(), torch.no_grad():
             for i in range(0, len(ids), 256):
                 idx = ids[i : i + 256]
                 t = torch.from_numpy(np.asarray(arr[idx])).float().div(255)
@@ -601,7 +606,7 @@ class AEService:
         query_id = int(max(0, min(n - 1, query_id)))
         k = int(max(1, min(24, k)))
         self.model.eval()
-        with torch.no_grad():
+        with device_guard(), torch.no_grad():
             xq = imaging.uint8_to_tensor(np.asarray(arr[query_id])).unsqueeze(0).to(self.device)
             zq = self.model.encode(xq).cpu().numpy()[0]
         d = np.linalg.norm(self._embed_Z - zq[None, :], axis=1)
@@ -636,7 +641,7 @@ class AEService:
         # un morphing real, interpolamos el código COMPLETO de esa variante (cuello + skips) y
         # decodificamos con los skips interpolados. En básico/grande el código es solo z.
         use_skips = hasattr(self.model, "encode_with_skips")
-        with torch.no_grad():
+        with device_guard(), torch.no_grad():
             if use_skips:
                 za, skips_a = self.model.encode_with_skips(xa)
                 zb, skips_b = self.model.encode_with_skips(xb)

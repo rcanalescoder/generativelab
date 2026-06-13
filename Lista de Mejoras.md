@@ -321,6 +321,23 @@ para demos interactivas.
 
 ---
 
+## 6 bis. Estabilidad: serialización de MPS (fix 2026-06-13)
+
+Tras la v3 apareció un fallo de estabilidad: al **entrenar** desde la app, el backend se caía
+entero con **502 Bad Gateway** en todas las pestañas. Causa (confirmada en el crash report):
+**SIGSEGV** dentro del backend Metal (`mps::MetalShaderLibrary::getLibraryPipelineState`,
+`MPS_tanh`/`MPS_sigmoid`). PyTorch-MPS **no es thread-safe** y la app entrena en un hilo aparte
+(patrón hilo+cola para SSE) mientras uvicorn sirve inferencia en otros hilos: dos hilos enviando
+trabajo a Metal a la vez corrompían el pipeline de shaders. No era OOM (memoria al 97 %).
+
+Arreglo: un cerrojo de proceso `device_guard()` (RLock reentrante) en `backend/app/device.py`
+que **serializa todo el cómputo en el device**. Se aplica por paso de entrenamiento, en la vista
+previa, en el traslado de cada lote a la GPU y en toda la inferencia (generate/reconstruct/
+interpolate/trajectory/metrics/embedding) de los cuatro servicios. Como se adquiere y suelta por
+paso, la inferencia se intercala entre pasos sin bloquear la UI. Verificado con la prueba de
+fuego (entrenar GAN + 50 peticiones de inferencia concurrentes): backend vivo, 200 en todas, sin
+crash. Lección transversal: *en MPS, todo el acceso al device desde varios hilos debe serializarse*.
+
 ## 7. Cronología de experimentos (2026-06-12, generada desde `experiments/ledger.jsonl`)
 
 | # | Hora | Modelo | Run | KID×1000 ↓ | Div. | Train (s) |

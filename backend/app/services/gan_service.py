@@ -24,7 +24,7 @@ from torch import nn
 
 from .. import imaging
 from ..data import dataset
-from ..device import get_device
+from ..device import device_guard, get_device
 from ..models.diffusion import EMA
 from ..models.gan import (
     GAN_ARCHS,
@@ -149,13 +149,15 @@ class GANService:
             chunk = np.asarray(arr[idx])  # (B,64,64,3) uint8
             t = torch.from_numpy(chunk).float().div_(127.5).sub_(1.0)  # [0,255] -> [-1,1]
             t = t.permute(0, 3, 1, 2).contiguous()
-            yield t.to(self.device)
+            with device_guard():  # el traslado a la GPU también es Metal: serialízalo
+                t = t.to(self.device)
+            yield t
 
     def _preview(self, generator: nn.Module, fixed_z: torch.Tensor) -> list[str]:
         """Grid pequeño de caras generadas desde un z fijo (para ver el progreso)."""
         was_training = generator.training
         generator.eval()
-        with torch.no_grad():
+        with device_guard(), torch.no_grad():
             imgs = to_image_range(generator(fixed_z))
         if was_training:
             generator.train()
@@ -241,32 +243,35 @@ class GANService:
                 nb = 0
                 for real in self._iter_batches(indices, hp.batch_size):
                     bs = real.size(0)
-                    # label smoothing (v3): a D se le pide ~0.9 para las reales, no 1.0 —
-                    # evita que se vuelva sobreconfiado y deje a G sin gradiente útil.
-                    real_labels = torch.full((bs,), hp.label_smooth, device=self.device)
-                    fake_labels = torch.zeros(bs, device=self.device)
-                    ones = torch.ones(bs, device=self.device)
+                    # Serializa el paso completo frente a las peticiones de inferencia: en MPS,
+                    # dos hilos tocando Metal a la vez segfaultean el proceso (ver device.py).
+                    with device_guard():
+                        # label smoothing (v3): a D se le pide ~0.9 para las reales, no 1.0 —
+                        # evita que se vuelva sobreconfiado y deje a G sin gradiente útil.
+                        real_labels = torch.full((bs,), hp.label_smooth, device=self.device)
+                        fake_labels = torch.zeros(bs, device=self.device)
+                        ones = torch.ones(bs, device=self.device)
 
-                    # ----- (1) paso del discriminador -----
-                    opt_d.zero_grad(set_to_none=True)
-                    out_real = discriminator(aug(real))
-                    loss_real = criterion(out_real, real_labels)
-                    z = torch.randn(bs, hp.z_dim, device=self.device)
-                    fake = generator(z)
-                    out_fake = discriminator(aug(fake.detach()))  # detach: no propaga a G
-                    loss_fake = criterion(out_fake, fake_labels)
-                    loss_d = loss_real + loss_fake
-                    loss_d.backward()
-                    opt_d.step()
+                        # ----- (1) paso del discriminador -----
+                        opt_d.zero_grad(set_to_none=True)
+                        out_real = discriminator(aug(real))
+                        loss_real = criterion(out_real, real_labels)
+                        z = torch.randn(bs, hp.z_dim, device=self.device)
+                        fake = generator(z)
+                        out_fake = discriminator(aug(fake.detach()))  # detach: no propaga a G
+                        loss_fake = criterion(out_fake, fake_labels)
+                        loss_d = loss_real + loss_fake
+                        loss_d.backward()
+                        opt_d.step()
 
-                    # ----- (2) paso del generador -----
-                    opt_g.zero_grad(set_to_none=True)
-                    out_fake_g = discriminator(aug(fake))  # reusar las falsas, ahora SÍ propaga a G
-                    loss_g = criterion(out_fake_g, ones)  # non-saturating (target 1.0, sin smooth)
-                    loss_g.backward()
-                    opt_g.step()
-                    if ema is not None:
-                        ema.update(generator)
+                        # ----- (2) paso del generador -----
+                        opt_g.zero_grad(set_to_none=True)
+                        out_fake_g = discriminator(aug(fake))  # reusar las falsas, ahora SÍ propaga a G
+                        loss_g = criterion(out_fake_g, ones)  # non-saturating (target 1.0, sin smooth)
+                        loss_g.backward()
+                        opt_g.step()
+                        if ema is not None:
+                            ema.update(generator)
 
                     run_g += loss_g.detach()
                     run_d += loss_d.detach()
@@ -350,7 +355,7 @@ class GANService:
         g = torch.Generator(device="cpu").manual_seed(int(seed))
         z = torch.randn(n, self.hp.z_dim, generator=g).to(self.device)
         gen.eval()
-        with torch.no_grad():
+        with device_guard(), torch.no_grad():
             imgs = to_image_range(gen(z))
         return [imaging.tensor_to_b64(imgs[k]) for k in range(n)]
 
@@ -367,7 +372,7 @@ class GANService:
         zb = torch.randn(1, self.hp.z_dim, generator=g)
         gen.eval()
         frames: list[dict] = []
-        with torch.no_grad():
+        with device_guard(), torch.no_grad():
             for s in range(steps):
                 alpha = s / (steps - 1)
                 z = ((1 - alpha) * za + alpha * zb).to(self.device)

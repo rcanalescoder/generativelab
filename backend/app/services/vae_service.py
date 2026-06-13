@@ -17,7 +17,7 @@ from torch import nn
 
 from .. import imaging, metrics as metrics_mod
 from ..data import dataset
-from ..device import get_device
+from ..device import device_guard, get_device
 from ..models.vae import VAE_ARCHS, build_vae, count_params
 from ..seeding import set_seed
 
@@ -139,7 +139,9 @@ class VAEService:
             idx = indices[i : i + batch_size]
             chunk = np.asarray(arr[idx])  # (B,64,64,3) uint8
             t = torch.from_numpy(chunk).float().div_(255).permute(0, 3, 1, 2).contiguous()
-            yield t.to(self.device)
+            with device_guard():  # el traslado a la GPU también es Metal: serialízalo
+                t = t.to(self.device)
+            yield t
 
     def _preview(self, model: nn.Module) -> list[str]:
         """Reconstrucción determinista (vía μ) de unas caras fijas para la vista previa."""
@@ -148,7 +150,7 @@ class VAEService:
         arr = dataset.load_array()
         n = dataset.count()
         ids = [i for i in PREVIEW_IDS if i < n][:4]
-        with torch.no_grad():
+        with device_guard(), torch.no_grad():
             xs = torch.stack([imaging.uint8_to_tensor(np.asarray(arr[i])) for i in ids]).to(self.device)
             xh = model.decode(model.encode_mu(xs))
         if was_training:
@@ -213,14 +215,16 @@ class VAEService:
                 run_kl = torch.zeros((), device=self.device)
                 nb = 0
                 for batch in self._iter_batches(indices, hp.batch_size):
-                    opt.zero_grad(set_to_none=True)
-                    recon, mu, logvar, _ = model(batch)
-                    recon_loss = recon_crit(recon, batch)
-                    # KL por píxel (v3): misma escala que el MSE medio → β=1 ≈ ELBO equilibrado.
-                    kl_loss = _kl_divergence(mu, logvar) / PIXELS
-                    loss = recon_loss + beta_t * kl_loss
-                    loss.backward()
-                    opt.step()
+                    # Serializa el paso frente a la inferencia (MPS no es thread-safe; ver device.py).
+                    with device_guard():
+                        opt.zero_grad(set_to_none=True)
+                        recon, mu, logvar, _ = model(batch)
+                        recon_loss = recon_crit(recon, batch)
+                        # KL por píxel (v3): misma escala que el MSE medio → β=1 ≈ ELBO equilibrado.
+                        kl_loss = _kl_divergence(mu, logvar) / PIXELS
+                        loss = recon_loss + beta_t * kl_loss
+                        loss.backward()
+                        opt.step()
                     run_total += loss.detach()
                     run_recon += recon_loss.detach()
                     run_kl += kl_loss.detach()
@@ -305,7 +309,7 @@ class VAEService:
         model.eval()
         tot = 0.0
         cnt = 0
-        with torch.no_grad():
+        with device_guard(), torch.no_grad():
             for batch in self._iter_batches(ids, 256):
                 recon = model.decode(model.encode_mu(batch))
                 tot += torch.mean((recon - batch) ** 2, dim=[1, 2, 3]).sum().item()
@@ -356,12 +360,13 @@ class VAEService:
                 for ep in range(epochs):
                     np.random.default_rng(seed + ep + 1).shuffle(ids)
                     for batch in self._iter_batches(ids, 256):
-                        opt.zero_grad(set_to_none=True)
-                        recon, mu, logvar, _ = model(batch)
-                        # misma escala v3 que en iter_train: KL por píxel
-                        loss = recon_crit(recon, batch) + beta * _kl_divergence(mu, logvar) / PIXELS
-                        loss.backward()
-                        opt.step()
+                        with device_guard():
+                            opt.zero_grad(set_to_none=True)
+                            recon, mu, logvar, _ = model(batch)
+                            # misma escala v3 que en iter_train: KL por píxel
+                            loss = recon_crit(recon, batch) + beta * _kl_divergence(mu, logvar) / PIXELS
+                            loss.backward()
+                            opt.step()
                         if self._cancel:
                             yield {"type": "cancelled"}
                             return
@@ -479,7 +484,7 @@ class VAEService:
         n = dataset.count()
         out: list[dict] = []
         self.model.eval()
-        with torch.no_grad():
+        with device_guard(), torch.no_grad():
             for i in ids:
                 if i < 0 or i >= n:
                     continue
@@ -503,7 +508,7 @@ class VAEService:
         if self.model is None:
             raise RuntimeError("modelo no entrenado")
         self.model.eval()
-        with torch.no_grad():
+        with device_guard(), torch.no_grad():
             recon = self.model.decode(self.model.encode_mu(x.unsqueeze(0).to(self.device)))[0]
         return {
             "original": imaging.tensor_to_b64(x),
@@ -535,7 +540,7 @@ class VAEService:
         cnt = 0
         examples: list[dict] = []
         ex_ids = set(ids[:n_examples].tolist())
-        with torch.no_grad():
+        with device_guard(), torch.no_grad():
             for i in range(0, len(ids), 128):
                 idx = ids[i : i + 128]
                 x = (
@@ -604,7 +609,7 @@ class VAEService:
         arr = dataset.load_array()
         self.model.eval()
         chunks: list[np.ndarray] = []
-        with torch.no_grad():
+        with device_guard(), torch.no_grad():
             for i in range(0, len(ids), 256):
                 idx = ids[i : i + 256]
                 t = torch.from_numpy(np.asarray(arr[idx])).float().div(255)
@@ -659,7 +664,7 @@ class VAEService:
         query_id = int(max(0, min(n - 1, query_id)))
         k = int(max(1, min(24, k)))
         self.model.eval()
-        with torch.no_grad():
+        with device_guard(), torch.no_grad():
             xq = imaging.uint8_to_tensor(np.asarray(arr[query_id])).unsqueeze(0).to(self.device)
             zq = self.model.encode_mu(xq).cpu().numpy()[0]
         d = np.linalg.norm(self._embed_Z - zq[None, :], axis=1)
@@ -687,7 +692,7 @@ class VAEService:
         b_id = int(max(0, min(n - 1, b_id)))
         steps = int(max(2, min(12, steps)))
         self.model.eval()
-        with torch.no_grad():
+        with device_guard(), torch.no_grad():
             za = self.model.encode_mu(imaging.uint8_to_tensor(np.asarray(arr[a_id])).unsqueeze(0).to(self.device))
             zb = self.model.encode_mu(imaging.uint8_to_tensor(np.asarray(arr[b_id])).unsqueeze(0).to(self.device))
             frames = []

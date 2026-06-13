@@ -31,7 +31,7 @@ from torch.nn import functional as F
 
 from .. import imaging
 from ..data import dataset
-from ..device import get_device
+from ..device import device_guard, get_device
 from ..models.diffusion import (
     DEFAULT_SCHEDULE,
     DIFF_ARCHS,
@@ -186,11 +186,14 @@ class DiffusionService:
             if t.shape[-1] != img_size:
                 t = F.interpolate(t, size=img_size, mode="bilinear", align_corners=False)
             t = t.mul_(2.0).sub_(1.0)  # [0,1] -> [-1,1]
-            yield t.to(self.device)
+            with device_guard():  # el traslado a la GPU también es Metal: serialízalo
+                t = t.to(self.device)
+            yield t
 
     def _preview_grid(self, model: TimeUNet, n: int = PREVIEW_N) -> list[str]:
         """Genera un grid pequeño de muestras (pocos pasos) para la vista previa del epoch."""
-        imgs, _ = sample_loop(model, self.sched, n, self.device, steps=PREVIEW_STEPS)
+        with device_guard():
+            imgs, _ = sample_loop(model, self.sched, n, self.device, steps=PREVIEW_STEPS)
         return [self._encode(imgs[k]) for k in range(imgs.shape[0])]
 
     def _encode(self, img01: torch.Tensor) -> str:
@@ -266,15 +269,17 @@ class DiffusionService:
                 nb = 0
                 for batch in self._iter_batches(indices, hp.batch_size, img_size):
                     b = batch.shape[0]
-                    t = torch.randint(0, hp.timesteps, (b,), device=self.device, dtype=torch.long)
-                    noise = torch.randn_like(batch)
-                    x_t = q_sample(self.sched, batch, t, noise)
-                    eps_pred = model(x_t, t)
-                    loss = F.mse_loss(eps_pred, noise)
-                    opt.zero_grad(set_to_none=True)
-                    loss.backward()
-                    opt.step()
-                    ema.update(model)  # actualizar la EMA tras cada paso del optimizador
+                    # Serializa el paso frente a la inferencia (MPS no es thread-safe; ver device.py).
+                    with device_guard():
+                        t = torch.randint(0, hp.timesteps, (b,), device=self.device, dtype=torch.long)
+                        noise = torch.randn_like(batch)
+                        x_t = q_sample(self.sched, batch, t, noise)
+                        eps_pred = model(x_t, t)
+                        loss = F.mse_loss(eps_pred, noise)
+                        opt.zero_grad(set_to_none=True)
+                        loss.backward()
+                        opt.step()
+                        ema.update(model)  # actualizar la EMA tras cada paso del optimizador
                     running += loss.detach()
                     nb += 1
                     global_step += 1
@@ -351,7 +356,8 @@ class DiffusionService:
         steps = int(max(2, min(self.hp.timesteps, steps)))
         set_seed(seed)
         self._ensure_schedule(self.hp.timesteps)
-        imgs, _ = sample_loop(self.model, self.sched, n, self.device, steps=steps)
+        with device_guard():
+            imgs, _ = sample_loop(self.model, self.sched, n, self.device, steps=steps)
         return [self._encode(imgs[k]) for k in range(imgs.shape[0])]
 
     def trajectory(self, seed: int, steps: int | None = None, snapshots: int = 8) -> list[dict]:
@@ -372,9 +378,10 @@ class DiffusionService:
         total_positions = len(ts) + 1                       # +1 por el ruido inicial (pos 0)
         # posiciones (en la secuencia de muestreo) en las que capturar, repartidas uniformemente
         positions = sorted({int(round(p)) for p in np.linspace(0, total_positions - 1, snapshots)})
-        imgs, snaps = sample_loop(
-            self.model, self.sched, 1, self.device, steps=steps, capture=positions
-        )
+        with device_guard():
+            imgs, snaps = sample_loop(
+                self.model, self.sched, 1, self.device, steps=steps, capture=positions
+            )
 
         frames: list[dict] = []
         for pos, snap in zip(positions, snaps):
