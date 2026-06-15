@@ -39,6 +39,8 @@ lengüetas deben sentirse hermanas de esa.
 generative-models-visual-lab/
 ├── CLAUDE.md                  # este archivo
 ├── README.md
+├── arrancar.sh                # script de arranque/reinicio
+├── parar.sh                   # script de parada ordenada
 ├── design/
 │   └── mockup.html            # referencia visual del tab Autoencoder
 ├── frontend/                  # Vite + React + TS + Tailwind

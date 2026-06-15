@@ -179,14 +179,19 @@ PYTORCH_ENABLE_MPS_FALLBACK=1 uvicorn app.main:app --port 8000
 En desarrollo, Vite hace de **proxy** de `/api/*` → `http://localhost:8000`. Cuando ambos
 están vivos, la pastilla "MPS activo" del header se pone verde.
 
-### 5. Atajo: `arrancar.sh`
+### 5. Atajos: `arrancar.sh` y `parar.sh`
 
-Desde la raíz del proyecto, un único script levanta (o **reinicia**, si ya estaban corriendo)
-backend + frontend:
+Desde la raíz del proyecto, puedes levantar (o **reinicia**, si ya estaban corriendo) backend + frontend con:
 
 ```bash
 ./arrancar.sh
 # abre http://localhost:5173
+```
+
+Para detener adecuadamente ambos servicios (liberando los puertos `8000` y `5173` y limpiando los archivos de PIDs), ejecuta:
+
+```bash
+./parar.sh
 ```
 
 Comprobación rápida del backend:
@@ -278,6 +283,7 @@ Patrones clave (reutilizados en los cuatro modelos):
 ```
 generative-models-visual-lab/
 ├── arrancar.sh                     # arranca/reinicia backend + frontend
+├── parar.sh                        # detiene ordenadamente backend + frontend
 ├── CLAUDE.md / GUIA-FASES.md       # especificación y guía por fases
 ├── design/mockup.html              # referencia visual del tab Autoencoder
 ├── backend/
